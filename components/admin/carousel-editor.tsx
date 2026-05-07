@@ -55,7 +55,7 @@ export default function CarouselEditor() {
         title: "Nuevo slide",
         subtitle: "Descripción del slide",
         buttonText: "Inscribirme",
-        buttonUrl: "/inscripcion",
+        buttonUrl: `/inscripcion/${eventSettings?.currentYear || new Date().getFullYear()}`,
         order: slides.length,
         year: eventSettings?.currentYear || new Date().getFullYear(),
         isNew: true,

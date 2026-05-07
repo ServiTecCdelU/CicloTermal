@@ -170,7 +170,7 @@ export default function AdminRegistrationsPage() {
   const fetchRegistrations = async () => {
     setLoading(true)
     try {
-      const registrationsRef = collection(db, "participantes2025")
+      const registrationsRef = collection(db, "participantesCicloTermal")
       const allRegistrationsQuery = query(registrationsRef, orderBy("fechaInscripcion", "desc"))
       const snapshot = await getDocs(allRegistrationsQuery)
 
@@ -194,8 +194,8 @@ export default function AdminRegistrationsPage() {
         return bNum - aNum
       })
 
-      const years = [...new Set(registrationsData.map((reg) => reg.fechaInscripcion?.getFullYear()).filter(Boolean))]
-      setAvailableYears(years.sort((a, b) => b - a))
+      const years = [...new Set(registrationsData.flatMap((reg) => reg.años || []).filter(Boolean))]
+      setAvailableYears((years as number[]).sort((a, b) => b - a))
 
       setRegistrations(registrationsData)
       setFilteredRegistrations(registrationsData) // filteredRegistrations ya estará ordenado inicialmente
@@ -232,7 +232,7 @@ export default function AdminRegistrationsPage() {
     }
 
     if (yearFilter !== "all") {
-      filtered = filtered.filter((reg) => reg.fechaInscripcion?.getFullYear() === Number.parseInt(yearFilter))
+      filtered = filtered.filter((reg) => (reg.años || []).includes(Number.parseInt(yearFilter)))
     }
 
     if (healthFilter !== "all") {
@@ -413,7 +413,7 @@ export default function AdminRegistrationsPage() {
 
     setUpdatingStatus(true)
     try {
-      const registrationRef = doc(db, "participantes2025", selectedRegistration.id)
+      const registrationRef = doc(db, "participantesCicloTermal", selectedRegistration.id)
       const updateData = {
         estado: newStatus,
         nota: statusNote,
@@ -754,7 +754,7 @@ export default function AdminRegistrationsPage() {
         grupoCiclistas: formatCapitalization(editFormData.grupoCiclistas),
       }
 
-      const registrationRef = doc(db, "participantes2025", selectedRegistration.id)
+      const registrationRef = doc(db, "participantesCicloTermal", selectedRegistration.id)
 
       // Handle comprobante upload if new file selected
       const updateData = { ...formattedData }
@@ -806,7 +806,7 @@ export default function AdminRegistrationsPage() {
     if (!selectedRegistration) return
 
     try {
-      const registrationRef = doc(db, "participantes2025", selectedRegistration.id)
+      const registrationRef = doc(db, "participantesCicloTermal", selectedRegistration.id)
       await deleteDoc(registrationRef)
 
       // Update local state

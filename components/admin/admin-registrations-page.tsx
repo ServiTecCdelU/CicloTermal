@@ -166,7 +166,7 @@ export default function AdminRegistrationsPage() {
   const fetchRegistrations = async () => {
     setLoading(true)
     try {
-      const registrationsRef = collection(db, "participantes2025")
+      const registrationsRef = collection(db, "participantesCicloTermal")
       const allRegistrationsQuery = query(registrationsRef, orderBy("fechaInscripcion", "desc"))
       const snapshot = await getDocs(allRegistrationsQuery)
 
@@ -399,7 +399,7 @@ export default function AdminRegistrationsPage() {
 
     setUpdatingStatus(true)
     try {
-      const registrationRef = doc(db, "participantes2025", selectedRegistration.id)
+      const registrationRef = doc(db, "participantesCicloTermal", selectedRegistration.id)
       const updateData = {
         estado: newStatus,
         nota: statusNote,
@@ -739,7 +739,7 @@ export default function AdminRegistrationsPage() {
         grupoCiclistas: formatCapitalization(editFormData.grupoCiclistas),
       }
 
-      const registrationRef = doc(db, "participantes2025", selectedRegistration.id)
+      const registrationRef = doc(db, "participantesCicloTermal", selectedRegistration.id)
 
       // Handle comprobante upload if new file selected
       const updateData = { ...formattedData }

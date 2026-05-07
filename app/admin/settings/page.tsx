@@ -7,139 +7,96 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { db } from "@/lib/firebase/firebase-config"
-import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore"
-import { AlertCircle } from "lucide-react"
+import { doc, getDoc, setDoc } from "firebase/firestore"
+import { AlertCircle, Plus, Calendar } from "lucide-react"
+import type { CicloConfig } from "@/lib/firebase/firebase-provider"
+
+const emptySettings = {
+  cupoMaximo: 300,
+  precio: 35000,
+  metodoPago: "Transferencia bancaria",
+  datosPago: "",
+}
 
 export default function AdminSettingsPage() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [years, setYears] = useState([])
-  const [settings, setSettings] = useState({
-    cupoMaximo: 300,
-    precio: 35000,
-    metodoPago: "Transferencia bancaria",
-    datosPago: "",
-    inscripcionesAbiertas: true,
-    currentYear: new Date().getFullYear(),
-  })
+  const [savingCiclos, setSavingCiclos] = useState(false)
+  const [settings, setSettings] = useState(emptySettings)
+  const [ciclos, setCiclos] = useState<CicloConfig[]>([])
 
   useEffect(() => {
-    const fetchSettings = async () => {
+    const fetch = async () => {
       try {
-        const settingsDoc = doc(db, "settings", "eventSettings")
-        const docSnap = await getDoc(settingsDoc)
-
-        if (docSnap.exists()) {
-          setSettings(docSnap.data())
+        const settingsSnap = await getDoc(doc(db, "settings", "eventSettings"))
+        if (settingsSnap.exists()) {
+          const data = settingsSnap.data()
+          setSettings({
+            cupoMaximo: data.cupoMaximo ?? 300,
+            precio: data.precio ?? 35000,
+            metodoPago: data.metodoPago ?? "Transferencia bancaria",
+            datosPago: data.datosPago ?? "",
+          })
         }
 
-        // Fetch available years
-        const yearsRef = collection(db, "eventYears")
-        const yearsSnapshot = await getDocs(yearsRef)
-        const yearsData = yearsSnapshot.docs.map((doc) => doc.data().year)
-        setYears(yearsData.sort((a, b) => b - a)) // Sort years in descending order
+        const ciclosSnap = await getDoc(doc(db, "configuracion", "inscripciones"))
+        if (ciclosSnap.exists()) {
+          setCiclos(ciclosSnap.data().ciclos || [])
+        }
       } catch (error) {
-        console.error("Error fetching settings:", error)
+        console.error("Error cargando configuración:", error)
       } finally {
         setLoading(false)
       }
     }
-
-    fetchSettings()
+    fetch()
   }, [])
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target
-    setSettings({
-      ...settings,
-      [name]: type === "number" ? Number(value) : value,
-    })
-  }
-
-  const handleSwitchChange = (checked) => {
-    setSettings({
-      ...settings,
-      inscripcionesAbiertas: checked,
-    })
-  }
-
-  const handleSelectChange = (name, value) => {
-    setSettings({
-      ...settings,
-      [name]: name === "currentYear" ? Number(value) : value,
-    })
+    setSettings({ ...settings, [name]: type === "number" ? Number(value) : value })
   }
 
   const saveSettings = async () => {
     setSaving(true)
     try {
-      await setDoc(doc(db, "settings", "eventSettings"), settings)
-      toast({
-        title: "Configuración guardada",
-        description: "Los cambios han sido guardados correctamente",
-      })
-    } catch (error) {
-      console.error("Error saving settings:", error)
-      toast({
-        title: "Error",
-        description: "No se pudieron guardar los cambios",
-        variant: "destructive",
-      })
+      await setDoc(doc(db, "settings", "eventSettings"), settings, { merge: true })
+      toast({ title: "Configuración guardada" })
+    } catch {
+      toast({ title: "Error al guardar", variant: "destructive" })
     } finally {
       setSaving(false)
     }
   }
 
-  const startNewEdition = async () => {
-    if (
-      !confirm(
-        "¿Estás seguro de que deseas iniciar una nueva edición? Esto guardará todos los datos actuales y creará una nueva edición vacía.",
-      )
-    ) {
-      return
-    }
-
-    setSaving(true)
+  const saveCiclos = async () => {
+    setSavingCiclos(true)
     try {
-      const nextYear = new Date().getFullYear() + 1
-      const newEdition = `Edición ${nextYear}`
-
-      // Add new year to eventYears collection
-      await setDoc(doc(db, "eventYears", nextYear.toString()), {
-        year: nextYear,
-        edition: newEdition,
-      })
-
-      // Update current year in settings
-      await setDoc(doc(db, "settings", "eventSettings"), {
-        ...settings,
-        currentYear: nextYear,
-      })
-
-      // Reset registrations for new year
-      // (We don't delete old registrations, they remain in the database with their year)
-
-      toast({
-        title: "Nueva edición creada",
-        description: `Se ha iniciado la edición del año ${nextYear}`,
-      })
-
-      // Refresh the page to show new settings
-      window.location.reload()
-    } catch (error) {
-      console.error("Error creating new edition:", error)
-      toast({
-        title: "Error",
-        description: "No se pudo crear la nueva edición",
-        variant: "destructive",
-      })
+      await setDoc(doc(db, "configuracion", "inscripciones"), { ciclos })
+      toast({ title: "Ciclos guardados" })
+    } catch {
+      toast({ title: "Error al guardar ciclos", variant: "destructive" })
     } finally {
-      setSaving(false)
+      setSavingCiclos(false)
     }
+  }
+
+  const toggleCiclo = (idx: number, habilitado: boolean) => {
+    setCiclos(ciclos.map((c, i) => (i === idx ? { ...c, habilitado } : c)))
+  }
+
+  const updateCicloFecha = (idx: number, field: "fechaDesde" | "fechaHasta", value: string) => {
+    setCiclos(ciclos.map((c, i) => (i === idx ? { ...c, [field]: value } : c)))
+  }
+
+  const addYear = () => {
+    const maxAño = ciclos.length > 0 ? Math.max(...ciclos.map((c) => c.año)) : new Date().getFullYear()
+    const nextAño = maxAño + 1
+    if (ciclos.some((c) => c.año === nextAño)) return
+    setCiclos([...ciclos, { año: nextAño, habilitado: false, fechaDesde: "", fechaHasta: "" }])
   }
 
   if (loading) {
@@ -157,109 +114,124 @@ export default function AdminSettingsPage() {
         <p className="text-muted-foreground">Administra la configuración general del evento</p>
       </div>
 
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Configuración General</CardTitle>
-            <CardDescription>Configura los parámetros generales del evento</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="cupoMaximo">Cupo máximo de participantes</Label>
-                <Input
-                  id="cupoMaximo"
-                  name="cupoMaximo"
-                  type="number"
-                  value={settings.cupoMaximo}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="precio">Precio de inscripción ($)</Label>
-                <Input id="precio" name="precio" type="number" value={settings.precio} onChange={handleInputChange} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="metodoPago">Método de pago</Label>
-                <Input id="metodoPago" name="metodoPago" value={settings.metodoPago} onChange={handleInputChange} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="currentYear">Año actual del evento</Label>
-                <Select
-                  value={settings.currentYear.toString()}
-                  onValueChange={(value) => handleSelectChange("currentYear", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar año" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
+      {/* ── Configuración general ─────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuración General</CardTitle>
+          <CardDescription>Cupo, precio y datos de pago</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="datosPago">Datos de pago (información bancaria)</Label>
-              <Textarea
-                id="datosPago"
-                name="datosPago"
-                value={settings.datosPago}
-                onChange={handleInputChange}
-                rows={4}
-              />
+              <Label htmlFor="cupoMaximo">Cupo máximo de participantes</Label>
+              <Input id="cupoMaximo" name="cupoMaximo" type="number" value={settings.cupoMaximo} onChange={handleInputChange} />
             </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="inscripcionesAbiertas"
-                checked={settings.inscripcionesAbiertas}
-                onCheckedChange={handleSwitchChange}
-              />
-              <Label htmlFor="inscripcionesAbiertas">Inscripciones abiertas</Label>
+            <div className="space-y-2">
+              <Label htmlFor="precio">Precio de inscripción ($)</Label>
+              <Input id="precio" name="precio" type="number" value={settings.precio} onChange={handleInputChange} />
             </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => window.location.reload()}>
-              Cancelar
-            </Button>
-            <Button onClick={saveSettings} disabled={saving}>
-              {saving ? "Guardando..." : "Guardar cambios"}
-            </Button>
-          </CardFooter>
-        </Card>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="metodoPago">Método de pago</Label>
+              <Input id="metodoPago" name="metodoPago" value={settings.metodoPago} onChange={handleInputChange} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="datosPago">Datos bancarios para el formulario</Label>
+            <Textarea id="datosPago" name="datosPago" value={settings.datosPago} onChange={handleInputChange} rows={4} />
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-end">
+          <Button onClick={saveSettings} disabled={saving}>
+            {saving ? "Guardando..." : "Guardar cambios"}
+          </Button>
+        </CardFooter>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Nueva Edición</CardTitle>
-            <CardDescription>Inicia una nueva edición del evento</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-start space-x-2 p-4 bg-amber-50 rounded-md">
+      {/* ── Gestión de ciclos / inscripciones ────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Inscripciones por año (ciclos)
+          </CardTitle>
+          <CardDescription>
+            Habilitá o deshabilitá inscripciones y establecé el rango de fechas para cada ciclo.
+            La ruta de inscripción será <code>/inscripcion/[año]</code>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {ciclos.length === 0 && (
+            <div className="flex items-start gap-2 p-4 bg-amber-50 rounded-md">
               <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-amber-700">Atención</h4>
-                <p className="text-sm text-amber-600">
-                  Al iniciar una nueva edición, se guardará toda la información actual y se creará una nueva edición
-                  vacía. Las inscripciones anteriores se mantendrán en el sistema pero asociadas a la edición anterior.
-                </p>
-              </div>
+              <p className="text-sm text-amber-700">No hay ciclos configurados. Agregá un año para comenzar.</p>
             </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="destructive" onClick={startNewEdition} disabled={saving} className="ml-auto">
-              {saving ? "Procesando..." : "Iniciar nueva edición"}
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+          )}
+
+          {ciclos
+            .slice()
+            .sort((a, b) => b.año - a.año)
+            .map((ciclo, rawIdx) => {
+              const idx = ciclos.findIndex((c) => c.año === ciclo.año)
+              return (
+                <div key={ciclo.año} className="border rounded-lg p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Cicloturismo {ciclo.año}</h3>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={ciclo.habilitado}
+                        onCheckedChange={(v) => toggleCiclo(idx, v)}
+                        id={`habilitado-${ciclo.año}`}
+                      />
+                      <Label htmlFor={`habilitado-${ciclo.año}`} className="cursor-pointer">
+                        {ciclo.habilitado ? "Habilitado" : "Deshabilitado"}
+                      </Label>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor={`desde-${ciclo.año}`}>Fecha de apertura</Label>
+                      <Input
+                        id={`desde-${ciclo.año}`}
+                        type="date"
+                        value={ciclo.fechaDesde}
+                        onChange={(e) => updateCicloFecha(idx, "fechaDesde", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`hasta-${ciclo.año}`}>Fecha de cierre</Label>
+                      <Input
+                        id={`hasta-${ciclo.año}`}
+                        type="date"
+                        value={ciclo.fechaHasta}
+                        onChange={(e) => updateCicloFecha(idx, "fechaHasta", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {ciclo.habilitado && (
+                    <p className="text-xs text-green-700 bg-green-50 px-3 py-1 rounded">
+                      Inscripción activa en <code>/inscripcion/{ciclo.año}</code>
+                      {ciclo.fechaDesde && ciclo.fechaHasta
+                        ? ` — del ${ciclo.fechaDesde} al ${ciclo.fechaHasta}`
+                        : " (sin rango de fechas definido)"}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+
+          <Button variant="outline" className="w-full" onClick={addYear}>
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar nuevo año
+          </Button>
+        </CardContent>
+        <CardFooter className="flex justify-end">
+          <Button onClick={saveCiclos} disabled={savingCiclos}>
+            {savingCiclos ? "Guardando..." : "Guardar ciclos"}
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

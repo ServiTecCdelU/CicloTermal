@@ -128,8 +128,8 @@ export default function ExpensesPage() {
       setExpenses(expensesData.sort((a, b) => b.fecha.getTime() - a.fecha.getTime()))
 
       // Fetch registrations for income calculation
-      const registrationsRef = collection(db, "participantes2025")
-      const currentYearRegistrations = query(registrationsRef, where("year", "==", new Date().getFullYear()))
+      const registrationsRef = collection(db, "participantesCicloTermal")
+      const currentYearRegistrations = query(registrationsRef, where("años", "array-contains", new Date().getFullYear()))
       const registrationsSnapshot = await getDocs(currentYearRegistrations)
       const registrationsData: Registration[] = registrationsSnapshot.docs.map((doc) => ({
         id: doc.id,

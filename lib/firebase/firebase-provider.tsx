@@ -5,10 +5,18 @@ import { onAuthStateChanged, type User } from "firebase/auth"
 import { doc, getDoc } from "firebase/firestore"
 import { auth, db } from "./firebase-config"
 
+export interface CicloConfig {
+  año: number
+  habilitado: boolean
+  fechaDesde: string
+  fechaHasta: string
+}
+
 interface FirebaseContextType {
   user: User | null
   loading: boolean
   eventSettings: any
+  ciclosConfig: CicloConfig[]
   isFirebaseAvailable: boolean
 }
 
@@ -16,6 +24,7 @@ const FirebaseContext = createContext<FirebaseContextType>({
   user: null,
   loading: true,
   eventSettings: null,
+  ciclosConfig: [],
   isFirebaseAvailable: false,
 })
 
@@ -25,6 +34,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [eventSettings, setEventSettings] = useState(null)
+  const [ciclosConfig, setCiclosConfig] = useState<CicloConfig[]>([])
   const [isFirebaseAvailable, setIsFirebaseAvailable] = useState(false)
 
   // Verificar si Firebase está disponible
@@ -77,7 +87,6 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
         if (docSnap.exists()) {
           setEventSettings(docSnap.data())
         } else {
-          // Set default settings if none exist
           setEventSettings({
             cupoMaximo: 300,
             precio: 35000,
@@ -86,9 +95,14 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
             currentYear: new Date().getFullYear(),
           })
         }
+
+        const ciclosDoc = doc(db, "configuracion", "inscripciones")
+        const ciclosSnap = await getDoc(ciclosDoc)
+        if (ciclosSnap.exists()) {
+          setCiclosConfig(ciclosSnap.data().ciclos || [])
+        }
       } catch (error) {
         console.error("Error fetching event settings:", error)
-        // Set default settings on error
         setEventSettings({
           cupoMaximo: 300,
           precio: 35000,
@@ -103,7 +117,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   }, [isFirebaseAvailable])
 
   return (
-    <FirebaseContext.Provider value={{ user, loading, eventSettings, isFirebaseAvailable }}>
+    <FirebaseContext.Provider value={{ user, loading, eventSettings, ciclosConfig, isFirebaseAvailable }}>
       {children}
     </FirebaseContext.Provider>
   )

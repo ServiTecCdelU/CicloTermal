@@ -277,8 +277,8 @@ export default function AdminDashboardPage() {
 
   const fetchRegistrations = async () => {
     try {
-      const registrationsRef = collection(db, "participantes2025")
-      const currentYearRegistrations = query(registrationsRef, where("year", "==", new Date().getFullYear()))
+      const registrationsRef = collection(db, "participantesCicloTermal")
+      const currentYearRegistrations = query(registrationsRef, where("años", "array-contains", new Date().getFullYear()))
       const snapshot = await getDocs(currentYearRegistrations)
 
       const registrationsData: Registration[] = snapshot.docs.map((doc) => {
