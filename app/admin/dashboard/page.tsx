@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { db } from "@/lib/firebase/firebase-config"
 import { collection, getDocs, query, where } from "firebase/firestore"
@@ -512,76 +512,46 @@ export default function AdminDashboardPage() {
     fetchRegistrations()
   }, [statusFilter])
 
-  useEffect(() => {
-    fetchRegistrations()
-  }, [])
-
   const hasRegistrations = stats.validRegistrations > 0
 
-  const genderData: ChartDataItem[] = [
+  const genderData = useMemo<ChartDataItem[]>(() => [
     { name: "Masculino", value: stats.maleCount },
     { name: "Femenino", value: stats.femaleCount },
     { name: "Otro", value: stats.otherCount },
-  ].filter((item) => item.value > 0)
+  ].filter((item) => item.value > 0), [stats.maleCount, stats.femaleCount, stats.otherCount])
 
-  const jerseySizeData: ChartDataItem[] = Object.entries(stats.jerseySize)
-    .map(([size, count]) => ({
-      name: size.toUpperCase(),
-      value: count,
-    }))
-    .filter((item) => item.value > 0)
-    .sort((a, b) => {
-      const sizeOrder = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"]
-      return sizeOrder.indexOf(a.name) - sizeOrder.indexOf(b.name)
-    })
+  const jerseySizeData = useMemo<ChartDataItem[]>(() => {
+    const sizeOrder = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+    return Object.entries(stats.jerseySize)
+      .map(([size, count]) => ({ name: size.toUpperCase(), value: count }))
+      .filter((item) => item.value > 0)
+      .sort((a, b) => sizeOrder.indexOf(a.name) - sizeOrder.indexOf(b.name))
+  }, [stats.jerseySize])
 
-  // Filtrar datos por tiempo seleccionado
-  const getFilteredChartData = () => {
+  const filteredChartData = useMemo(() => {
     if (timeFilter === "all" || stats.registrationsByDay.length === 0) {
       return stats.registrationsByDay
     }
-
     const now = new Date()
     const filterDate = new Date()
-
     switch (timeFilter) {
-      case "week":
-        filterDate.setDate(now.getDate() - 7)
-        break
-      case "month":
-        filterDate.setMonth(now.getMonth() - 1)
-        break
-      case "quarter":
-        filterDate.setMonth(now.getMonth() - 3)
-        break
-      default:
-        return stats.registrationsByDay
+      case "week": filterDate.setDate(now.getDate() - 7); break
+      case "month": filterDate.setMonth(now.getMonth() - 1); break
+      case "quarter": filterDate.setMonth(now.getMonth() - 3); break
+      default: return stats.registrationsByDay
     }
+    return stats.registrationsByDay.filter((item) => new Date(item.date) >= filterDate)
+  }, [timeFilter, stats.registrationsByDay])
 
-    return stats.registrationsByDay.filter((item) => {
-      const itemDate = new Date(item.date)
-      return itemDate >= filterDate
-    })
-  }
-
-  const filteredChartData = getFilteredChartData()
-
-  // Calcular tendencia (porcentaje de cambio)
-  const calculateTrend = () => {
+  const trend = useMemo(() => {
     if (filteredChartData.length < 2) return 0
-
     const firstHalf = filteredChartData.slice(0, Math.floor(filteredChartData.length / 2))
     const secondHalf = filteredChartData.slice(Math.floor(filteredChartData.length / 2))
-
     const firstHalfTotal = firstHalf.reduce((sum, item) => sum + item.total, 0)
     const secondHalfTotal = secondHalf.reduce((sum, item) => sum + item.total, 0)
-
     if (firstHalfTotal === 0) return secondHalfTotal > 0 ? 100 : 0
-
     return ((secondHalfTotal - firstHalfTotal) / firstHalfTotal) * 100
-  }
-
-  const trend = calculateTrend()
+  }, [filteredChartData])
 
   // Calcular porcentaje de ocupación
   const occupancyPercentage = Math.round((stats.validRegistrations / (eventSettings?.cupoMaximo || 300)) * 100)

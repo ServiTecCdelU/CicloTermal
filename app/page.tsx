@@ -1,13 +1,14 @@
+import dynamic from "next/dynamic"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import CarouselSection from "@/components/carousel-section"
-import JerseySection from "@/components/jersey-section"
-import HistorySection from "@/components/history-section"
-import BenefitsSection from "@/components/benefits-section"
-import PhotosSection from "@/components/photos-section"
-import SponsorsSection from "@/components/sponsors-section"
-import ContactSection from "@/components/contact-section"
-import CyclingMap from "@/components/cycling-map"
+
+const HistorySection = dynamic(() => import("@/components/history-section"))
+const BenefitsSection = dynamic(() => import("@/components/benefits-section"))
+const JerseySection = dynamic(() => import("@/components/jersey-section"))
+const PhotosSection = dynamic(() => import("@/components/photos-section"))
+const SponsorsSection = dynamic(() => import("@/components/sponsors-section"))
+const ContactSection = dynamic(() => import("@/components/contact-section"))
 
 export default function Home() {
   return (

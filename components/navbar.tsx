@@ -50,12 +50,18 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
+    let rafId: number
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10)
+      cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        setIsScrolled(window.scrollY > 10)
+      })
     }
-
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      cancelAnimationFrame(rafId)
+    }
   }, [])
 
   return (

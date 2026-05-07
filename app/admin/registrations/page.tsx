@@ -2,7 +2,7 @@
 
 import { DialogFooter } from "@/components/ui/dialog"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { db } from "@/lib/firebase/firebase-config"
-import { collection, getDocs, orderBy, query, doc, updateDoc, deleteDoc } from "firebase/firestore"
+import { collection, getDocs, orderBy, query, doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore"
 import {
   Search,
   Filter,
@@ -120,6 +120,8 @@ export default function AdminRegistrationsPage() {
   const [sendingEmail, setSendingEmail] = useState(false)
   const [comprobanteUrl, setComprobanteUrl] = useState("")
   const [loadingComprobante, setLoadingComprobante] = useState(false)
+  const [comprobanteRequested, setComprobanteRequested] = useState(false)
+  const comprobanteCache = useRef<Map<string, string>>(new Map())
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
   const [zoomedImage, setZoomedImage] = useState(false)
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 })
@@ -127,7 +129,7 @@ export default function AdminRegistrationsPage() {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [refreshing, setRefreshing] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(50)
+  const [itemsPerPage, setItemsPerPage] = useState(15)
   const [showFilters, setShowFilters] = useState(false)
   const topRef = useRef(null)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -135,7 +137,6 @@ export default function AdminRegistrationsPage() {
   const { toast } = useToast()
 
   const [priceFilter, setPriceFilter] = useState("all")
-  const [filteredRegistrations, setFilteredRegistrations] = useState([])
 
   const [editFormData, setEditFormData] = useState({
     nombre: "",
@@ -161,48 +162,100 @@ export default function AdminRegistrationsPage() {
     topRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  const CACHE_KEY = "registrations_v2"
+  const CACHE_TTL = 15 * 60 * 1000 // 15 minutos
+
+  const isBase64Data = (str: any) =>
+    typeof str === "string" && (str.startsWith("data:") || str.startsWith("iVBOR") || str.includes("JVBERi0"))
+
+  const applyRegistrationsData = (data: any[]) => {
+    const restored = data.map((r: any) => ({
+      ...r,
+      fechaInscripcion: r.fechaInscripcion ? new Date(r.fechaInscripcion) : null,
+    }))
+    const years = [...new Set(restored.flatMap((r: any) => r.años || []).filter(Boolean))]
+    setAvailableYears((years as number[]).sort((a, b) => b - a))
+    setRegistrations(restored)
+  }
+
   const handleRefresh = async () => {
     setRefreshing(true)
-    await fetchRegistrations()
+    sessionStorage.removeItem(CACHE_KEY)
+    comprobanteCache.current.clear()
+    await fetchRegistrations(true)
     setTimeout(() => setRefreshing(false), 1000)
   }
 
-  const fetchRegistrations = async () => {
-    setLoading(true)
+  const fetchFromFirestore = async () => {
+    const registrationsRef = collection(db, "participantesCicloTermal")
+    const allRegistrationsQuery = query(registrationsRef, orderBy("fechaInscripcion", "desc"))
+    const snapshot = await getDocs(allRegistrationsQuery)
+
+    const registrationsData = snapshot.docs.map((docSnap) => {
+      const data = docSnap.data()
+      const comprobantePagoUrl =
+        data.comprobantePagoUrl && !isBase64Data(data.comprobantePagoUrl)
+          ? data.comprobantePagoUrl
+          : undefined
+      return {
+        id: docSnap.id,
+        ...data,
+        imagenBase64: undefined,
+        comprobantePagoUrl,
+        hasComprobante: !!(data.imagenBase64 || data.comprobantePagoUrl),
+        fechaInscripcion: data.fechaInscripcion?.toDate?.() || null,
+        fechaNacimiento: formatDate(data.fechaNacimiento) || "-",
+      }
+    })
+
+    registrationsData.sort((a, b) => {
+      const aStatus = a.estado || "pendiente"
+      const bStatus = b.estado || "pendiente"
+      if (aStatus === "pendiente" && bStatus !== "pendiente") return -1
+      if (aStatus !== "pendiente" && bStatus === "pendiente") return 1
+      return (b.numeroInscripcion || 0) - (a.numeroInscripcion || 0)
+    })
+
     try {
-      const registrationsRef = collection(db, "participantesCicloTermal")
-      const allRegistrationsQuery = query(registrationsRef, orderBy("fechaInscripcion", "desc"))
-      const snapshot = await getDocs(allRegistrationsQuery)
-
-      const registrationsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        fechaInscripcion: doc.data().fechaInscripcion?.toDate?.() || null,
-        fechaNacimiento: formatDate(doc.data().fechaNacimiento) || "-",
+      const toCache = registrationsData.map((r) => ({
+        ...r,
+        fechaInscripcion: r.fechaInscripcion instanceof Date ? r.fechaInscripcion.toISOString() : null,
       }))
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: toCache, ts: Date.now() }))
+    } catch { /* sessionStorage lleno */ }
 
-      // Aplicar el ordenamiento inicial: primero pendientes, luego por número de inscripción descendente
-      registrationsData.sort((a, b) => {
-        const aStatus = a.estado || "pendiente"
-        const bStatus = b.estado || "pendiente"
+    return registrationsData
+  }
 
-        if (aStatus === "pendiente" && bStatus !== "pendiente") return -1
-        if (aStatus !== "pendiente" && bStatus === "pendiente") return 1
+  const fetchRegistrations = async (forceRefresh = false) => {
+    // Stale-while-revalidate: mostrar cache inmediatamente aunque esté vencido
+    let hasStaleCache = false
+    if (!forceRefresh) {
+      try {
+        const raw = sessionStorage.getItem(CACHE_KEY)
+        if (raw) {
+          const { data, ts } = JSON.parse(raw)
+          applyRegistrationsData(data)
+          setLoading(false)
+          if (Date.now() - ts < CACHE_TTL) return  // fresco, no re-fetchear
+          hasStaleCache = true  // vencido: mostrar pero actualizar de fondo
+        }
+      } catch {
+        sessionStorage.removeItem(CACHE_KEY)
+      }
+    }
 
-        const aNum = a.numeroInscripcion || 0
-        const bNum = b.numeroInscripcion || 0
-        return bNum - aNum
-      })
+    if (!hasStaleCache) setLoading(true)
+    else setRefreshing(true)  // actualización silenciosa de fondo
 
-      const years = [...new Set(registrationsData.flatMap((reg) => reg.años || []).filter(Boolean))]
-      setAvailableYears((years as number[]).sort((a, b) => b - a))
-
-      setRegistrations(registrationsData)
-      setFilteredRegistrations(registrationsData) // filteredRegistrations ya estará ordenado inicialmente
+    try {
+      const data = await fetchFromFirestore()
+      applyRegistrationsData(data)
     } catch (error) {
       console.error("Error fetching registrations:", error)
     } finally {
       setLoading(false)
+      if (hasStaleCache) setRefreshing(false)
     }
   }
 
@@ -210,108 +263,40 @@ export default function AdminRegistrationsPage() {
     fetchRegistrations()
   }, [])
 
+  // Reset página cuando cambia algún filtro
   useEffect(() => {
-    let filtered = registrations
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(
-        (reg) =>
-          reg.nombre?.toLowerCase().includes(term) ||
-          reg.apellido?.toLowerCase().includes(term) ||
-          reg.dni?.includes(term) ||
-          reg.email?.toLowerCase().includes(term) ||
-          reg.telefono?.includes(term) ||
-          reg.localidad?.toLowerCase().includes(term) ||
-          reg.grupoCiclistas?.toLowerCase().includes(term),
-      )
-    }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((reg) => reg.estado === statusFilter)
-    }
-
-    if (yearFilter !== "all") {
-      filtered = filtered.filter((reg) => (reg.años || []).includes(Number.parseInt(yearFilter)))
-    }
-
-    if (healthFilter !== "all") {
-      filtered = filtered.filter((reg) => {
-        const healthInfo = parseHealthConditions(reg.condicionSalud)
-        if (healthFilter === "with_conditions") {
-          return healthInfo.condicionesSalud && healthInfo.condicionesSalud.trim() !== ""
-        } else if (healthFilter === "without_conditions") {
-          return !healthInfo.condicionesSalud || healthInfo.condicionesSalud.trim() === ""
-        }
-        return true
-      })
-    }
-
-    if (celiacFilter !== "all") {
-      filtered = filtered.filter((reg) => {
-        const healthInfo = parseHealthConditions(reg.condicionSalud)
-        return healthInfo.esCeliaco === celiacFilter
-      })
-    }
-
-    if (noteFilter !== "all") {
-      filtered = filtered.filter((reg) => {
-        if (noteFilter === "with_notes") {
-          return reg.nota && reg.nota.trim() !== ""
-        } else if (noteFilter === "without_notes") {
-          return !reg.nota || reg.nota.trim() === ""
-        }
-        return true
-      })
-    }
-
-    if (transferFilter !== "all") {
-      filtered = filtered.filter((reg) => {
-        if (transferFilter === "sin_especificar") {
-          return !reg.transferidoA || reg.transferidoA === "sin_especificar"
-        }
-        return reg.transferidoA === transferFilter
-      })
-    }
-
-    // Ordenar: primero pendientes, luego por número de inscripción descendente (más reciente primero)
-    // Esta lógica ya se aplica en fetchRegistrations para la carga inicial,
-    // pero se mantiene aquí para re-ordenar si los filtros cambian y afectan el orden.
-    filtered.sort((a, b) => {
-      // Prioridad 1: Estado pendiente va primero
-      const aStatus = a.estado || "pendiente"
-      const bStatus = b.estado || "pendiente"
-
-      if (aStatus === "pendiente" && bStatus !== "pendiente") return -1
-      if (aStatus !== "pendiente" && bStatus === "pendiente") return 1
-
-      // Prioridad 2: Por número de inscripción descendente (más alto primero)
-      const aNum = a.numeroInscripcion || 0
-      const bNum = b.numeroInscripcion || 0
-      return bNum - aNum
-    })
-
-    setFilteredRegistrations(filtered)
     setCurrentPage(1)
-  }, [searchTerm, statusFilter, yearFilter, healthFilter, celiacFilter, noteFilter, transferFilter, registrations])
+  }, [searchTerm, statusFilter, yearFilter, healthFilter, celiacFilter, noteFilter, transferFilter])
+
 
   const loadComprobante = async (registration) => {
+    // Cache en memoria por id
+    if (comprobanteCache.current.has(registration.id)) {
+      setComprobanteUrl(comprobanteCache.current.get(registration.id)!)
+      return
+    }
     setLoadingComprobante(true)
     try {
-      let url = ""
-
-      if (registration.comprobantePagoUrl) {
-        url = registration.comprobantePagoUrl
-      } else if (registration.imagenBase64) {
-        url = registration.imagenBase64
+      // Si ya tenemos una URL real (no base64) en memoria, usarla directamente
+      if (registration.comprobantePagoUrl && !isBase64Data(registration.comprobantePagoUrl)) {
+        comprobanteCache.current.set(registration.id, registration.comprobantePagoUrl)
+        setComprobanteUrl(registration.comprobantePagoUrl)
+        return
       }
-
-      setComprobanteUrl(url)
-      return url
+      // Si no, hacer getDoc solo para este registro
+      const docRef = doc(db, "participantesCicloTermal", registration.id)
+      const docSnap = await getDoc(docRef)
+      if (docSnap.exists()) {
+        const data = docSnap.data()
+        const url = data.comprobantePagoUrl || data.imagenBase64 || ""
+        comprobanteCache.current.set(registration.id, url)
+        setComprobanteUrl(url)
+      } else {
+        setComprobanteUrl("")
+      }
     } catch (error) {
       console.error("Error cargando comprobante:", error)
       setComprobanteUrl("")
-      return ""
     } finally {
       setLoadingComprobante(false)
     }
@@ -351,12 +336,13 @@ export default function AdminRegistrationsPage() {
     setIsDragging(false)
   }
 
-  const openDetailsModal = async (registration) => {
+  const openDetailsModal = (registration) => {
     setSelectedRegistration(registration)
     setNewStatus(registration.estado || "pendiente")
     setStatusNote(registration.nota || "")
+    setComprobanteUrl("")
+    setComprobanteRequested(false)
     setIsDetailsModalOpen(true)
-    await loadComprobante(registration)
   }
 
   const closeDetailsModal = () => {
@@ -365,6 +351,7 @@ export default function AdminRegistrationsPage() {
     setNewStatus("")
     setStatusNote("")
     setComprobanteUrl("")
+    setComprobanteRequested(false)
   }
 
   const openImageModal = () => {
@@ -863,15 +850,6 @@ export default function AdminRegistrationsPage() {
     }
   }
 
-  const getStatistics = () => {
-    const total = registrations.length
-    const confirmados = registrations.filter((reg) => reg.estado === "confirmado").length
-    const pendientes = registrations.filter((reg) => reg.estado === "pendiente" || !reg.estado).length
-    const rechazados = registrations.filter((reg) => reg.estado === "rechazado").length
-
-    return { total, confirmados, pendientes, rechazados }
-  }
-
   const clearAllFilters = () => {
     setSearchTerm("")
     setStatusFilter("all")
@@ -883,9 +861,15 @@ export default function AdminRegistrationsPage() {
     setPriceFilter("all")
   }
 
-  const stats = getStatistics()
+  const stats = useMemo(() => {
+    const total = registrations.length
+    const confirmados = registrations.filter((reg) => reg.estado === "confirmado").length
+    const pendientes = registrations.filter((reg) => reg.estado === "pendiente" || !reg.estado).length
+    const rechazados = registrations.filter((reg) => reg.estado === "rechazado").length
+    return { total, confirmados, pendientes, rechazados }
+  }, [registrations])
 
-  const filteredRegistrationsData = registrations.filter((registration) => {
+  const filteredRegistrationsData = useMemo(() => registrations.filter((registration) => {
     const matchesSearch =
       registration.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       registration.apellido?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -937,7 +921,7 @@ export default function AdminRegistrationsPage() {
       matchesTransfer &&
       matchesPrice
     )
-  })
+  }), [registrations, searchTerm, statusFilter, yearFilter, healthFilter, celiacFilter, noteFilter, transferFilter, priceFilter])
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage
@@ -948,6 +932,7 @@ export default function AdminRegistrationsPage() {
   const paginate = (pageNumber) => {
     if (pageNumber > 0 && pageNumber <= totalPages) {
       setCurrentPage(pageNumber)
+      topRef.current?.scrollIntoView({ behavior: "smooth" })
     }
   }
 
@@ -1553,6 +1538,7 @@ export default function AdminRegistrationsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="15">15</SelectItem>
                       <SelectItem value="50">50</SelectItem>
                       <SelectItem value="100">100</SelectItem>
                       <SelectItem value="150">150</SelectItem>
@@ -1949,42 +1935,57 @@ export default function AdminRegistrationsPage() {
                           <p className="text-xs text-gray-500 mt-2">Archivo seleccionado: {newComprobanteFile.name}</p>
                         )}
                       </div>
-                    ) : (
-                      <>
-                        {loadingComprobante ? (
-                          <div className="flex items-center justify-center">
-                            <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
-                            <span className="ml-2 text-sm text-gray-500">Cargando comprobante...</span>
-                          </div>
-                        ) : comprobanteUrl ? (
-                          <div className="flex flex-col items-center justify-center">
-                            {isPDF(comprobanteUrl) ? (
-                              <a
-                                href={comprobanteUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-indigo-600 hover:text-indigo-800 text-sm"
-                              >
-                                Ver comprobante (PDF)
-                              </a>
-                            ) : (
-                              <>
-                                <img
-                                  src={comprobanteUrl || "/placeholder.svg"}
-                                  alt="Comprobante de Pago"
-                                  className="max-h-64 max-w-full rounded-md shadow-md cursor-zoom-in"
-                                  onClick={openImageModal}
-                                />
-                                <Button variant="link" size="sm" onClick={openImageModal} className="text-xs mt-2">
-                                  Ampliar imagen
-                                </Button>
-                              </>
-                            )}
-                          </div>
+                    ) : !comprobanteRequested ? (
+                      <div className="flex items-center gap-3">
+                        {selectedRegistration?.hasComprobante ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                            onClick={() => {
+                              setComprobanteRequested(true)
+                              loadComprobante(selectedRegistration)
+                            }}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            Ver Comprobante
+                          </Button>
                         ) : (
                           <p className="text-sm text-gray-500">No hay comprobante disponible</p>
                         )}
-                      </>
+                      </div>
+                    ) : loadingComprobante ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                        <span className="ml-2 text-sm text-gray-500">Cargando comprobante...</span>
+                      </div>
+                    ) : comprobanteUrl ? (
+                      <div className="flex flex-col items-center justify-center">
+                        {isPDF(comprobanteUrl) ? (
+                          <a
+                            href={comprobanteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:text-indigo-800 text-sm"
+                          >
+                            Ver comprobante (PDF)
+                          </a>
+                        ) : (
+                          <>
+                            <img
+                              src={comprobanteUrl || "/placeholder.svg"}
+                              alt="Comprobante de Pago"
+                              className="max-h-64 max-w-full rounded-md shadow-md cursor-zoom-in"
+                              onClick={openImageModal}
+                            />
+                            <Button variant="link" size="sm" onClick={openImageModal} className="text-xs mt-2">
+                              Ampliar imagen
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No hay comprobante disponible</p>
                     )}
                   </CardContent>
                 </Card>
