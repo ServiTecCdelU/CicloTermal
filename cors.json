@@ -1,0 +1,7 @@
+[
+    {
+      "origin": ["http://localhost:3000", "ciclo-turismo.vercel.app"],
+      "method": ["GET", "PUT", "POST", "DELETE"],
+      "maxAgeSeconds": 3600
+    }
+  ]
