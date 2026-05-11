@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth"
+import { getAuth, signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from "firebase/auth"
 import { db } from "../../lib/firebase/firebase-config"
 import { collection, getDocs, query, where, addDoc, updateDoc } from "firebase/firestore"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,6 +33,66 @@ export default function LoginPage() {
       localStorage.setItem('emailSectionOpen', JSON.stringify(isEmailSectionOpen))
     }
   }, [isEmailSectionOpen])
+
+  // Procesar resultado del redirect de Google
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      const auth = getAuth()
+      try {
+        const result = await getRedirectResult(auth)
+        if (!result) return
+
+        setLoading(true)
+        const user = result.user
+
+        const adminsRef = collection(db, "admins")
+        const adminQuery = query(adminsRef, where("email", "==", user.email))
+        const adminSnapshot = await getDocs(adminQuery)
+
+        if (!adminSnapshot.empty) {
+          const adminDoc = adminSnapshot.docs[0]
+          const adminData = adminDoc.data()
+
+          try {
+            await updateDoc(adminDoc.ref, { lastLogin: new Date() })
+          } catch {}
+
+          if (adminData.role === "admin") {
+            router.push("/admin/dashboard")
+          } else {
+            await auth.signOut()
+            setError("Tu cuenta está pendiente de aprobación por un administrador.")
+          }
+        } else {
+          try {
+            await addDoc(collection(db, "admins"), {
+              email: user.email,
+              displayName: user.displayName || "",
+              photoURL: user.photoURL || "",
+              role: "pending",
+              loginMethod: "google",
+              createdAt: new Date(),
+              lastLogin: new Date()
+            })
+            await auth.signOut()
+            setError("Gracias por registrarte. Tu solicitud de acceso está pendiente de aprobación.")
+          } catch {
+            await auth.signOut()
+            setError("Error al procesar la solicitud. Por favor, intenta nuevamente.")
+          }
+        }
+      } catch (error) {
+        if (error.code !== "auth/no-auth-event") {
+          console.error("Error en redirect de Google:", error)
+          setError("Error al iniciar sesión con Google. Por favor, intenta nuevamente.")
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    handleRedirectResult()
+  }, [])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -103,75 +163,14 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setError("")
     setLoading(true)
-
     try {
       const auth = getAuth()
       const provider = new GoogleAuthProvider()
-      
-      // Autenticar con Google
-      const result = await signInWithPopup(auth, provider)
-      const user = result.user
-      
-      // Verificar si el usuario de Google existe en la colección de admins
-      const adminsRef = collection(db, "admins")
-      const adminQuery = query(adminsRef, where("email", "==", user.email))
-      const adminSnapshot = await getDocs(adminQuery)
-
-      if (!adminSnapshot.empty) {
-        // El usuario ya está en la colección de admins
-        const adminDoc = adminSnapshot.docs[0]
-        const adminData = adminDoc.data()
-        
-        // Actualizar último login
-        try {
-          await updateDoc(adminDoc.ref, {
-            lastLogin: new Date()
-          })
-        } catch (updateError) {
-          console.error("Error al actualizar último login:", updateError)
-        }
-        
-        // Verificar si el usuario tiene rol de administrador
-        if (adminData.role === "admin") {
-          // El usuario es administrador aprobado, redirigir al dashboard
-          router.push("/admin/dashboard")
-        } else {
-          // El usuario está pendiente de aprobación
-          await auth.signOut()
-          setError("Tu cuenta está pendiente de aprobación por un administrador.")
-        }
-      } else {
-        // El usuario no existe en la colección de admins, agregarlo como pendiente
-        try {
-          await addDoc(collection(db, "admins"), {
-            email: user.email,
-            displayName: user.displayName || "",
-            photoURL: user.photoURL || "",
-            role: "pending", // Usuario pendiente de aprobación
-            loginMethod: "google",
-            createdAt: new Date(),
-            lastLogin: new Date()
-          })
-          
-          // Cerrar sesión ya que aún no está aprobado
-          await auth.signOut()
-          setError("Gracias por registrarte. Tu solicitud de acceso está pendiente de aprobación.")
-        } catch (addError) {
-          console.error("Error al guardar usuario en admins:", addError)
-          await auth.signOut()
-          setError("Error al procesar la solicitud. Por favor, intenta nuevamente.")
-        }
-      }
+      await signInWithRedirect(auth, provider)
+      // La página se redirige — el resultado se procesa en el useEffect de arriba
     } catch (error) {
       console.error("Error al iniciar sesión con Google:", error)
-      if (error.code === "auth/popup-closed-by-user") {
-        setError("Inicio de sesión cancelado. Por favor, intenta nuevamente.")
-      } else if (error.code === "auth/cancelled-popup-request") {
-        setError("La solicitud de inicio de sesión fue cancelada. Por favor, intenta nuevamente.")
-      } else {
-        setError("Error al iniciar sesión con Google. Por favor, intenta nuevamente.")
-      }
-    } finally {
+      setError("Error al iniciar sesión con Google. Por favor, intenta nuevamente.")
       setLoading(false)
     }
   }
