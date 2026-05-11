@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef, useMemo, memo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { db } from "@/lib/firebase/firebase-config"
 import { collection, getDocs, query, where } from "firebase/firestore"
@@ -180,36 +180,133 @@ const parseHealthConditions = (condicionSalud: any): CondicionSalud => {
   }
 }
 
+interface DashboardChartsProps {
+  jerseySizeData: ChartDataItem[]
+  genderData: ChartDataItem[]
+  jerseySize: JerseySize
+}
+
+const DashboardCharts = memo(function DashboardCharts({ jerseySizeData, genderData, jerseySize }: DashboardChartsProps) {
+  const yAxisTicks = (() => {
+    const maxValue = Math.max(...jerseySizeData.map((item) => item.value), 0)
+    if (maxValue === 0) return [0]
+    const ticks = []
+    for (let i = 0; i <= maxValue; i++) ticks.push(i)
+    return ticks
+  })()
+
+  return (
+    <div className="grid gap-3 md:gap-6 grid-cols-1 lg:grid-cols-2 mb-4 md:mb-6">
+      {/* Jersey Size Chart */}
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.8 }}>
+        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 border-0 overflow-hidden bg-white">
+          <CardHeader className="border-b bg-gray-50/50 pb-2 md:pb-3 px-2 md:px-4 py-2 md:py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 md:gap-2">
+                <Shirt className="h-4 md:h-5 w-4 md:w-5 text-purple-600" />
+                <div>
+                  <CardTitle className="text-sm md:text-lg font-semibold">Gráfico de Talles</CardTitle>
+                  <CardDescription className="mt-1 text-xs md:text-sm hidden md:block">Distribución visual por talle</CardDescription>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-3 md:pt-6 px-2 md:px-4">
+            <div className="h-48 md:h-64">
+              {jerseySizeData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={jerseySizeData} margin={{ top: 10, right: 15, left: 10, bottom: 5 }}>
+                    <defs>
+                      {JERSEY_COLORS.map((color, index) => (
+                        <linearGradient key={`jersey-gradient-${index}`} id={`jersey-gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={color} stopOpacity={0.8} />
+                          <stop offset="100%" stopColor={color} stopOpacity={0.5} />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} domain={[0, "dataMax"]} ticks={yAxisTicks} />
+                    <Tooltip formatter={(value) => [`${value} remeras`, "Cantidad"]} contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)", fontSize: "12px" }} />
+                    <Bar dataKey="value" name="Remeras" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={1500}>
+                      {jerseySizeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={`url(#jersey-gradient-${index})`} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <Shirt className="h-8 md:h-12 w-8 md:w-12 text-gray-300 mb-2" />
+                  <p className="text-gray-500 text-center text-xs md:text-sm">No hay datos de talles disponibles</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-2 md:mt-4 grid grid-cols-4 md:grid-cols-7 gap-1 md:gap-2 text-xs">
+              {Object.entries(jerseySize).map(([size, count]) => (
+                <div key={size} className="text-center p-1 md:p-2 bg-gray-50 rounded">
+                  <div className="font-bold text-purple-600 text-xs md:text-sm">{size.toUpperCase()}</div>
+                  <div className="text-gray-600 text-xs">{count}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+          <CardFooter className="border-t bg-gray-50/50 py-2 md:py-3 text-xs text-muted-foreground px-2 md:px-4">
+            <div className="flex items-center gap-1"><Clock className="h-2 md:h-3 w-2 md:w-3" />Actualizado: {new Date().toLocaleTimeString()}</div>
+          </CardFooter>
+        </Card>
+      </motion.div>
+
+      {/* Gender Chart */}
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.9 }}>
+        <Card className="shadow-sm hover:shadow-lg transition-all duration-300 border-0 overflow-hidden bg-white">
+          <CardHeader className="border-b bg-gray-50/50 pb-2 md:pb-3 px-2 md:px-4 py-2 md:py-4">
+            <div className="flex items-center gap-1 md:gap-2">
+              <PieChartIcon className="h-4 md:h-5 w-4 md:w-5 text-indigo-600" />
+              <div>
+                <CardTitle className="text-sm md:text-lg font-semibold">Gráfico por Género</CardTitle>
+                <CardDescription className="text-xs md:text-sm hidden md:block">Distribución visual por género</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="h-48 md:h-64 pt-3 md:pt-6 px-2 md:px-4">
+            {genderData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <defs>
+                    {GENDER_COLORS.map((color, index) => (
+                      <linearGradient key={`gender-gradient-${index}`} id={`gender-gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity={0.8} />
+                        <stop offset="100%" stopColor={color} stopOpacity={0.5} />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <Pie data={genderData} cx="50%" cy="50%" innerRadius={20} outerRadius={60} paddingAngle={5} dataKey="value" label={({ name, value }) => `${name}: ${value}`} labelLine={false} animationBegin={0} animationDuration={1500}>
+                    {genderData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={`url(#gender-gradient-${index})`} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full">
+                <Users className="h-8 md:h-12 w-8 md:w-12 text-gray-300 mb-2" />
+                <p className="text-gray-500 text-center text-xs md:text-sm">No hay datos de género disponibles</p>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="border-t bg-gray-50/50 py-2 md:py-3 text-xs text-muted-foreground px-2 md:px-4">
+            <div className="flex items-center gap-1"><Clock className="h-2 md:h-3 w-2 md:w-3" />Actualizado: {new Date().toLocaleTimeString()}</div>
+          </CardFooter>
+        </Card>
+      </motion.div>
+    </div>
+  )
+})
+
 export default function AdminDashboardPage() {
   const { eventSettings } = useFirebaseContext()
   const [registrations, setRegistrations] = useState<Registration[]>([])
-  const [stats, setStats] = useState<DashboardStats>({
-    totalRegistrations: 0,
-    validRegistrations: 0,
-    confirmedRegistrations: 0,
-    pendingRegistrations: 0,
-    maleCount: 0,
-    femaleCount: 0,
-    otherCount: 0,
-    withHealthConditions: 0,
-    celiacCount: 0,
-    jerseySize: {
-      xs: 0,
-      s: 0,
-      m: 0,
-      l: 0,
-      xl: 0,
-      xxl: 0,
-      xxxl: 0,
-    },
-    jerseySizeByStatus: {
-      all: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-      confirmado: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-      pendiente: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-    },
-    registrationsByDay: [],
-    groupsCount: 0,
-  })
   const [loading, setLoading] = useState<boolean>(true)
   const [timeFilter, setTimeFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -221,9 +318,6 @@ export default function AdminDashboardPage() {
   const [celiacModal, setCeliacModal] = useState(false)
   const [jerseyModal, setJerseyModal] = useState(false)
   const [groupsModal, setGroupsModal] = useState(false)
-  const [peopleWithConditions, setPeopleWithConditions] = useState<PersonWithCondition[]>([])
-  const [celiacPeople, setCeliacPeople] = useState<PersonCeliac[]>([])
-  const [groupsInfo, setGroupsInfo] = useState<GroupInfo[]>([])
 
   // Agregar estado para grupos expandidos
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
@@ -278,216 +372,148 @@ export default function AdminDashboardPage() {
   const fetchRegistrations = async () => {
     try {
       const registrationsRef = collection(db, "participantesCicloTermal")
-      const currentYearRegistrations = query(registrationsRef, where("años", "array-contains", new Date().getFullYear()))
-      const snapshot = await getDocs(currentYearRegistrations)
-
-      const registrationsData: Registration[] = snapshot.docs.map((doc) => {
-        const data = doc.data()
+      const q = query(registrationsRef, where("años", "array-contains", new Date().getFullYear()))
+      const snapshot = await getDocs(q)
+      const data: Registration[] = snapshot.docs.map((doc) => {
+        const d = doc.data()
         let fechaInscripcion: Date
-
-        if (data.fechaInscripcion && typeof data.fechaInscripcion.toDate === "function") {
-          fechaInscripcion = data.fechaInscripcion.toDate()
-        } else if (data.fechaInscripcion instanceof Date) {
-          fechaInscripcion = data.fechaInscripcion
-        } else if (data.fechaInscripcion) {
-          fechaInscripcion = new Date(data.fechaInscripcion)
+        if (d.fechaInscripcion && typeof d.fechaInscripcion.toDate === "function") {
+          fechaInscripcion = d.fechaInscripcion.toDate()
+        } else if (d.fechaInscripcion instanceof Date) {
+          fechaInscripcion = d.fechaInscripcion
+        } else if (d.fechaInscripcion) {
+          fechaInscripcion = new Date(d.fechaInscripcion)
         } else {
           fechaInscripcion = new Date()
         }
-
-        return {
-          id: doc.id,
-          ...data,
-          fechaInscripcion,
-        }
+        return { id: doc.id, ...d, fechaInscripcion }
       })
+      setRegistrations(data)
+    } catch (error) {
+      console.error("Error fetching registrations:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-      setRegistrations(registrationsData)
+  useEffect(() => {
+    fetchRegistrations()
+  }, [])
 
-      // Filtrar según el estado seleccionado
-      let filteredForStats = registrationsData
-      if (statusFilter === "confirmado") {
-        filteredForStats = registrationsData.filter((reg) => reg.estado === "confirmado")
-      } else if (statusFilter === "pendiente") {
-        filteredForStats = registrationsData.filter((reg) => reg.estado === "pendiente" || !reg.estado)
-      } else {
-        // "all" - excluir solo rechazados
-        filteredForStats = registrationsData.filter((reg) => reg.estado !== "rechazado")
+  const { stats, peopleWithConditions, celiacPeople, groupsInfo } = useMemo(() => {
+    let filteredForStats = registrations
+    if (statusFilter === "confirmado") {
+      filteredForStats = registrations.filter((reg) => reg.estado === "confirmado")
+    } else if (statusFilter === "pendiente") {
+      filteredForStats = registrations.filter((reg) => reg.estado === "pendiente" || !reg.estado)
+    } else {
+      filteredForStats = registrations.filter((reg) => reg.estado !== "rechazado")
+    }
+
+    const confirmedRegistrations = registrations.filter((reg) => reg.estado === "confirmado")
+    const pendingRegistrations = registrations.filter((reg) => reg.estado === "pendiente" || !reg.estado)
+    const validRegistrations = [...confirmedRegistrations, ...pendingRegistrations]
+
+    const maleCount = filteredForStats.filter((reg) => reg.genero?.toLowerCase() === "masculino").length
+    const femaleCount = filteredForStats.filter((reg) => reg.genero?.toLowerCase() === "femenino").length
+    const otherCount = filteredForStats.filter(
+      (reg) => reg.genero && reg.genero?.toLowerCase() !== "masculino" && reg.genero?.toLowerCase() !== "femenino",
+    ).length
+
+    let withHealthConditions = 0
+    let celiacCount = 0
+    const conditionsList: PersonWithCondition[] = []
+    const celiacList: PersonCeliac[] = []
+
+    filteredForStats.forEach((reg) => {
+      try {
+        const healthInfo = parseHealthConditions(reg.condicionSalud)
+        if (healthInfo.esCeliaco === "si") {
+          celiacCount++
+          celiacList.push({ nombre: reg.nombre || "", apellido: reg.apellido || "" })
+        }
+        if (healthInfo.condicionesSalud && healthInfo.condicionesSalud.trim() !== "") {
+          withHealthConditions++
+          conditionsList.push({ nombre: reg.nombre || "", apellido: reg.apellido || "", condicion: healthInfo.condicionesSalud })
+        }
+      } catch {}
+    })
+
+    const jerseySizeByStatus: JerseySizeByStatus = {
+      all: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
+      confirmado: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
+      pendiente: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
+    }
+    validRegistrations.forEach((reg) => {
+      if (reg.talleRemera) {
+        const size = reg.talleRemera.toLowerCase() as keyof JerseySize
+        if (Object.prototype.hasOwnProperty.call(jerseySizeByStatus.all, size)) jerseySizeByStatus.all[size]++
       }
-
-      const confirmedRegistrations = registrationsData.filter((reg) => reg.estado === "confirmado")
-      const pendingRegistrations = registrationsData.filter((reg) => reg.estado === "pendiente" || !reg.estado)
-      const validRegistrations = [...confirmedRegistrations, ...pendingRegistrations]
-
-      const maleCount = filteredForStats.filter((reg) => reg.genero?.toLowerCase() === "masculino").length
-      const femaleCount = filteredForStats.filter((reg) => reg.genero?.toLowerCase() === "femenino").length
-      const otherCount = filteredForStats.filter(
-        (reg) => reg.genero && reg.genero?.toLowerCase() !== "masculino" && reg.genero?.toLowerCase() !== "femenino",
-      ).length
-
-      let withHealthConditions = 0
-      let celiacCount = 0
-      const conditionsList: PersonWithCondition[] = []
-      const celiacList: PersonCeliac[] = []
-
-      filteredForStats.forEach((reg) => {
-        try {
-          const healthInfo = parseHealthConditions(reg.condicionSalud)
-
-          // Contar celíacos
-          if (healthInfo.esCeliaco === "si") {
-            celiacCount++
-            celiacList.push({
-              nombre: reg.nombre || "",
-              apellido: reg.apellido || "",
-            })
-          }
-
-          // Contar condiciones médicas
-          if (healthInfo.condicionesSalud && healthInfo.condicionesSalud.trim() !== "") {
-            withHealthConditions++
-            conditionsList.push({
-              nombre: reg.nombre || "",
-              apellido: reg.apellido || "",
-              condicion: healthInfo.condicionesSalud,
-            })
-          }
-        } catch (error) {
-          console.error("Error al procesar condicionSalud:", error, reg.id)
-        }
-      })
-
-      setPeopleWithConditions(conditionsList)
-      setCeliacPeople(celiacList)
-
-      // Calcular talles por estado
-      const jerseySizeByStatus: JerseySizeByStatus = {
-        all: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-        confirmado: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-        pendiente: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
+    })
+    confirmedRegistrations.forEach((reg) => {
+      if (reg.talleRemera) {
+        const size = reg.talleRemera.toLowerCase() as keyof JerseySize
+        if (Object.prototype.hasOwnProperty.call(jerseySizeByStatus.confirmado, size)) jerseySizeByStatus.confirmado[size]++
       }
-
-      // Contar talles para todos (sin rechazados)
-      validRegistrations.forEach((reg) => {
-        if (reg.talleRemera) {
-          const size = reg.talleRemera.toLowerCase() as keyof JerseySize
-          if (jerseySizeByStatus.all.hasOwnProperty(size)) {
-            jerseySizeByStatus.all[size]++
-          }
-        }
-      })
-
-      // Contar talles para confirmados
-      confirmedRegistrations.forEach((reg) => {
-        if (reg.talleRemera) {
-          const size = reg.talleRemera.toLowerCase() as keyof JerseySize
-          if (jerseySizeByStatus.confirmado.hasOwnProperty(size)) {
-            jerseySizeByStatus.confirmado[size]++
-          }
-        }
-      })
-
-      // Contar talles para pendientes
-      pendingRegistrations.forEach((reg) => {
-        if (reg.talleRemera) {
-          const size = reg.talleRemera.toLowerCase() as keyof JerseySize
-          if (jerseySizeByStatus.pendiente.hasOwnProperty(size)) {
-            jerseySizeByStatus.pendiente[size]++
-          }
-        }
-      })
-
-      const jerseySizes: JerseySize = {
-        xs: 0,
-        s: 0,
-        m: 0,
-        l: 0,
-        xl: 0,
-        xxl: 0,
-        xxxl: 0,
+    })
+    pendingRegistrations.forEach((reg) => {
+      if (reg.talleRemera) {
+        const size = reg.talleRemera.toLowerCase() as keyof JerseySize
+        if (Object.prototype.hasOwnProperty.call(jerseySizeByStatus.pendiente, size)) jerseySizeByStatus.pendiente[size]++
       }
+    })
 
-      filteredForStats.forEach((reg) => {
-        if (reg.talleRemera) {
-          const size = reg.talleRemera.toLowerCase() as keyof JerseySize
-          if (jerseySizes.hasOwnProperty(size)) {
-            jerseySizes[size]++
-          }
-        }
-      })
-
-      // Contar grupos únicos y sus participantes
-      const groupsMap = new Map<string, string[]>()
-      filteredForStats.forEach((reg) => {
-        const grupo = reg.grupoCiclistas || reg.grupoBici || reg.grupo_bici || reg.grupobici || reg.grupo
-        if (grupo && grupo.trim() !== "") {
-          const groupName = grupo.trim()
-          const participantName = `${reg.nombre || ""} ${reg.apellido || ""}`.trim()
-
-          if (!groupsMap.has(groupName)) {
-            groupsMap.set(groupName, [])
-          }
-          if (participantName) {
-            groupsMap.get(groupName)?.push(participantName)
-          }
-        }
-      })
-
-      const groupsInfoArray: GroupInfo[] = Array.from(groupsMap.entries())
-        .map(([nombre, participantes]) => ({
-          nombre,
-          cantidad: participantes.length,
-          participantes: participantes.sort(),
-        }))
-        .sort((a, b) => b.cantidad - a.cantidad)
-
-      setGroupsInfo(groupsInfoArray)
-
-      const registrationsByDay: Record<string, { total: number; rejected: number }> = {}
-
-      const sortedRegistrations = [...registrationsData].sort(
-        (a, b) => a.fechaInscripcion.getTime() - b.fechaInscripcion.getTime(),
-      )
-
-      if (sortedRegistrations.length > 0) {
-        const firstDate = new Date(sortedRegistrations[0].fechaInscripcion)
-        const lastDate = new Date(sortedRegistrations[sortedRegistrations.length - 1].fechaInscripcion)
-
-        const currentDate = new Date(firstDate)
-        while (currentDate <= lastDate) {
-          const dateStr = currentDate.toLocaleDateString()
-          registrationsByDay[dateStr] = { total: 0, rejected: 0 }
-          currentDate.setDate(currentDate.getDate() + 1)
-        }
+    const jerseySizes: JerseySize = { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 }
+    filteredForStats.forEach((reg) => {
+      if (reg.talleRemera) {
+        const size = reg.talleRemera.toLowerCase() as keyof JerseySize
+        if (Object.prototype.hasOwnProperty.call(jerseySizes, size)) jerseySizes[size]++
       }
+    })
 
-      registrationsData.forEach((reg) => {
-        try {
-          if (reg.fechaInscripcion) {
-            const date = reg.fechaInscripcion.toLocaleDateString()
-            if (!registrationsByDay[date]) {
-              registrationsByDay[date] = { total: 0, rejected: 0 }
-            }
-            registrationsByDay[date].total++
-            if (reg.estado === "rechazado") {
-              registrationsByDay[date].rejected++
-            }
-          }
-        } catch (error) {
-          console.error("Error al procesar fecha:", error)
+    const groupsMap = new Map<string, string[]>()
+    filteredForStats.forEach((reg) => {
+      const grupo = reg.grupoCiclistas || reg.grupoBici || reg.grupo_bici || reg.grupobici || reg.grupo
+      if (grupo && grupo.trim() !== "") {
+        const groupName = grupo.trim()
+        const participantName = `${reg.nombre || ""} ${reg.apellido || ""}`.trim()
+        if (!groupsMap.has(groupName)) groupsMap.set(groupName, [])
+        if (participantName) groupsMap.get(groupName)?.push(participantName)
+      }
+    })
+
+    const groupsInfoArray: GroupInfo[] = Array.from(groupsMap.entries())
+      .map(([nombre, participantes]) => ({ nombre, cantidad: participantes.length, participantes: participantes.sort() }))
+      .sort((a, b) => b.cantidad - a.cantidad)
+
+    const registrationsByDay: Record<string, { total: number; rejected: number }> = {}
+    const sortedRegs = [...registrations].sort((a, b) => a.fechaInscripcion.getTime() - b.fechaInscripcion.getTime())
+    if (sortedRegs.length > 0) {
+      const cur = new Date(sortedRegs[0].fechaInscripcion)
+      const last = new Date(sortedRegs[sortedRegs.length - 1].fechaInscripcion)
+      while (cur <= last) {
+        registrationsByDay[cur.toLocaleDateString()] = { total: 0, rejected: 0 }
+        cur.setDate(cur.getDate() + 1)
+      }
+    }
+    registrations.forEach((reg) => {
+      try {
+        if (reg.fechaInscripcion) {
+          const date = reg.fechaInscripcion.toLocaleDateString()
+          if (!registrationsByDay[date]) registrationsByDay[date] = { total: 0, rejected: 0 }
+          registrationsByDay[date].total++
+          if (reg.estado === "rechazado") registrationsByDay[date].rejected++
         }
-      })
+      } catch {}
+    })
 
-      const registrationsByDayArray = Object.entries(registrationsByDay)
-        .map(([date, counts]) => ({
-          date,
-          total: counts.total,
-          rejected: counts.rejected,
-        }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    const registrationsByDayArray = Object.entries(registrationsByDay)
+      .map(([date, counts]) => ({ date, total: counts.total, rejected: counts.rejected }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
-      setStats({
-        totalRegistrations: registrationsData.length,
+    return {
+      stats: {
+        totalRegistrations: registrations.length,
         validRegistrations: validRegistrations.length,
         confirmedRegistrations: confirmedRegistrations.length,
         pendingRegistrations: pendingRegistrations.length,
@@ -500,17 +526,51 @@ export default function AdminDashboardPage() {
         jerseySizeByStatus,
         registrationsByDay: registrationsByDayArray,
         groupsCount: groupsInfoArray.length,
-      })
-    } catch (error) {
-      console.error("Error fetching registrations:", error)
-    } finally {
-      setLoading(false)
+      } as DashboardStats,
+      peopleWithConditions: conditionsList,
+      celiacPeople: celiacList,
+      groupsInfo: groupsInfoArray,
     }
-  }
+  }, [registrations, statusFilter])
 
-  useEffect(() => {
-    fetchRegistrations()
-  }, [statusFilter])
+  const financialData = useMemo(() => {
+    const sum = (regs: Registration[]) => regs.reduce((acc, reg) => {
+      const amount = (reg.precio || "0").replace(/[$.,]/g, "")
+      return acc + (Number.parseInt(amount) || 0)
+    }, 0)
+    const PRECIOS = ["$25.000", "$33.000", "$35.000"]
+    const total = sum(registrations)
+    const gise = sum(registrations.filter((r) => r.transferidoA === "Gise"))
+    const bruni = sum(registrations.filter((r) => r.transferidoA === "Bruni"))
+    const sinEspecificar = sum(registrations.filter((r) => !r.transferidoA || r.transferidoA === "sin_especificar"))
+    const giseCount = registrations.filter((r) => r.transferidoA === "Gise").length
+    const bruniCount = registrations.filter((r) => r.transferidoA === "Bruni").length
+    const giseByPrecio = PRECIOS.map((p) => {
+      const count = registrations.filter((r) => r.transferidoA === "Gise" && r.precio === p).length
+      const amount = Number.parseInt(p.replace(/[$.,]/g, "")) || 0
+      return { precio: p, count, total: count * amount }
+    })
+    const bruniByPrecio = PRECIOS.map((p) => {
+      const count = registrations.filter((r) => r.transferidoA === "Bruni" && r.precio === p).length
+      const amount = Number.parseInt(p.replace(/[$.,]/g, "")) || 0
+      return { precio: p, count, total: count * amount }
+    })
+    const pendientesByPrecio = PRECIOS.map((p) => {
+      const count = registrations.filter((r) => (!r.transferidoA || r.transferidoA === "sin_especificar") && r.precio === p).length
+      const amount = Number.parseInt(p.replace(/[$.,]/g, "")) || 0
+      return { precio: p, count, total: count * amount }
+    })
+    const giseOtros = { count: 0, total: 0 }
+    const bruniOtros = { count: 0, total: 0 }
+    const pendientesOtros = { count: 0, total: 0 }
+    registrations.forEach((r) => {
+      const amount = Number.parseInt((r.precio || "0").replace(/[$.,]/g, "")) || 0
+      if (r.transferidoA === "Gise" && !PRECIOS.includes(r.precio)) { giseOtros.count++; giseOtros.total += amount }
+      if (r.transferidoA === "Bruni" && !PRECIOS.includes(r.precio)) { bruniOtros.count++; bruniOtros.total += amount }
+      if ((!r.transferidoA || r.transferidoA === "sin_especificar") && !PRECIOS.includes(r.precio)) { pendientesOtros.count++; pendientesOtros.total += amount }
+    })
+    return { total, gise, bruni, sinEspecificar, giseCount, bruniCount, giseByPrecio, bruniByPrecio, pendientesByPrecio, giseOtros, bruniOtros, pendientesOtros }
+  }, [registrations])
 
   const hasRegistrations = stats.validRegistrations > 0
 
@@ -585,18 +645,6 @@ export default function AdminDashboardPage() {
       default:
         return stats.validRegistrations
     }
-  }
-
-  // Generar ticks exactos para el eje Y del gráfico de remeras
-  const generateYAxisTicks = () => {
-    const maxValue = Math.max(...jerseySizeData.map((item) => item.value))
-    if (maxValue === 0) return [0]
-
-    const ticks = []
-    for (let i = 0; i <= maxValue; i++) {
-      ticks.push(i)
-    }
-    return ticks
   }
 
   if (loading) {
@@ -1117,14 +1165,7 @@ export default function AdminDashboardPage() {
               <CardContent className="px-2 md:px-3 pb-2 md:pb-3">
                 <div className="flex items-baseline gap-1">
                   <div className="text-xl md:text-3xl font-bold text-green-900">
-                    $
-                    {registrations
-                      .reduce((total, reg) => {
-                        const precio = reg.precio || "0"
-                        const amount = precio.replace(/[$.,]/g, "")
-                        return total + (Number.parseInt(amount) || 0)
-                      }, 0)
-                      .toLocaleString()}
+                    ${financialData.total.toLocaleString()}
                   </div>
                 </div>
 
@@ -1133,30 +1174,14 @@ export default function AdminDashboardPage() {
                     <span className="flex items-center gap-1">
                       <User className="h-2 md:h-3 w-2 md:w-3 text-blue-600" />
                       <span className="hidden sm:inline">Gise:</span>
-                      <span className="sm:hidden">G:</span>$
-                      {registrations
-                        .filter((reg) => reg.transferidoA === "Gise")
-                        .reduce((total, reg) => {
-                          const precio = reg.precio || "0"
-                          const amount = precio.replace(/[$.,]/g, "")
-                          return total + (Number.parseInt(amount) || 0)
-                        }, 0)
-                        .toLocaleString()}
+                      <span className="sm:hidden">G:</span>${financialData.gise.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="flex items-center gap-1">
                       <User className="h-2 md:h-3 w-2 md:w-3 text-purple-600" />
                       <span className="hidden sm:inline">Bruni:</span>
-                      <span className="sm:hidden">B:</span>$
-                      {registrations
-                        .filter((reg) => reg.transferidoA === "Bruni")
-                        .reduce((total, reg) => {
-                          const precio = reg.precio || "0"
-                          const amount = precio.replace(/[$.,]/g, "")
-                          return total + (Number.parseInt(amount) || 0)
-                        }, 0)
-                        .toLocaleString()}
+                      <span className="sm:hidden">B:</span>${financialData.bruni.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1197,21 +1222,13 @@ export default function AdminDashboardPage() {
               <CardContent className="px-2 md:px-3 pb-2 md:pb-3">
                 <div className="flex items-baseline gap-1">
                   <div className="text-xl md:text-3xl font-bold text-blue-900">
-                    $
-                    {registrations
-                      .filter((reg) => reg.transferidoA === "Gise")
-                      .reduce((total, reg) => {
-                        const precio = reg.precio || "0"
-                        const amount = precio.replace(/[$.,]/g, "")
-                        return total + (Number.parseInt(amount) || 0)
-                      }, 0)
-                      .toLocaleString()}
+                    ${financialData.gise.toLocaleString()}
                   </div>
                 </div>
 
                 <div className="mt-1 flex flex-col md:flex-row items-start md:items-center gap-1 md:gap-2">
                   <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 text-xs px-1 py-0">
-                    {registrations.filter((reg) => reg.transferidoA === "Gise").length} pagos
+                    {financialData.giseCount} pagos
                   </Badge>
                 </div>
 
@@ -1219,40 +1236,11 @@ export default function AdminDashboardPage() {
                   <div className="flex justify-between text-xs mb-1">
                     <span>Del total</span>
                     <span className="font-medium">
-                      {Math.round(
-                        (registrations
-                          .filter((reg) => reg.transferidoA === "Gise")
-                          .reduce((total, reg) => {
-                            const precio = reg.precio || "0"
-                            const amount = precio.replace(/[$.,]/g, "")
-                            return total + (Number.parseInt(amount) || 0)
-                          }, 0) /
-                          registrations.reduce((total, reg) => {
-                            const precio = reg.precio || "0"
-                            const amount = precio.replace(/[$.,]/g, "")
-                            return total + (Number.parseInt(amount) || 0)
-                          }, 0)) *
-                          100,
-                      )}
-                      %
+                      {financialData.total > 0 ? Math.round((financialData.gise / financialData.total) * 100) : 0}%
                     </span>
                   </div>
                   <Progress
-                    value={Math.round(
-                      (registrations
-                        .filter((reg) => reg.transferidoA === "Gise")
-                        .reduce((total, reg) => {
-                          const precio = reg.precio || "0"
-                          const amount = precio.replace(/[$.,]/g, "")
-                          return total + (Number.parseInt(amount) || 0)
-                        }, 0) /
-                        registrations.reduce((total, reg) => {
-                          const precio = reg.precio || "0"
-                          const amount = precio.replace(/[$.,]/g, "")
-                          return total + (Number.parseInt(amount) || 0)
-                        }, 0)) *
-                        100,
-                    )}
+                    value={financialData.total > 0 ? Math.round((financialData.gise / financialData.total) * 100) : 0}
                     className="h-1 md:h-2"
                     indicatorClassName="bg-gradient-to-r from-blue-500 to-blue-600"
                   />
@@ -1282,21 +1270,13 @@ export default function AdminDashboardPage() {
               <CardContent className="px-2 md:px-3 pb-2 md:pb-3">
                 <div className="flex items-baseline gap-1">
                   <div className="text-xl md:text-3xl font-bold text-purple-900">
-                    $
-                    {registrations
-                      .filter((reg) => reg.transferidoA === "Bruni")
-                      .reduce((total, reg) => {
-                        const precio = reg.precio || "0"
-                        const amount = precio.replace(/[$.,]/g, "")
-                        return total + (Number.parseInt(amount) || 0)
-                      }, 0)
-                      .toLocaleString()}
+                    ${financialData.bruni.toLocaleString()}
                   </div>
                 </div>
 
                 <div className="mt-1 flex flex-col md:flex-row items-start md:items-center gap-1 md:gap-2">
                   <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-200 text-xs px-1 py-0">
-                    {registrations.filter((reg) => reg.transferidoA === "Bruni").length} pagos
+                    {financialData.bruniCount} pagos
                   </Badge>
                 </div>
 
@@ -1304,40 +1284,11 @@ export default function AdminDashboardPage() {
                   <div className="flex justify-between text-xs mb-1">
                     <span>Del total</span>
                     <span className="font-medium">
-                      {Math.round(
-                        (registrations
-                          .filter((reg) => reg.transferidoA === "Bruni")
-                          .reduce((total, reg) => {
-                            const precio = reg.precio || "0"
-                            const amount = precio.replace(/[$.,]/g, "")
-                            return total + (Number.parseInt(amount) || 0)
-                          }, 0) /
-                          registrations.reduce((total, reg) => {
-                            const precio = reg.precio || "0"
-                            const amount = precio.replace(/[$.,]/g, "")
-                            return total + (Number.parseInt(amount) || 0)
-                          }, 0)) *
-                          100,
-                      )}
-                      %
+                      {financialData.total > 0 ? Math.round((financialData.bruni / financialData.total) * 100) : 0}%
                     </span>
                   </div>
                   <Progress
-                    value={Math.round(
-                      (registrations
-                        .filter((reg) => reg.transferidoA === "Bruni")
-                        .reduce((total, reg) => {
-                          const precio = reg.precio || "0"
-                          const amount = precio.replace(/[$.,]/g, "")
-                          return total + (Number.parseInt(amount) || 0)
-                        }, 0) /
-                        registrations.reduce((total, reg) => {
-                          const precio = reg.precio || "0"
-                          const amount = precio.replace(/[$.,]/g, "")
-                          return total + (Number.parseInt(amount) || 0)
-                        }, 0)) *
-                        100,
-                    )}
+                    value={financialData.total > 0 ? Math.round((financialData.bruni / financialData.total) * 100) : 0}
                     className="h-1 md:h-2"
                     indicatorClassName="bg-gradient-to-r from-purple-500 to-purple-600"
                   />
@@ -1391,35 +1342,15 @@ export default function AdminDashboardPage() {
                   <div className="flex justify-between text-xs mb-1">
                     <span>Utilizado</span>
                     <span className="font-medium">
-                      {registrations.length > 0
-                        ? Math.round(
-                            (expenses.reduce((total, expense) => total + (expense.monto || 0), 0) /
-                              registrations.reduce((total, reg) => {
-                                const precio = reg.precio || "0"
-                                const amount = precio.replace(/[$.,]/g, "")
-                                return total + (Number.parseInt(amount) || 0)
-                              }, 0)) *
-                              100,
-                          )
-                        : 0}
-                      %
+                      {financialData.total > 0
+                        ? Math.round((expenses.reduce((acc, e) => acc + (e.monto || 0), 0) / financialData.total) * 100)
+                        : 0}%
                     </span>
                   </div>
                   <Progress
-                    value={
-                      registrations.length > 0
-                        ? Math.min(
-                            100,
-                            (expenses.reduce((total, expense) => total + (expense.monto || 0), 0) /
-                              registrations.reduce((total, reg) => {
-                                const precio = reg.precio || "0"
-                                const amount = precio.replace(/[$.,]/g, "")
-                                return total + (Number.parseInt(amount) || 0)
-                              }, 0)) *
-                              100,
-                          )
-                        : 0
-                    }
+                    value={financialData.total > 0
+                      ? Math.min(100, Math.round((expenses.reduce((acc, e) => acc + (e.monto || 0), 0) / financialData.total) * 100))
+                      : 0}
                     className="h-1 md:h-2"
                     indicatorClassName="bg-gradient-to-r from-red-500 to-red-600"
                   />
@@ -1428,177 +1359,8 @@ export default function AdminDashboardPage() {
             </Card>
           </motion.div>
         </div>
-        {/* Main Charts - Más compactos para móvil */}
-        <div className="grid gap-3 md:gap-6 grid-cols-1 lg:grid-cols-2 mb-4 md:mb-6">
-          {/* Jersey Size Chart */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.8 }}
-          >
-            <Card className="shadow-sm hover:shadow-lg transition-all duration-300 border-0 overflow-hidden bg-white">
-              <CardHeader className="border-b bg-gray-50/50 pb-2 md:pb-3 px-2 md:px-4 py-2 md:py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 md:gap-2">
-                    <Shirt className="h-4 md:h-5 w-4 md:w-5 text-purple-600" />
-                    <div>
-                      <CardTitle className="text-sm md:text-lg font-semibold">Gráfico de Talles</CardTitle>
-                      <CardDescription className="mt-1 text-xs md:text-sm hidden md:block">
-                        Distribución visual por talle
-                      </CardDescription>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-3 md:pt-6 px-2 md:px-4">
-                <div className="h-48 md:h-64">
-                  {jerseySizeData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={jerseySizeData} margin={{ top: 10, right: 15, left: 10, bottom: 5 }}>
-                        <defs>
-                          {JERSEY_COLORS.map((color, index) => (
-                            <linearGradient
-                              key={`jersey-gradient-${index}`}
-                              id={`jersey-gradient-${index}`}
-                              x1="0"
-                              y1="0"
-                              x2="0"
-                              y2="1"
-                            >
-                              <stop offset="0%" stopColor={color} stopOpacity={0.8} />
-                              <stop offset="100%" stopColor={color} stopOpacity={0.5} />
-                            </linearGradient>
-                          ))}
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                        <YAxis
-                          allowDecimals={false}
-                          tick={{ fontSize: 10 }}
-                          domain={[0, "dataMax"]}
-                          ticks={generateYAxisTicks()}
-                        />
-                        <Tooltip
-                          formatter={(value, name) => [`${value} remeras`, "Cantidad"]}
-                          contentStyle={{
-                            borderRadius: "8px",
-                            border: "1px solid #e5e7eb",
-                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                            fontSize: "12px",
-                          }}
-                        />
-                        <Bar
-                          dataKey="value"
-                          name="Remeras"
-                          radius={[4, 4, 0, 0]}
-                          animationBegin={0}
-                          animationDuration={1500}
-                        >
-                          {jerseySizeData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={`url(#jersey-gradient-${index})`} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full">
-                      <Shirt className="h-8 md:h-12 w-8 md:w-12 text-gray-300 mb-2" />
-                      <p className="text-gray-500 text-center text-xs md:text-sm">No hay datos de talles disponibles</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Resumen de talles - Más compacto */}
-                <div className="mt-2 md:mt-4 grid grid-cols-4 md:grid-cols-7 gap-1 md:gap-2 text-xs">
-                  {Object.entries(stats.jerseySize).map(([size, count]) => (
-                    <div key={size} className="text-center p-1 md:p-2 bg-gray-50 rounded">
-                      <div className="font-bold text-purple-600 text-xs md:text-sm">{size.toUpperCase()}</div>
-                      <div className="text-gray-600 text-xs">{count}</div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter className="border-t bg-gray-50/50 py-2 md:py-3 text-xs text-muted-foreground px-2 md:px-4">
-                <div className="flex items-center gap-1">
-                  <Clock className="h-2 md:h-3 w-2 md:w-3" />
-                  Actualizado: {new Date().toLocaleTimeString()}
-                </div>
-              </CardFooter>
-            </Card>
-          </motion.div>
-
-          {/* Gender Chart */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.9 }}
-          >
-            <Card className="shadow-sm hover:shadow-lg transition-all duration-300 border-0 overflow-hidden bg-white">
-              <CardHeader className="border-b bg-gray-50/50 pb-2 md:pb-3 px-2 md:px-4 py-2 md:py-4">
-                <div className="flex items-center gap-1 md:gap-2">
-                  <PieChartIcon className="h-4 md:h-5 w-4 md:w-5 text-indigo-600" />
-                  <div>
-                    <CardTitle className="text-sm md:text-lg font-semibold">Gráfico por Género</CardTitle>
-                    <CardDescription className="text-xs md:text-sm hidden md:block">
-                      Distribución visual por género
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="h-48 md:h-64 pt-3 md:pt-6 px-2 md:px-4">
-                {genderData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <defs>
-                        {GENDER_COLORS.map((color, index) => (
-                          <linearGradient
-                            key={`gender-gradient-${index}`}
-                            id={`gender-gradient-${index}`}
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop offset="0%" stopColor={color} stopOpacity={0.8} />
-                            <stop offset="100%" stopColor={color} stopOpacity={0.5} />
-                          </linearGradient>
-                        ))}
-                      </defs>
-                      <Pie
-                        data={genderData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={20}
-                        outerRadius={60}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
-                        labelLine={false}
-                        animationBegin={0}
-                        animationDuration={1500}
-                      >
-                        {genderData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={`url(#gender-gradient-${index})`} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full">
-                    <Users className="h-8 md:h-12 w-8 md:w-12 text-gray-300 mb-2" />
-                    <p className="text-gray-500 text-center text-xs md:text-sm">No hay datos de género disponibles</p>
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="border-t bg-gray-50/50 py-2 md:py-3 text-xs text-muted-foreground px-2 md:px-4">
-                <div className="flex items-center gap-1">
-                  <Clock className="h-2 md:h-3 w-2 md:w-3" />
-                  Actualizado: {new Date().toLocaleTimeString()}
-                </div>
-              </CardFooter>
-            </Card>
-          </motion.div>
-        </div>
+        {/* Main Charts */}
+        <DashboardCharts jerseySizeData={jerseySizeData} genderData={genderData} jerseySize={stats.jerseySize} />
       </div>
 
       {/* Scroll to top button */}
@@ -1977,16 +1739,7 @@ export default function AdminDashboardPage() {
                 {/* Total General */}
                 <div className="bg-green-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold text-green-900 mb-2">Total Recaudado</h3>
-                  <p className="text-3xl font-bold text-green-900">
-                    $
-                    {registrations
-                      .reduce((total, reg) => {
-                        const precio = reg.precio || "0"
-                        const amount = precio.replace(/[$.,]/g, "")
-                        return total + (Number.parseInt(amount) || 0)
-                      }, 0)
-                      .toLocaleString()}
-                  </p>
+                  <p className="text-3xl font-bold text-green-900">${financialData.total.toLocaleString()}</p>
                 </div>
 
                 {/* Transferencias Confirmadas */}
@@ -1995,60 +1748,22 @@ export default function AdminDashboardPage() {
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h3 className="text-lg font-semibold text-blue-900 mb-4">Transferencias a Gise</h3>
                     <div className="space-y-3">
-                      {[
-                        { precio: "$25.000", amount: 25000 },
-                        { precio: "$33.000", amount: 33000 },
-                        { precio: "$35.000", amount: 35000 },
-                      ].map(({ precio, amount }) => {
-                        const count = registrations.filter(
-                          (reg) => reg.transferidoA === "Gise" && reg.precio === precio,
-                        ).length
-                        const total = count * amount
-                        return (
-                          <div key={precio} className="flex justify-between items-center">
-                            <span>
-                              {count} × {precio}
-                            </span>
-                            <span className="font-semibold">${total.toLocaleString()}</span>
-                          </div>
-                        )
-                      })}
-                      {(() => {
-                        const otherCount = registrations.filter(
-                          (reg) =>
-                            reg.transferidoA === "Gise" && !["$25.000", "$33.000", "$35.000"].includes(reg.precio),
-                        ).length
-                        const otherTotal = registrations
-                          .filter(
-                            (reg) =>
-                              reg.transferidoA === "Gise" && !["$25.000", "$33.000", "$35.000"].includes(reg.precio),
-                          )
-                          .reduce((total, reg) => {
-                            const precio = reg.precio || "0"
-                            const amount = precio.replace(/[$.,]/g, "")
-                            return total + (Number.parseInt(amount) || 0)
-                          }, 0)
-                        return otherCount > 0 ? (
-                          <div className="flex justify-between items-center">
-                            <span>{otherCount} × Otro</span>
-                            <span className="font-semibold">${otherTotal.toLocaleString()}</span>
-                          </div>
-                        ) : null
-                      })()}
+                      {financialData.giseByPrecio.map(({ precio, count, total }) => (
+                        <div key={precio} className="flex justify-between items-center">
+                          <span>{count} × {precio}</span>
+                          <span className="font-semibold">${total.toLocaleString()}</span>
+                        </div>
+                      ))}
+                      {financialData.giseOtros.count > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span>{financialData.giseOtros.count} × Otro</span>
+                          <span className="font-semibold">${financialData.giseOtros.total.toLocaleString()}</span>
+                        </div>
+                      )}
                       <div className="border-t pt-2 mt-2">
                         <div className="flex justify-between items-center font-bold text-blue-900">
                           <span>Total Gise:</span>
-                          <span>
-                            $
-                            {registrations
-                              .filter((reg) => reg.transferidoA === "Gise")
-                              .reduce((total, reg) => {
-                                const precio = reg.precio || "0"
-                                const amount = precio.replace(/[$.,]/g, "")
-                                return total + (Number.parseInt(amount) || 0)
-                              }, 0)
-                              .toLocaleString()}
-                          </span>
+                          <span>${financialData.gise.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -2058,60 +1773,22 @@ export default function AdminDashboardPage() {
                   <div className="bg-purple-50 p-4 rounded-lg">
                     <h3 className="text-lg font-semibold text-purple-900 mb-4">Transferencias a Bruni</h3>
                     <div className="space-y-3">
-                      {[
-                        { precio: "$25.000", amount: 25000 },
-                        { precio: "$33.000", amount: 33000 },
-                        { precio: "$35.000", amount: 35000 },
-                      ].map(({ precio, amount }) => {
-                        const count = registrations.filter(
-                          (reg) => reg.transferidoA === "Bruni" && reg.precio === precio,
-                        ).length
-                        const total = count * amount
-                        return (
-                          <div key={precio} className="flex justify-between items-center">
-                            <span>
-                              {count} × {precio}
-                            </span>
-                            <span className="font-semibold">${total.toLocaleString()}</span>
-                          </div>
-                        )
-                      })}
-                      {(() => {
-                        const otherCount = registrations.filter(
-                          (reg) =>
-                            reg.transferidoA === "Bruni" && !["$25.000", "$33.000", "$35.000"].includes(reg.precio),
-                        ).length
-                        const otherTotal = registrations
-                          .filter(
-                            (reg) =>
-                              reg.transferidoA === "Bruni" && !["$25.000", "$33.000", "$35.000"].includes(reg.precio),
-                          )
-                          .reduce((total, reg) => {
-                            const precio = reg.precio || "0"
-                            const amount = precio.replace(/[$.,]/g, "")
-                            return total + (Number.parseInt(amount) || 0)
-                          }, 0)
-                        return otherCount > 0 ? (
-                          <div className="flex justify-between items-center">
-                            <span>{otherCount} × Otro</span>
-                            <span className="font-semibold">${otherTotal.toLocaleString()}</span>
-                          </div>
-                        ) : null
-                      })()}
+                      {financialData.bruniByPrecio.map(({ precio, count, total }) => (
+                        <div key={precio} className="flex justify-between items-center">
+                          <span>{count} × {precio}</span>
+                          <span className="font-semibold">${total.toLocaleString()}</span>
+                        </div>
+                      ))}
+                      {financialData.bruniOtros.count > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span>{financialData.bruniOtros.count} × Otro</span>
+                          <span className="font-semibold">${financialData.bruniOtros.total.toLocaleString()}</span>
+                        </div>
+                      )}
                       <div className="border-t pt-2 mt-2">
                         <div className="flex justify-between items-center font-bold text-purple-900">
                           <span>Total Bruni:</span>
-                          <span>
-                            $
-                            {registrations
-                              .filter((reg) => reg.transferidoA === "Bruni")
-                              .reduce((total, reg) => {
-                                const precio = reg.precio || "0"
-                                const amount = precio.replace(/[$.,]/g, "")
-                                return total + (Number.parseInt(amount) || 0)
-                              }, 0)
-                              .toLocaleString()}
-                          </span>
+                          <span>${financialData.bruni.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -2122,62 +1799,22 @@ export default function AdminDashboardPage() {
                 <div className="bg-orange-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold text-orange-900 mb-4">Pendientes (Sin Transferir)</h3>
                   <div className="space-y-3">
-                    {[
-                      { precio: "$25.000", amount: 25000 },
-                      { precio: "$33.000", amount: 33000 },
-                      { precio: "$35.000", amount: 35000 },
-                    ].map(({ precio, amount }) => {
-                      const count = registrations.filter(
-                        (reg) => (!reg.transferidoA || reg.transferidoA === "sin_especificar") && reg.precio === precio,
-                      ).length
-                      const total = count * amount
-                      return count > 0 ? (
-                        <div key={precio} className="flex justify-between items-center">
-                          <span>
-                            {count} × {precio}
-                          </span>
-                          <span className="font-semibold">${total.toLocaleString()}</span>
-                        </div>
-                      ) : null
-                    })}
-                    {(() => {
-                      const otherCount = registrations.filter(
-                        (reg) =>
-                          (!reg.transferidoA || reg.transferidoA === "sin_especificar") &&
-                          !["$25.000", "$33.000", "$35.000"].includes(reg.precio),
-                      ).length
-                      const otherTotal = registrations
-                        .filter(
-                          (reg) =>
-                            (!reg.transferidoA || reg.transferidoA === "sin_especificar") &&
-                            !["$25.000", "$33.000", "$35.000"].includes(reg.precio),
-                        )
-                        .reduce((total, reg) => {
-                          const precio = reg.precio || "0"
-                          const amount = precio.replace(/[$.,]/g, "")
-                          return total + (Number.parseInt(amount) || 0)
-                        }, 0)
-                      return otherCount > 0 ? (
-                        <div className="flex justify-between items-center">
-                          <span>{otherCount} × Otro</span>
-                          <span className="font-semibold">${otherTotal.toLocaleString()}</span>
-                        </div>
-                      ) : null
-                    })()}
+                    {financialData.pendientesByPrecio.filter(({ count }) => count > 0).map(({ precio, count, total }) => (
+                      <div key={precio} className="flex justify-between items-center">
+                        <span>{count} × {precio}</span>
+                        <span className="font-semibold">${total.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    {financialData.pendientesOtros.count > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span>{financialData.pendientesOtros.count} × Otro</span>
+                        <span className="font-semibold">${financialData.pendientesOtros.total.toLocaleString()}</span>
+                      </div>
+                    )}
                     <div className="border-t pt-2 mt-2">
                       <div className="flex justify-between items-center font-bold text-orange-900">
                         <span>Total Pendientes:</span>
-                        <span>
-                          $
-                          {registrations
-                            .filter((reg) => !reg.transferidoA || reg.transferidoA === "sin_especificar")
-                            .reduce((total, reg) => {
-                              const precio = reg.precio || "0"
-                              const amount = precio.replace(/[$.,]/g, "")
-                              return total + (Number.parseInt(amount) || 0)
-                            }, 0)
-                            .toLocaleString()}
-                        </span>
+                        <span>${financialData.sinEspecificar.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -2187,16 +1824,7 @@ export default function AdminDashboardPage() {
                 <div className="bg-gray-100 p-4 rounded-lg">
                   <div className="flex justify-between items-center text-xl font-bold text-gray-900">
                     <span>Total Confirmados + Pendientes:</span>
-                    <span>
-                      $
-                      {registrations
-                        .reduce((total, reg) => {
-                          const precio = reg.precio || "0"
-                          const amount = precio.replace(/[$.,]/g, "")
-                          return total + (Number.parseInt(amount) || 0)
-                        }, 0)
-                        .toLocaleString()}
-                    </span>
+                    <span>${financialData.total.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
