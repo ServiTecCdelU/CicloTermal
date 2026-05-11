@@ -52,6 +52,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { motion } from "framer-motion"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { parseHealthConditions, type CondicionSalud } from "@/lib/utils"
 
 interface Registration {
   id: string
@@ -64,15 +65,6 @@ interface Registration {
   year?: number
   estado?: string
   grupoCiclistas?: string
-  [key: string]: any
-}
-
-interface CondicionSalud {
-  tieneAlergias?: boolean
-  tomaMedicamentos?: boolean
-  tieneProblemasSalud?: boolean
-  condicionesSalud?: string
-  esCeliaco?: string
   [key: string]: any
 }
 
@@ -155,30 +147,6 @@ const gradientColors = [
   { start: "#10b981", end: "#3b82f6" },
   { start: "#f59e0b", end: "#ef4444" },
 ]
-
-// Función para extraer información de condiciones de salud
-const parseHealthConditions = (condicionSalud: any): CondicionSalud => {
-  if (!condicionSalud) return { condicionesSalud: "", esCeliaco: "no" }
-
-  if (typeof condicionSalud === "string" && condicionSalud.trim().startsWith("{")) {
-    try {
-      const parsed = JSON.parse(condicionSalud)
-      return {
-        condicionesSalud: parsed.condicionesSalud || parsed.condicionSalud || "",
-        esCeliaco: parsed.esCeliaco || "no",
-      }
-    } catch (e) {
-      return { condicionesSalud: condicionSalud, esCeliaco: "no" }
-    }
-  } else if (typeof condicionSalud === "object") {
-    return {
-      condicionesSalud: condicionSalud.condicionesSalud || condicionSalud.condicionSalud || "",
-      esCeliaco: condicionSalud.esCeliaco || "no",
-    }
-  } else {
-    return { condicionesSalud: condicionSalud || "", esCeliaco: "no" }
-  }
-}
 
 interface DashboardChartsProps {
   jerseySizeData: ChartDataItem[]

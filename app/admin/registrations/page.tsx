@@ -52,6 +52,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { useToast } from "@/components/ui/use-toast"
 import { AdminRegistrationsExcel } from "@/components/admin/admin-registrations-excel"
+import { parseHealthConditions } from "@/lib/utils"
 
 // Importa EmailJS
 import emailjs from "@emailjs/browser"
@@ -74,30 +75,6 @@ const formatDate = (dateString) => {
   }
 
   return dateString
-}
-
-// Función para extraer información de condiciones de salud
-const parseHealthConditions = (condicionSalud) => {
-  if (!condicionSalud) return { condicionesSalud: "", esCeliaco: "no" }
-
-  if (typeof condicionSalud === "string" && condicionSalud.trim().startsWith("{")) {
-    try {
-      const parsed = JSON.parse(condicionSalud)
-      return {
-        condicionesSalud: parsed.condicionesSalud || "",
-        esCeliaco: parsed.esCeliaco || "no",
-      }
-    } catch (e) {
-      return { condicionesSalud: condicionSalud, esCeliaco: "no" }
-    }
-  } else if (typeof condicionSalud === "object") {
-    return {
-      condicionesSalud: condicionSalud.condicionesSalud || "",
-      esCeliaco: condicionSalud.esCeliaco || "no",
-    }
-  } else {
-    return { condicionesSalud: condicionSalud || "", esCeliaco: "no" }
-  }
 }
 
 export default function AdminRegistrationsPage() {
