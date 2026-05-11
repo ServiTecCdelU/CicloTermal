@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { db } from "@/lib/firebase/firebase-config"
 import { collection, getDocs, orderBy, query, doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore"
+import { useAdminData } from "@/lib/admin-data-context"
 import {
   Search,
   Filter,
@@ -78,6 +79,7 @@ const formatDate = (dateString) => {
 }
 
 export default function AdminRegistrationsPage() {
+  const { registrations: ctxRegistrations, loadingRegistrations: ctxLoading, refreshRegistrations } = useAdminData()
   const [registrations, setRegistrations] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -138,53 +140,13 @@ export default function AdminRegistrationsPage() {
     topRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  const CACHE_KEY = "registrations_v2"
-  const CACHE_TTL = 15 * 60 * 1000 // 15 minutos
-
-  const isBase64Data = (str: any) =>
-    typeof str === "string" && (str.startsWith("data:") || str.startsWith("iVBOR") || str.includes("JVBERi0"))
-
   const applyRegistrationsData = (data: any[]) => {
-    const restored = data.map((r: any) => ({
+    const processed = data.map((r: any) => ({
       ...r,
-      fechaInscripcion: r.fechaInscripcion ? new Date(r.fechaInscripcion) : null,
+      fechaNacimiento: formatDate(r.fechaNacimiento) || "-",
     }))
-    const years = [...new Set(restored.flatMap((r: any) => r.años || []).filter(Boolean))]
-    setAvailableYears((years as number[]).sort((a, b) => b - a))
-    setRegistrations(restored)
-  }
 
-  const handleRefresh = async () => {
-    setRefreshing(true)
-    sessionStorage.removeItem(CACHE_KEY)
-    comprobanteCache.current.clear()
-    await fetchRegistrations(true)
-    setTimeout(() => setRefreshing(false), 1000)
-  }
-
-  const fetchFromFirestore = async () => {
-    const registrationsRef = collection(db, "participantesCicloTermal")
-    const allRegistrationsQuery = query(registrationsRef, orderBy("fechaInscripcion", "desc"))
-    const snapshot = await getDocs(allRegistrationsQuery)
-
-    const registrationsData = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data()
-      const comprobantePagoUrl =
-        data.comprobantePagoUrl && !isBase64Data(data.comprobantePagoUrl)
-          ? data.comprobantePagoUrl
-          : undefined
-      return {
-        id: docSnap.id,
-        ...data,
-        imagenBase64: undefined,
-        comprobantePagoUrl,
-        hasComprobante: !!(data.imagenBase64 || data.comprobantePagoUrl),
-        fechaInscripcion: data.fechaInscripcion?.toDate?.() || null,
-        fechaNacimiento: formatDate(data.fechaNacimiento) || "-",
-      }
-    })
-
-    registrationsData.sort((a, b) => {
+    processed.sort((a, b) => {
       const aStatus = a.estado || "pendiente"
       const bStatus = b.estado || "pendiente"
       if (aStatus === "pendiente" && bStatus !== "pendiente") return -1
@@ -192,58 +154,36 @@ export default function AdminRegistrationsPage() {
       return (b.numeroInscripcion || 0) - (a.numeroInscripcion || 0)
     })
 
-    try {
-      const toCache = registrationsData.map((r) => ({
-        ...r,
-        fechaInscripcion: r.fechaInscripcion instanceof Date ? r.fechaInscripcion.toISOString() : null,
-      }))
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: toCache, ts: Date.now() }))
-    } catch { /* sessionStorage lleno */ }
-
-    return registrationsData
+    const years = [...new Set(processed.flatMap((r: any) => r.años || []).filter(Boolean))]
+    setAvailableYears((years as number[]).sort((a, b) => b - a))
+    setRegistrations(processed)
   }
 
-  const fetchRegistrations = async (forceRefresh = false) => {
-    // Stale-while-revalidate: mostrar cache inmediatamente aunque esté vencido
-    let hasStaleCache = false
-    if (!forceRefresh) {
-      try {
-        const raw = sessionStorage.getItem(CACHE_KEY)
-        if (raw) {
-          const { data, ts } = JSON.parse(raw)
-          applyRegistrationsData(data)
-          setLoading(false)
-          if (Date.now() - ts < CACHE_TTL) return  // fresco, no re-fetchear
-          hasStaleCache = true  // vencido: mostrar pero actualizar de fondo
-        }
-      } catch {
-        sessionStorage.removeItem(CACHE_KEY)
-      }
-    }
-
-    if (!hasStaleCache) setLoading(true)
-    else setRefreshing(true)  // actualización silenciosa de fondo
-
-    try {
-      const data = await fetchFromFirestore()
-      applyRegistrationsData(data)
-    } catch (error) {
-      console.error("Error fetching registrations:", error)
-    } finally {
-      setLoading(false)
-      if (hasStaleCache) setRefreshing(false)
-    }
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    comprobanteCache.current.clear()
+    await refreshRegistrations()
+    setTimeout(() => setRefreshing(false), 1000)
   }
 
+  // Sincronizar con datos del contexto compartido
   useEffect(() => {
-    fetchRegistrations()
-  }, [])
+    if (!ctxLoading && ctxRegistrations.length > 0) {
+      applyRegistrationsData(ctxRegistrations)
+      setLoading(false)
+    } else if (!ctxLoading) {
+      setLoading(false)
+    }
+  }, [ctxRegistrations, ctxLoading])
 
   // Reset página cuando cambia algún filtro
   useEffect(() => {
     setCurrentPage(1)
   }, [searchTerm, statusFilter, yearFilter, healthFilter, celiacFilter, noteFilter, transferFilter])
 
+
+  const isBase64Data = (str: any) =>
+    typeof str === "string" && (str.startsWith("data:") || str.startsWith("iVBOR") || str.includes("JVBERi0"))
 
   const loadComprobante = async (registration) => {
     // Cache en memoria por id

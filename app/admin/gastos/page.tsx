@@ -21,6 +21,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { db } from "@/lib/firebase/firebase-config"
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "firebase/firestore"
+import { useAdminData } from "@/lib/admin-data-context"
 import {
   Plus,
   Edit,
@@ -69,6 +70,7 @@ const EXPENSE_CATEGORIES = [
 ]
 
 export default function ExpensesPage() {
+  const { expenses: ctxExpenses, registrations: ctxRegistrations, loadingExpenses: ctxLoadingExpenses, loadingRegistrations: ctxLoadingRegistrations, refreshExpenses } = useAdminData()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [loading, setLoading] = useState(true)
@@ -112,40 +114,28 @@ export default function ExpensesPage() {
   const remainingMoney = totalIncome - totalExpenses
   const expensePercentage = totalIncome > 0 ? Math.round((totalExpenses / totalIncome) * 100) : 0
 
-  const fetchData = async () => {
-    try {
-      // Fetch expenses
-      const expensesRef = collection(db, "gastos2025")
-      const expensesSnapshot = await getDocs(expensesRef)
-      const expensesData: Expense[] = expensesSnapshot.docs.map((doc) => {
-        const data = doc.data()
-        return {
-          id: doc.id,
-          ...data,
-          fecha: data.fecha?.toDate() || new Date(),
-        }
-      })
-      setExpenses(expensesData.sort((a, b) => b.fecha.getTime() - a.fecha.getTime()))
-
-      // Fetch registrations for income calculation
-      const registrationsRef = collection(db, "participantesCicloTermal")
-      const currentYearRegistrations = query(registrationsRef, where("años", "array-contains", new Date().getFullYear()))
-      const registrationsSnapshot = await getDocs(currentYearRegistrations)
-      const registrationsData: Registration[] = registrationsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      setRegistrations(registrationsData.filter((reg) => reg.estado !== "rechazado"))
-    } catch (error) {
-      console.error("Error fetching data:", error)
-    } finally {
-      setLoading(false)
+  // Sincronizar con datos del contexto compartido
+  useEffect(() => {
+    if (!ctxLoadingExpenses) {
+      setExpenses(ctxExpenses as Expense[])
     }
-  }
+  }, [ctxExpenses, ctxLoadingExpenses])
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    if (!ctxLoadingRegistrations) {
+      const currentYear = new Date().getFullYear()
+      const filtered = ctxRegistrations
+        .filter((r) => r.años?.includes(currentYear) && r.estado !== "rechazado")
+        .map((r) => ({ id: r.id, precio: r.precio, transfirio_a: r.transfirio_a }))
+      setRegistrations(filtered)
+    }
+  }, [ctxRegistrations, ctxLoadingRegistrations])
+
+  useEffect(() => {
+    if (!ctxLoadingExpenses && !ctxLoadingRegistrations) {
+      setLoading(false)
+    }
+  }, [ctxLoadingExpenses, ctxLoadingRegistrations])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -185,7 +175,7 @@ export default function ExpensesPage() {
       })
 
       // Refresh data
-      fetchData()
+      refreshExpenses()
     } catch (error) {
       console.error("Error saving expense:", error)
     }
@@ -207,7 +197,7 @@ export default function ExpensesPage() {
     if (confirm("¿Estás seguro de que quieres eliminar este gasto?")) {
       try {
         await deleteDoc(doc(db, "gastos2025", expenseId))
-        fetchData()
+        refreshExpenses()
       } catch (error) {
         console.error("Error deleting expense:", error)
       }

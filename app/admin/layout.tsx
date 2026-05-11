@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { auth } from "@/lib/firebase/firebase-config"
 import AdminSidebar from "@/components/admin/admin-sidebar"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
+import { AdminDataProvider } from "@/lib/admin-data-context"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
@@ -67,9 +68,11 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-pink-50 to-blue-50">
-      <AdminSidebar />
-      <div className="flex-1 p-4 md:p-6">{children}</div>
-    </div>
+    <AdminDataProvider>
+      <div className="flex min-h-screen bg-gradient-to-br from-pink-50 to-blue-50">
+        <AdminSidebar />
+        <div className="flex-1 p-4 md:p-6">{children}</div>
+      </div>
+    </AdminDataProvider>
   )
 }
