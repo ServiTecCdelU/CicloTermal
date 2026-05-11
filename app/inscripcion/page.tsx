@@ -2,45 +2,35 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { doc, getDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase/firebase-config"
+import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { Loader2 } from "lucide-react"
 
 export default function InscripcionRedirect() {
   const router = useRouter()
+  const { ciclosConfig, eventSettings } = useFirebaseContext()
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    const redirect = async () => {
-      try {
-        const snap = await getDoc(doc(db, "configuracion", "inscripciones"))
-        if (snap.exists()) {
-          const ciclos: any[] = snap.data().ciclos || []
-          const today = new Date().toISOString().slice(0, 10)
-          const activo = ciclos.find(
-            (c) =>
-              c.habilitado &&
-              (!c.fechaDesde || today >= c.fechaDesde) &&
-              (!c.fechaHasta || today <= c.fechaHasta),
-          )
-          if (activo) {
-            router.replace(`/inscripcion/${activo.año}`)
-            return
-          }
-          // Si hay alguno habilitado aunque esté fuera de rango, redirigir igual
-          const habilitado = ciclos.find((c) => c.habilitado)
-          if (habilitado) {
-            router.replace(`/inscripcion/${habilitado.año}`)
-            return
-          }
-        }
-        setError(true)
-      } catch {
-        setError(true)
-      }
+    if (eventSettings === null) return
+
+    const today = new Date().toISOString().slice(0, 10)
+    const activo = ciclosConfig.find(
+      (c) =>
+        c.habilitado &&
+        (!c.fechaDesde || today >= c.fechaDesde) &&
+        (!c.fechaHasta || today <= c.fechaHasta),
+    )
+    if (activo) {
+      router.replace(`/inscripcion/${activo.año}`)
+      return
     }
-    redirect()
-  }, [router])
+    const habilitado = ciclosConfig.find((c) => c.habilitado)
+    if (habilitado) {
+      router.replace(`/inscripcion/${habilitado.año}`)
+      return
+    }
+    setError(true)
+  }, [ciclosConfig, eventSettings, router])
 
   if (error) {
     return (
