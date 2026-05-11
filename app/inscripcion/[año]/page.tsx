@@ -49,7 +49,7 @@ import { Progress } from "@/components/ui/progress"
 import emailjs from "@emailjs/browser"
 
 if (typeof window !== "undefined") {
-  emailjs.init("azc3nwXCG2ojZsRsB")
+  emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_KEY_INSCRIPCION!)
 }
 
 const gruposCiclistas = [
@@ -396,7 +396,7 @@ export default function InscripcionAño() {
 
   const sendAdminNotificationEmail = async (participantData) => {
     try {
-      await emailjs.send("default_service", "template_f7yvb9x", {
+      await emailjs.send(process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!, process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_INSCRIPCION!, {
         nombre: participantData.nombre,
         apellido: participantData.apellido,
         comprobanteUrl: participantData.nombreArchivo || "comprobante",

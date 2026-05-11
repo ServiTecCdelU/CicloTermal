@@ -53,9 +53,8 @@ import { useToast } from "@/components/ui/use-toast"
 // Importa EmailJS
 import emailjs from "@emailjs/browser"
 
-// Inicializa EmailJS
 if (typeof window !== "undefined") {
-  emailjs.init("qZ1uWOlXB-rlAsutR")
+  emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_KEY_ADMIN!)
 }
 
 // Función para formatear fechas
@@ -382,7 +381,11 @@ export default function AdminRegistrationsPage() {
         fechaInscripcion: participant.fechaInscripcion?.toLocaleDateString("es-ES") || "",
       }
 
-      const response = await emailjs.send("default_service", "template_2fg4bhx", templateParams)
+      const response = await emailjs.send(
+        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
+        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ADMIN!,
+        templateParams,
+      )
 
       console.log("Email enviado con éxito:", response)
       return true

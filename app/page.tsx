@@ -1,3 +1,5 @@
+"use client"
+
 import dynamic from "next/dynamic"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
