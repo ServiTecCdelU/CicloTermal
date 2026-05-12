@@ -210,6 +210,21 @@ export default function InscripcionAño() {
     check()
   }, [añoParam])
 
+  const parseFecha = (s: string): Date | null => {
+    for (const fmt of ["yyyy-MM-dd", "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy"]) {
+      try {
+        const p = parse(s, fmt, new Date())
+        if (!isNaN(p.getTime())) return p
+      } catch {}
+    }
+    return null
+  }
+
+  const normalizeGenero = (v: string) => {
+    const map: Record<string, string> = { masculino: "Masculino", femenino: "Femenino", otro: "Otro" }
+    return map[v?.toLowerCase()] ?? v
+  }
+
   // Lookup DNI en participantesCicloTermal
   const lookupDni = async (dni: string) => {
     if (!dni || dni.length < 7) return
@@ -218,6 +233,8 @@ export default function InscripcionAño() {
       const snap = await getDoc(doc(db, "participantesCicloTermal", dni.trim()))
       if (snap.exists()) {
         const data = snap.data()
+        const grupoSanguineo = data.grupoSanguineo ? String(data.grupoSanguineo).toUpperCase() : undefined
+        const genero = data.genero ? normalizeGenero(String(data.genero)) : undefined
         setFormData((prev) => ({
           ...prev,
           nombre: data.nombre ?? prev.nombre,
@@ -229,15 +246,13 @@ export default function InscripcionAño() {
           paisTelefonoEmergencia: data.paisTelefonoEmergencia ?? prev.paisTelefonoEmergencia,
           fechaNacimiento: data.fechaNacimiento ?? prev.fechaNacimiento,
           localidad: data.localidad ?? prev.localidad,
-          grupoSanguineo: data.grupoSanguineo ?? prev.grupoSanguineo,
-          genero: data.genero ?? prev.genero,
+          grupoSanguineo: grupoSanguineo ?? prev.grupoSanguineo,
+          genero: genero ?? prev.genero,
           grupoCiclistas: data.grupoCiclistas ?? prev.grupoCiclistas,
         }))
         if (data.fechaNacimiento) {
-          try {
-            const parsed = parse(data.fechaNacimiento, "yyyy-MM-dd", new Date())
-            if (!isNaN(parsed.getTime())) setBirthDate(parsed)
-          } catch { /* ignorar */ }
+          const parsed = parseFecha(String(data.fechaNacimiento))
+          if (parsed) setBirthDate(parsed)
         }
         setDniFound(true)
         toast({ title: "Perfil encontrado", description: "Se precargaron tus datos personales.", variant: "success" })
@@ -266,11 +281,10 @@ export default function InscripcionAño() {
 
   useEffect(() => {
     if (formData.fechaNacimiento && !birthDate) {
-      try {
-        const p = parse(formData.fechaNacimiento, "yyyy-MM-dd", new Date())
-        if (!isNaN(p.getTime())) setBirthDate(p)
-      } catch { /* ignorar */ }
+      const p = parseFecha(formData.fechaNacimiento)
+      if (p) setBirthDate(p)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.fechaNacimiento])
 
   const handleCloseSuccessDialog = () => {
@@ -303,14 +317,14 @@ export default function InscripcionAño() {
   const handleInputChange = (e) => {
     const { name, value, type } = e.target
     const newValue = type === "checkbox" ? e.target.checked : value
-    setFormData({ ...formData, [name]: newValue })
+    setFormData((prev) => ({ ...prev, [name]: newValue }))
     if (["nombre", "apellido", "dni", "email", "telefono", "nombreTransferencia"].includes(name)) {
-      setFieldErrors({ ...fieldErrors, [name]: validateField(name, newValue) })
+      setFieldErrors((prev) => ({ ...prev, [name]: validateField(name, newValue) }))
     }
   }
 
-  const handleCheckboxChange = (name, checked) => setFormData({ ...formData, [name]: checked })
-  const handleSelectChange = (name, value) => setFormData({ ...formData, [name]: value })
+  const handleCheckboxChange = (name, checked) => setFormData((prev) => ({ ...prev, [name]: checked }))
+  const handleSelectChange = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }))
 
   const handleFileChange = (e) => {
     const file = e.target.files[0]
@@ -323,7 +337,7 @@ export default function InscripcionAño() {
       toast({ title: "Tipo de archivo no válido", description: "Solo JPG, PNG o PDF.", variant: "destructive" })
       e.target.value = ""; return
     }
-    setFormData({ ...formData, comprobantePago: file })
+    setFormData((prev) => ({ ...prev, comprobantePago: file }))
     toast({ title: "Archivo cargado", description: "Comprobante cargado correctamente.", variant: "success" })
   }
 
