@@ -163,7 +163,7 @@ const emptyForm = {
   email: "", telefono: "", paisTelefono: "Argentina",
   telefonoEmergencia: "", paisTelefonoEmergencia: "Argentina",
   grupoSanguineo: "", genero: "", grupoCiclistas: "", talleRemera: "",
-  condicionesSalud: "", esCeliaco: "", recorrido: "",
+  condicionesSalud: "", esCeliaco: "",
   transferidoA: "", nombreTransferencia: "", horarioTransferencia: "",
   aceptaCondiciones: false, comprobantePago: null, comprobantePagoUrl: "",
 }
@@ -215,23 +215,23 @@ export default function InscripcionAño() {
     if (!dni || dni.length < 7) return
     setDniLookingUp(true)
     try {
-      const snap = await getDoc(doc(db, "participantesCicloTermal", dni))
+      const snap = await getDoc(doc(db, "participantesCicloTermal", dni.trim()))
       if (snap.exists()) {
         const data = snap.data()
         setFormData((prev) => ({
           ...prev,
-          nombre: data.nombre || prev.nombre,
-          apellido: data.apellido || prev.apellido,
-          email: data.email || prev.email,
-          telefono: data.telefono || prev.telefono,
-          paisTelefono: data.paisTelefono || prev.paisTelefono,
-          telefonoEmergencia: data.telefonoEmergencia || prev.telefonoEmergencia,
-          paisTelefonoEmergencia: data.paisTelefonoEmergencia || prev.paisTelefonoEmergencia,
-          fechaNacimiento: data.fechaNacimiento || prev.fechaNacimiento,
-          localidad: data.localidad || prev.localidad,
-          grupoSanguineo: data.grupoSanguineo || prev.grupoSanguineo,
-          genero: data.genero || prev.genero,
-          grupoCiclistas: data.grupoCiclistas || prev.grupoCiclistas,
+          nombre: data.nombre ?? prev.nombre,
+          apellido: data.apellido ?? prev.apellido,
+          email: data.email ?? prev.email,
+          telefono: data.telefono ?? prev.telefono,
+          paisTelefono: data.paisTelefono ?? prev.paisTelefono,
+          telefonoEmergencia: data.telefonoEmergencia ?? prev.telefonoEmergencia,
+          paisTelefonoEmergencia: data.paisTelefonoEmergencia ?? prev.paisTelefonoEmergencia,
+          fechaNacimiento: data.fechaNacimiento ?? prev.fechaNacimiento,
+          localidad: data.localidad ?? prev.localidad,
+          grupoSanguineo: data.grupoSanguineo ?? prev.grupoSanguineo,
+          genero: data.genero ?? prev.genero,
+          grupoCiclistas: data.grupoCiclistas ?? prev.grupoCiclistas,
         }))
         if (data.fechaNacimiento) {
           try {
@@ -244,10 +244,21 @@ export default function InscripcionAño() {
       } else {
         setDniFound(false)
       }
-    } catch { /* ignorar */ } finally {
+    } catch (err: any) {
+      toast({ title: "Error al buscar DNI", description: err?.message || "Verificá tu conexión", variant: "destructive" })
+    } finally {
       setDniLookingUp(false)
     }
   }
+
+  // Dispara el lookup mientras el usuario escribe (debounce 600ms)
+  useEffect(() => {
+    const dni = formData.dni.trim()
+    if (dni.length < 7) return
+    const timer = setTimeout(() => lookupDni(dni), 600)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.dni])
 
   useEffect(() => {
     if (birthDate) setFormData((prev) => ({ ...prev, fechaNacimiento: format(birthDate, "yyyy-MM-dd") }))
@@ -296,11 +307,6 @@ export default function InscripcionAño() {
     if (["nombre", "apellido", "dni", "email", "telefono", "nombreTransferencia"].includes(name)) {
       setFieldErrors({ ...fieldErrors, [name]: validateField(name, newValue) })
     }
-  }
-
-  const handleDniBlur = (e?: React.FocusEvent<HTMLInputElement>) => {
-    const dni = e?.target?.value ?? formData.dni
-    if (dni && dni.length >= 7) lookupDni(dni)
   }
 
   const handleCheckboxChange = (name, checked) => setFormData({ ...formData, [name]: checked })
@@ -352,7 +358,6 @@ export default function InscripcionAño() {
       if (!formData.grupoSanguineo) errors.grupoSanguineo = "Obligatorio"
       if (!formData.genero) errors.genero = "Obligatorio"
       if (!formData.grupoCiclistas) errors.grupoCiclistas = "Obligatorio"
-      if (!formData.recorrido) errors.recorrido = "Obligatorio"
     } else if (step === 2) {
       if (!formData.esCeliaco) errors.esCeliaco = "Debe indicar si es celíaco"
     } else if (step === 3) {
@@ -581,7 +586,6 @@ export default function InscripcionAño() {
                     <Input
                       id="dni" name="dni" value={formData.dni}
                       onChange={handleInputChange}
-                      onBlur={handleDniBlur}
                       className={fieldErrors.dni ? "border-red-500 pr-8" : "pr-8"}
                       placeholder="Ej: 32456789"
                     />
@@ -705,17 +709,6 @@ export default function InscripcionAño() {
                     </PopoverContent>
                   </Popover>
                   <p className="text-xs text-gray-500">Escriba el nombre de su grupo o seleccione uno de la lista.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="recorrido" className="flex justify-between">
-                    <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-green-500" />Recorrido *</span>
-                    {fieldErrors.recorrido && <span className="text-red-500 text-xs">{fieldErrors.recorrido}</span>}
-                  </Label>
-                  <RadioGroup value={formData.recorrido} onValueChange={(v) => handleSelectChange("recorrido", v)} className="flex flex-col space-y-1 mt-2">
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="30km" id="r-30" /><Label htmlFor="r-30" className="font-normal">30 KM</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="50km" id="r-50" /><Label htmlFor="r-50" className="font-normal">50 KM</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="aun_no_decido" id="r-nd" /><Label htmlFor="r-nd" className="font-normal">Aún no decido</Label></div>
-                  </RadioGroup>
                 </div>
               </div>
             </div>
