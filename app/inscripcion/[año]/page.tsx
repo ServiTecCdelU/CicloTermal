@@ -42,7 +42,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
-  Clock,
   Search,
 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
@@ -164,7 +163,7 @@ const emptyForm = {
   telefonoEmergencia: "", paisTelefonoEmergencia: "Argentina",
   grupoSanguineo: "", genero: "", grupoCiclistas: "", talleRemera: "",
   condicionesSalud: "", esCeliaco: "",
-  transferidoA: "", nombreTransferencia: "", horarioTransferencia: "",
+  nombreTransferencia: "",
   aceptaCondiciones: false, comprobantePago: null, comprobantePagoUrl: "",
 }
 
@@ -185,6 +184,8 @@ export default function InscripcionAño() {
   const [dniLookingUp, setDniLookingUp] = useState(false)
   const [dniFound, setDniFound] = useState(false)
   const [formData, setFormData] = useState(emptyForm)
+  const [datosPago1, setDatosPago1] = useState("")
+  const [datosPago2, setDatosPago2] = useState("")
 
   const totalSteps = 3
 
@@ -193,15 +194,23 @@ export default function InscripcionAño() {
     if (!añoParam || isNaN(añoParam)) { setCicloStatus("not_found"); return }
     const check = async () => {
       try {
-        const snap = await getDoc(doc(db, "configuracion", "inscripciones"))
-        if (!snap.exists()) { setCicloStatus("not_found"); return }
-        const ciclos: any[] = snap.data().ciclos || []
+        const [ciclosSnap, settingsSnap] = await Promise.all([
+          getDoc(doc(db, "configuracion", "inscripciones")),
+          getDoc(doc(db, "settings", "eventSettings")),
+        ])
+        if (!ciclosSnap.exists()) { setCicloStatus("not_found"); return }
+        const ciclos: any[] = ciclosSnap.data().ciclos || []
         const ciclo = ciclos.find((c) => c.año === añoParam)
         if (!ciclo) { setCicloStatus("not_found"); return }
         if (!ciclo.habilitado) { setCicloStatus("disabled"); return }
         const today = new Date().toISOString().slice(0, 10)
         if (ciclo.fechaDesde && today < ciclo.fechaDesde) { setCicloStatus("closed"); return }
         if (ciclo.fechaHasta && today > ciclo.fechaHasta) { setCicloStatus("closed"); return }
+        if (settingsSnap.exists()) {
+          const d = settingsSnap.data()
+          setDatosPago1(d.datosPago1 ?? "")
+          setDatosPago2(d.datosPago2 ?? "")
+        }
         setCicloStatus("open")
       } catch {
         setCicloStatus("not_found")
@@ -378,8 +387,6 @@ export default function InscripcionAño() {
       if (!formData.aceptaCondiciones) errors.aceptaCondiciones = "Debe aceptar los términos"
       if (!formData.nombreTransferencia) errors.nombreTransferencia = "Obligatorio"
       else if (!validateName(formData.nombreTransferencia)) errors.nombreTransferencia = "Solo letras"
-      if (!formData.horarioTransferencia) errors.horarioTransferencia = "Obligatorio"
-      if (!formData.transferidoA) errors.transferidoA = "Obligatorio"
     }
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) {
@@ -478,14 +485,12 @@ export default function InscripcionAño() {
         precio: "",
         estado: "pendiente",
         comprobantePagoUrl: "",
-        transferidoA: "",
         numeroInscripcion,
         aceptaTerminos: formData.aceptaCondiciones,
         fechaInscripcion: new Date().toISOString(),
         fechaActualizacion: new Date().toISOString(),
         // Campos de transferencia del ciclo actual
         nombreTransferencia: formData.nombreTransferencia || "",
-        horarioTransferencia: formData.horarioTransferencia || "",
       }
 
       const docRef = doc(db, "participantesCicloTermal", formData.dni)
@@ -766,68 +771,41 @@ export default function InscripcionAño() {
                 <DollarSign className="h-5 w-5" />
                 Información de pago
               </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                <Alert className="bg-white border-blue-200">
-                  <AlertCircle className="h-4 w-4 text-blue-500" />
-                  <AlertTitle className="text-blue-800">Dato de pago 1 - Argentina</AlertTitle>
-                  <AlertDescription className="text-blue-700">
-                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                      <li>Banco: Naranja X</li>
-                      <li>Titular: Nancy Gisela Orbes</li>
-                      <li>CUIT: 27-26233106-2</li>
-                      <li>CBU: 4530000800016415745759</li>
-                      <li>Alias: ciclotermal2025</li>
-                      <li><strong>Importe: $35.000 (ARS)</strong></li>
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-                <Alert className="bg-white border-green-200">
-                  <AlertCircle className="h-4 w-4 text-green-500" />
-                  <AlertTitle className="text-green-800">Dato de pago 2 - Uruguay</AlertTitle>
-                  <AlertDescription className="text-green-700">
-                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                      <li>Banco: Prex</li>
-                      <li>Titular: Nancy Gisela Orbes</li>
-                      <li>CBU: 0000013000032290638313</li>
-                      <li>Alias: CicloTermal.PREX</li>
-                      <li><strong>Importe: $1.300 (UYU)</strong></li>
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              </div>
+              {(datosPago1 || datosPago2) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                  {datosPago1 && (
+                    <Alert className="bg-white border-blue-200">
+                      <AlertCircle className="h-4 w-4 text-blue-500" />
+                      <AlertTitle className="text-blue-800">Dato de pago 1 - Argentina</AlertTitle>
+                      <AlertDescription className="text-blue-700 whitespace-pre-line mt-2 text-sm">
+                        {datosPago1}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {datosPago2 && (
+                    <Alert className="bg-white border-green-200">
+                      <AlertCircle className="h-4 w-4 text-green-500" />
+                      <AlertTitle className="text-green-800">Dato de pago 2 - Uruguay</AlertTitle>
+                      <AlertDescription className="text-green-700 whitespace-pre-line mt-2 text-sm">
+                        {datosPago2}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
 
-              <div className="space-y-4 mt-6 border-t pt-4">
+              <div className="space-y-4 mt-4 border-t pt-4">
                 <h4 className="font-medium text-gray-800 flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
                   Detalles de la transferencia
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nombreTransferencia" className="flex justify-between">
-                      <span>Nombre de quien transfiere *</span>
-                      {fieldErrors.nombreTransferencia && <span className="text-red-500 text-xs">{fieldErrors.nombreTransferencia}</span>}
-                    </Label>
-                    <Input id="nombreTransferencia" name="nombreTransferencia" value={formData.nombreTransferencia} onChange={handleInputChange}
-                      className={fieldErrors.nombreTransferencia ? "border-red-500" : ""} placeholder="Nombre completo" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="horarioTransferencia" className="flex justify-between items-center">
-                      <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5 text-gray-500" />Horario de transferencia *</span>
-                      {fieldErrors.horarioTransferencia && <span className="text-red-500 text-xs">{fieldErrors.horarioTransferencia}</span>}
-                    </Label>
-                    <Input id="horarioTransferencia" name="horarioTransferencia" type="datetime-local" value={formData.horarioTransferencia}
-                      onChange={handleInputChange} className={fieldErrors.horarioTransferencia ? "border-red-500" : ""} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="transferidoA" className="flex justify-between">
-                    <span>Transferido a *</span>
-                    {fieldErrors.transferidoA && <span className="text-red-500 text-xs">{fieldErrors.transferidoA}</span>}
+                <div className="space-y-2 max-w-xs">
+                  <Label htmlFor="nombreTransferencia" className="flex justify-between">
+                    <span>Nombre de quien transfiere *</span>
+                    {fieldErrors.nombreTransferencia && <span className="text-red-500 text-xs">{fieldErrors.nombreTransferencia}</span>}
                   </Label>
-                  <RadioGroup value={formData.transferidoA} onValueChange={(v) => handleSelectChange("transferidoA", v)} className="flex flex-col space-y-2 mt-2">
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="Gise" id="t-gise" /><Label htmlFor="t-gise" className="font-normal">Gisela Orbes</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="Bruni" id="t-bruni" /><Label htmlFor="t-bruni" className="font-normal">Brunilda Shubert</Label></div>
-                  </RadioGroup>
+                  <Input id="nombreTransferencia" name="nombreTransferencia" value={formData.nombreTransferencia} onChange={handleInputChange}
+                    className={fieldErrors.nombreTransferencia ? "border-red-500" : ""} placeholder="Nombre completo" />
                 </div>
               </div>
 
@@ -842,7 +820,7 @@ export default function InscripcionAño() {
                         <CheckCircle2 className="h-8 w-8 text-green-500" />
                         <p className="text-sm font-medium">{formData.comprobantePago.name}</p>
                         <p className="text-xs text-gray-500">{(formData.comprobantePago.size / 1024).toFixed(1)} KB</p>
-                        <Button variant="outline" size="sm" onClick={() => setFormData({ ...formData, comprobantePago: null })}>
+                        <Button variant="outline" size="sm" onClick={() => setFormData((prev) => ({ ...prev, comprobantePago: null }))}>
                           Cambiar archivo
                         </Button>
                       </div>

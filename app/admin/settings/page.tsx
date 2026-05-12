@@ -21,14 +21,16 @@ const emptySettings: {
   cupoMaximo: number
   precio: number
   metodoPago: string
-  datosPago: string
+  datosPago1: string
+  datosPago2: string
   currentYear: number
   fechaEvento: string
 } = {
   cupoMaximo: 300,
   precio: 35000,
   metodoPago: "Transferencia bancaria",
-  datosPago: "",
+  datosPago1: "",
+  datosPago2: "",
   currentYear: CURRENT_YEAR,
   fechaEvento: "",
 }
@@ -57,7 +59,8 @@ export default function AdminSettingsPage() {
             cupoMaximo: d.cupoMaximo ?? 300,
             precio: d.precio ?? 35000,
             metodoPago: d.metodoPago ?? "Transferencia bancaria",
-            datosPago: d.datosPago ?? "",
+            datosPago1: d.datosPago1 ?? "",
+            datosPago2: d.datosPago2 ?? "",
             currentYear: d.currentYear ?? CURRENT_YEAR,
             fechaEvento: d.fechaEvento ?? "",
           })
@@ -313,16 +316,29 @@ export default function AdminSettingsPage() {
                 onChange={handleInputChange}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="datosPago">Datos bancarios</Label>
-              <Textarea
-                id="datosPago"
-                name="datosPago"
-                value={settings.datosPago ?? ""}
-                onChange={handleInputChange}
-                rows={4}
-                placeholder="CBU, alias, titular..."
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="datosPago1">Dato de pago 1 - Argentina</Label>
+                <Textarea
+                  id="datosPago1"
+                  name="datosPago1"
+                  value={settings.datosPago1 ?? ""}
+                  onChange={handleInputChange}
+                  rows={5}
+                  placeholder={"Banco: Naranja X\nTitular: ...\nCBU: ...\nAlias: ...\nImporte: $35.000 (ARS)"}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="datosPago2">Dato de pago 2 - Uruguay</Label>
+                <Textarea
+                  id="datosPago2"
+                  name="datosPago2"
+                  value={settings.datosPago2 ?? ""}
+                  onChange={handleInputChange}
+                  rows={5}
+                  placeholder={"Banco: Prex\nTitular: ...\nCBU: ...\nAlias: ...\nImporte: $1.300 (UYU)"}
+                />
+              </div>
             </div>
           </div>
 
