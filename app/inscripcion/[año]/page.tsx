@@ -298,8 +298,9 @@ export default function InscripcionAño() {
     }
   }
 
-  const handleDniBlur = () => {
-    if (formData.dni && formData.dni.length >= 7) lookupDni(formData.dni)
+  const handleDniBlur = (e?: React.FocusEvent<HTMLInputElement>) => {
+    const dni = e?.target?.value ?? formData.dni
+    if (dni && dni.length >= 7) lookupDni(dni)
   }
 
   const handleCheckboxChange = (name, checked) => setFormData({ ...formData, [name]: checked })
@@ -554,14 +555,6 @@ export default function InscripcionAño() {
       case 1:
         return (
           <div className="space-y-6">
-            <Alert className="bg-amber-50 border-amber-200">
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-              <AlertTitle className="text-amber-800">Información importante</AlertTitle>
-              <AlertDescription className="text-amber-700">
-                <strong>Su inscripción es sin remera, no hay más talles disponibles</strong>
-              </AlertDescription>
-            </Alert>
-
             <div className="bg-gray-50 p-4 rounded-lg border shadow-sm">
               <h3 className="font-medium text-lg mb-4 text-gray-800 flex items-center gap-2">
                 <User className="h-5 w-5 text-blue-600" />
@@ -579,6 +572,24 @@ export default function InscripcionAño() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="dni" className="flex justify-between">
+                    <span>DNI *</span>
+                    {fieldErrors.dni && <span className="text-red-500 text-xs">{fieldErrors.dni}</span>}
+                  </Label>
+                  <div className="relative max-w-xs">
+                    <Input
+                      id="dni" name="dni" value={formData.dni}
+                      onChange={handleInputChange}
+                      onBlur={handleDniBlur}
+                      className={fieldErrors.dni ? "border-red-500 pr-8" : "pr-8"}
+                      placeholder="Ej: 32456789"
+                    />
+                    {dniLookingUp && <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-gray-400" />}
+                    {!dniLookingUp && dniFound && <CheckCircle2 className="absolute right-2 top-2.5 h-4 w-4 text-green-500" />}
+                  </div>
+                  <p className="text-xs text-gray-500">Si ya participaste antes, tus datos se cargarán automáticamente.</p>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="nombre" className="flex justify-between">
                     <span>Nombre *</span>
@@ -592,24 +603,6 @@ export default function InscripcionAño() {
                     {fieldErrors.apellido && <span className="text-red-500 text-xs">{fieldErrors.apellido}</span>}
                   </Label>
                   <Input id="apellido" name="apellido" value={formData.apellido} onChange={handleInputChange} className={fieldErrors.apellido ? "border-red-500" : ""} placeholder="Ej: Gómez" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dni" className="flex justify-between">
-                    <span>DNI *</span>
-                    {fieldErrors.dni && <span className="text-red-500 text-xs">{fieldErrors.dni}</span>}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="dni" name="dni" value={formData.dni}
-                      onChange={handleInputChange}
-                      onBlur={handleDniBlur}
-                      className={fieldErrors.dni ? "border-red-500 pr-8" : "pr-8"}
-                      placeholder="Ej: 32456789"
-                    />
-                    {dniLookingUp && <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-gray-400" />}
-                    {!dniLookingUp && dniFound && <CheckCircle2 className="absolute right-2 top-2.5 h-4 w-4 text-green-500" />}
-                  </div>
-                  <p className="text-xs text-gray-500">Si ya participaste antes, tus datos se cargarán automáticamente.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="fechaNacimiento" className="flex justify-between">
