@@ -414,12 +414,6 @@ export default function AdminDashboardPage() {
     }
   }, [eventSettings])
 
-  // Si el año seleccionado no tiene datos, auto-seleccionar el más reciente disponible
-  useEffect(() => {
-    if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
-      setSelectedYear(availableYears[0])
-    }
-  }, [availableYears])
 
   const hasRegistrations = stats.validRegistrations > 0
 
@@ -616,7 +610,7 @@ export default function AdminDashboardPage() {
             </Button>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+            <Select value={String(selectedYear)} onValueChange={(v) => { setSelectedYear(Number(v)); refreshRegistrations(Number(v)) }}>
               <SelectTrigger className="w-full sm:w-[120px] md:w-[140px] bg-white h-8 md:h-9 text-xs md:text-sm">
                 <div className="flex items-center gap-1 md:gap-2">
                   <CalendarDays className="h-3 md:h-4 w-3 md:w-4" />

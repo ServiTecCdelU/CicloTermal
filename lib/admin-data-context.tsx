@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import { collection, getDocs } from "firebase/firestore"
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase/firebase-config"
 
 
@@ -78,16 +78,18 @@ const saveToCacheForKey = (key: string, data: any[]) => {
   } catch {}
 }
 
+const CURRENT_YEAR = new Date().getFullYear()
+
 export function AdminDataProvider({ children }: { children: ReactNode }) {
   const [registrations, setRegistrations] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [loadingRegistrations, setLoadingRegistrations] = useState(true)
   const [loadingExpenses, setLoadingExpenses] = useState(true)
 
-  const fetchRegistrations = useCallback(async (_year?: number, forceRefresh = false) => {
-    // Mostrar caché inmediatamente si existe (incluso si está vencida)
+  const fetchRegistrations = useCallback(async (year = CURRENT_YEAR, forceRefresh = false) => {
+    const cacheKey = `${CACHE_KEY}_${year}`
     if (!forceRefresh) {
-      const cached = loadFromCacheForKey(CACHE_KEY)
+      const cached = loadFromCacheForKey(cacheKey)
       if (cached) {
         setRegistrations(cached)
         setLoadingRegistrations(false)
@@ -98,14 +100,11 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     setLoadingRegistrations(true)
     try {
       const ref = collection(db, "participantesCicloTermal")
-      const snapshot = await getDocs(ref)
-      const data = snapshot.docs.map(mapDoc).sort((a, b) => {
-        const ta = a.fechaInscripcion instanceof Date ? a.fechaInscripcion.getTime() : 0
-        const tb = b.fechaInscripcion instanceof Date ? b.fechaInscripcion.getTime() : 0
-        return tb - ta
-      })
+      const q = query(ref, where("años", "array-contains", year), orderBy("fechaInscripcion", "desc"))
+      const snapshot = await getDocs(q)
+      const data = snapshot.docs.map(mapDoc)
       setRegistrations(data)
-      if (data.length > 0) saveToCacheForKey(CACHE_KEY, data)
+      if (data.length > 0) saveToCacheForKey(cacheKey, data)
     } catch (error) {
       console.error("Error fetching registrations:", error)
     } finally {
@@ -131,18 +130,18 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // refreshRegistrations acepta opcionalmente un año para forzar recarga de ese año
-  const refreshRegistrations = useCallback(async (_year?: number) => {
+  const refreshRegistrations = useCallback(async (year = CURRENT_YEAR) => {
     if (typeof window !== "undefined") {
       try {
-        localStorage.removeItem(CACHE_KEY)
+        localStorage.removeItem(`${CACHE_KEY}_${year}`)
       } catch {}
     }
-    await fetchRegistrations(undefined, true)
+    await fetchRegistrations(year, true)
   }, [fetchRegistrations])
 
   useEffect(() => {
-    // Primero: mostrar caché (fresca o vencida) para render instantáneo
-    const freshCache = loadFromCacheForKey(CACHE_KEY)
+    const cacheKey = `${CACHE_KEY}_${CURRENT_YEAR}`
+    const freshCache = loadFromCacheForKey(cacheKey)
     if (freshCache) {
       setRegistrations(freshCache)
       setLoadingRegistrations(false)
@@ -150,14 +149,13 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const staleCache = loadFromCacheForKey(CACHE_KEY, true)
+    const staleCache = loadFromCacheForKey(cacheKey, true)
     if (staleCache) {
       setRegistrations(staleCache)
       setLoadingRegistrations(false)
-      // Refrescar en background sin mostrar loading
-      fetchRegistrations(undefined, true)
+      fetchRegistrations(CURRENT_YEAR, true)
     } else {
-      fetchRegistrations()
+      fetchRegistrations(CURRENT_YEAR)
     }
 
     fetchExpenses()

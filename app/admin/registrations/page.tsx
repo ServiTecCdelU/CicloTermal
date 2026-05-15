@@ -179,12 +179,6 @@ export default function AdminRegistrationsPage() {
     }
   }, [eventSettings])
 
-  // Si el año seleccionado no tiene datos, auto-seleccionar el más reciente disponible
-  useEffect(() => {
-    if (availableYears.length > 0 && yearFilter !== "all" && !availableYears.includes(Number(yearFilter))) {
-      setYearFilter(String(availableYears[0]))
-    }
-  }, [availableYears])
 
   // Sincronizar con datos del contexto compartido
   useEffect(() => {
@@ -981,7 +975,7 @@ export default function AdminRegistrationsPage() {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Select value={yearFilter} onValueChange={setYearFilter}>
+            <Select value={yearFilter} onValueChange={(v) => { setYearFilter(v); if (v !== "all") refreshRegistrations(Number(v)) }}>
               <SelectTrigger className="w-full sm:w-32 bg-white text-xs h-8">
                 <div className="flex items-center gap-1">
                   <CalendarDays className="h-3 w-3" />
