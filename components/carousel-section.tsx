@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
-import { BikeIcon } from "@/components/section-title"
+import { BikeIcon, HeartIcon } from "@/components/section-title"
 
 function formatSubtitle(fechaEvento?: string) {
   if (!fechaEvento) return "Cicloturismo Termal de Federación"
@@ -118,9 +118,16 @@ export default function CarouselSection() {
             />
             <div className="absolute inset-0 bg-black/30" />
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
-              <h1 className="text-3xl md:text-5xl font-bold mb-4 max-w-3xl">
-                {slide.title || "Cicloturismo Termal de Federación"}
-              </h1>
+              <div className="flex items-center gap-3 mb-4">
+                <HeartIcon size={20} />
+                <h1
+                  className="text-3xl md:text-5xl font-bold max-w-3xl leading-tight"
+                  style={{ fontFamily: "var(--font-marker)" }}
+                >
+                  {slide.title || "Cicloturismo Termal de Federación"}
+                </h1>
+                <HeartIcon size={20} />
+              </div>
               <p className="text-lg md:text-xl mb-8 max-w-2xl">
                 {slide.subtitle || "Segunda Edición - 12 de octubre de 2025"}
               </p>
