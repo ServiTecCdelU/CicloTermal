@@ -138,14 +138,20 @@ export default function Navbar() {
             </DialogDescription>
 
             <nav className="flex flex-col gap-4 mt-8">
-              {navItems.map((item) => (
+              {navItems.map((item, index) => (
                 <Link
                   key={item.name}
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-lg font-medium transition-colors hover:text-primary"
+                  className={index === 0
+                    ? "flex items-center gap-2 text-xl font-bold transition-colors hover:text-primary"
+                    : "text-lg font-medium transition-colors hover:text-primary"
+                  }
+                  style={index === 0 ? { fontFamily: "var(--font-marker)" } : undefined}
                 >
+                  {index === 0 && <HeartIcon size={14} />}
                   {item.name}
+                  {index === 0 && <HeartIcon size={14} />}
                 </Link>
               ))}
               <Link href="/inscripcion" onClick={() => setIsMobileMenuOpen(false)}>
