@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase/firebase-config"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 
 const CACHE_KEY_BASE = "ciclotermal_registrations_v1"
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+const CACHE_TTL = 30 * 60 * 1000 // 30 minutos
 
 interface AdminDataContextType {
   registrations: any[]
@@ -51,13 +51,13 @@ const mapDoc = (docSnap: any) => {
   }
 }
 
-const loadFromCacheForKey = (key: string): any[] | null => {
+const loadFromCacheForKey = (key: string, ignoreExpiry = false): any[] | null => {
   if (typeof window === "undefined") return null
   try {
     const raw = localStorage.getItem(key)
     if (!raw) return null
     const { data, ts } = JSON.parse(raw)
-    if (Date.now() - ts > CACHE_TTL) return null
+    if (!ignoreExpiry && Date.now() - ts > CACHE_TTL) return null
     return data.map((r: any) => ({
       ...r,
       fechaInscripcion: r.fechaInscripcion ? new Date(r.fechaInscripcion) : null,
@@ -97,22 +97,23 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     return eventSettings?.currentYear || new Date().getFullYear()
   }
 
-  const fetchRegistrations = useCallback(async (year?: number) => {
-    setLoadingRegistrations(true)
-    try {
-      const yearToLoad = year ?? determineYearToLoad()
-      const cacheKey = `${CACHE_KEY_BASE}_${yearToLoad}`
+  const fetchRegistrations = useCallback(async (year?: number, forceRefresh = false) => {
+    const yearToLoad = year ?? determineYearToLoad()
+    const cacheKey = `${CACHE_KEY_BASE}_${yearToLoad}`
 
-      // Intentar cargar desde caché por año
+    // Mostrar caché inmediatamente si existe (incluso si está vencida)
+    if (!forceRefresh) {
       const cached = loadFromCacheForKey(cacheKey)
       if (cached) {
         setRegistrations(cached)
         setLoadingRegistrations(false)
         return
       }
+    }
 
+    setLoadingRegistrations(true)
+    try {
       const ref = collection(db, "participantesCicloTermal")
-      // Traer solo inscripciones que incluyan el año (mejor performance cuando hay muchas filas)
       const q = query(ref, where("años", "array-contains", yearToLoad), orderBy("fechaInscripcion", "desc"))
       const snapshot = await getDocs(q)
       const data = snapshot.docs.map(mapDoc)
@@ -150,20 +151,31 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(key)
       } catch {}
     }
-    await fetchRegistrations(year)
+    await fetchRegistrations(year, true)
   }, [fetchRegistrations])
 
   useEffect(() => {
-    // Mostrar caché del año seleccionado inmediatamente si está fresca
     const yearToLoad = determineYearToLoad()
     const cacheKey = `${CACHE_KEY_BASE}_${yearToLoad}`
-    const cached = loadFromCacheForKey(cacheKey)
-    if (cached) {
-      setRegistrations(cached)
+
+    // Primero: mostrar caché (fresca o vencida) para render instantáneo
+    const freshCache = loadFromCacheForKey(cacheKey)
+    if (freshCache) {
+      setRegistrations(freshCache)
       setLoadingRegistrations(false)
+      return // Caché fresca, no re-fetch
+    }
+
+    const staleCache = loadFromCacheForKey(cacheKey, true)
+    if (staleCache) {
+      setRegistrations(staleCache)
+      setLoadingRegistrations(false)
+      // Refrescar en background sin mostrar loading
+      fetchRegistrations(yearToLoad, true)
     } else {
       fetchRegistrations(yearToLoad)
     }
+
     fetchExpenses()
   }, [fetchRegistrations, fetchExpenses, eventSettings])
 

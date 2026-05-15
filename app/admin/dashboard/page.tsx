@@ -1,9 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { db } from "@/lib/firebase/firebase-config"
-import { collection, getDocs, query, where } from "firebase/firestore"
 import { useAdminData } from "@/lib/admin-data-context"
 import {
   BarChart,
@@ -184,39 +182,9 @@ const parseHealthConditions = (condicionSalud: any): CondicionSalud => {
 export default function AdminDashboardPage() {
   const { eventSettings } = useFirebaseContext()
   const { registrations: allRegistrations, loadingRegistrations: ctxLoading, refreshRegistrations } = useAdminData()
-  const [registrations, setRegistrations] = useState<Registration[]>([])
-  const [stats, setStats] = useState<DashboardStats>({
-    totalRegistrations: 0,
-    validRegistrations: 0,
-    confirmedRegistrations: 0,
-    pendingRegistrations: 0,
-    maleCount: 0,
-    femaleCount: 0,
-    otherCount: 0,
-    withHealthConditions: 0,
-    celiacCount: 0,
-    jerseySize: {
-      xs: 0,
-      s: 0,
-      m: 0,
-      l: 0,
-      xl: 0,
-      xxl: 0,
-      xxxl: 0,
-    },
-    jerseySizeByStatus: {
-      all: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-      confirmado: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-      pendiente: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-    },
-    registrationsByDay: [],
-    groupsCount: 0,
-  })
-  const [loading, setLoading] = useState<boolean>(true)
   const [timeFilter, setTimeFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
-  const [availableYears, setAvailableYears] = useState<number[]>([])
   const [refreshing, setRefreshing] = useState<boolean>(false)
   const [activeStatsFilter, setActiveStatsFilter] = useState<string>("all")
 
@@ -225,9 +193,6 @@ export default function AdminDashboardPage() {
   const [celiacModal, setCeliacModal] = useState(false)
   const [jerseyModal, setJerseyModal] = useState(false)
   const [groupsModal, setGroupsModal] = useState(false)
-  const [peopleWithConditions, setPeopleWithConditions] = useState<PersonWithCondition[]>([])
-  const [celiacPeople, setCeliacPeople] = useState<PersonCeliac[]>([])
-  const [groupsInfo, setGroupsInfo] = useState<GroupInfo[]>([])
 
   // Agregar estado para grupos expandidos
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
@@ -236,33 +201,42 @@ export default function AdminDashboardPage() {
 
   const [showFinancialDetails, setShowFinancialDetails] = useState(false)
 
-  const toggleGroup = (index: number) => {
-    const newExpanded = new Set(expandedGroups)
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index)
-    } else {
-      newExpanded.add(index)
-    }
-    setExpandedGroups(newExpanded)
-  }
+  const toggleGroup = useCallback((index: number) => {
+    setExpandedGroups(prev => {
+      const newExpanded = new Set(prev)
+      if (newExpanded.has(index)) {
+        newExpanded.delete(index)
+      } else {
+        newExpanded.add(index)
+      }
+      return newExpanded
+    })
+  }, [])
 
   const topRef = useRef<HTMLDivElement>(null)
 
-  const scrollToTop = () => {
+  const scrollToTop = useCallback(() => {
     topRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  }, [])
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true)
     await refreshRegistrations()
     setTimeout(() => setRefreshing(false), 1000)
-  }
+  }, [refreshRegistrations])
 
-  const processRegistrations = (sourceData: any[], year?: number) => {
-    const targetYear = year ?? selectedYear
-    const registrationsData: Registration[] = sourceData
-      .filter((r) => (r.años ?? []).includes(targetYear))
-      .map((r) => {
+  // Años disponibles derivados
+  const availableYears = useMemo(() => {
+    if (allRegistrations.length === 0) return []
+    const years = [...new Set(allRegistrations.flatMap((r: any) => r.años ?? []).filter(Boolean))] as number[]
+    return years.sort((a, b) => b - a)
+  }, [allRegistrations])
+
+  // Registrations filtradas por año
+  const registrations = useMemo<Registration[]>(() => {
+    return allRegistrations
+      .filter((r: any) => (r.años ?? []).includes(selectedYear))
+      .map((r: any) => {
         let fechaInscripcion: Date
         if (r.fechaInscripcion instanceof Date) {
           fechaInscripcion = r.fechaInscripcion
@@ -273,29 +247,30 @@ export default function AdminDashboardPage() {
         }
         return { ...r, fechaInscripcion }
       })
+  }, [allRegistrations, selectedYear])
 
-    setRegistrations(registrationsData)
+  // Stats calculadas con useMemo — se recalcula solo si cambian registrations o statusFilter
+  const { stats, peopleWithConditions, celiacPeople, groupsInfo } = useMemo(() => {
+    const registrationsData = registrations
 
-      // Filtrar según el estado seleccionado
-      let filteredForStats = registrationsData
-      if (statusFilter === "confirmado") {
-        filteredForStats = registrationsData.filter((reg) => reg.estado === "confirmado")
-      } else if (statusFilter === "pendiente") {
-        filteredForStats = registrationsData.filter((reg) => reg.estado === "pendiente" || !reg.estado)
-      } else {
-        // "all" - excluir solo rechazados
-        filteredForStats = registrationsData.filter((reg) => reg.estado !== "rechazado")
-      }
+    let filteredForStats = registrationsData
+    if (statusFilter === "confirmado") {
+      filteredForStats = registrationsData.filter((reg) => reg.estado === "confirmado")
+    } else if (statusFilter === "pendiente") {
+      filteredForStats = registrationsData.filter((reg) => reg.estado === "pendiente" || !reg.estado)
+    } else {
+      filteredForStats = registrationsData.filter((reg) => reg.estado !== "rechazado")
+    }
 
-      const confirmedRegistrations = registrationsData.filter((reg) => reg.estado === "confirmado")
-      const pendingRegistrations = registrationsData.filter((reg) => reg.estado === "pendiente" || !reg.estado)
-      const validRegistrations = [...confirmedRegistrations, ...pendingRegistrations]
+    const confirmedRegistrations = registrationsData.filter((reg) => reg.estado === "confirmado")
+    const pendingRegistrations = registrationsData.filter((reg) => reg.estado === "pendiente" || !reg.estado)
+    const validRegistrations = [...confirmedRegistrations, ...pendingRegistrations]
 
-      const maleCount = filteredForStats.filter((reg) => reg.genero?.toLowerCase() === "masculino").length
-      const femaleCount = filteredForStats.filter((reg) => reg.genero?.toLowerCase() === "femenino").length
-      const otherCount = filteredForStats.filter(
-        (reg) => reg.genero && reg.genero?.toLowerCase() !== "masculino" && reg.genero?.toLowerCase() !== "femenino",
-      ).length
+    const maleCount = filteredForStats.filter((reg) => reg.genero?.toLowerCase() === "masculino").length
+    const femaleCount = filteredForStats.filter((reg) => reg.genero?.toLowerCase() === "femenino").length
+    const otherCount = filteredForStats.filter(
+      (reg) => reg.genero && reg.genero?.toLowerCase() !== "masculino" && reg.genero?.toLowerCase() !== "femenino",
+    ).length
 
       let withHealthConditions = 0
       let celiacCount = 0
@@ -329,136 +304,80 @@ export default function AdminDashboardPage() {
         }
       })
 
-      setPeopleWithConditions(conditionsList)
-      setCeliacPeople(celiacList)
+    // Calcular talles por estado
+    const jerseySizeByStatus: JerseySizeByStatus = {
+      all: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
+      confirmado: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
+      pendiente: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
+    }
 
-      // Calcular talles por estado
-      const jerseySizeByStatus: JerseySizeByStatus = {
-        all: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-        confirmado: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-        pendiente: { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 },
-      }
-
-      // Contar talles para todos (sin rechazados)
-      validRegistrations.forEach((reg) => {
+    const countJerseySize = (regs: Registration[], target: JerseySize) => {
+      for (const reg of regs) {
         if (reg.talleRemera) {
           const size = reg.talleRemera.toLowerCase() as keyof JerseySize
-          if (jerseySizeByStatus.all.hasOwnProperty(size)) {
-            jerseySizeByStatus.all[size]++
-          }
-        }
-      })
-
-      // Contar talles para confirmados
-      confirmedRegistrations.forEach((reg) => {
-        if (reg.talleRemera) {
-          const size = reg.talleRemera.toLowerCase() as keyof JerseySize
-          if (jerseySizeByStatus.confirmado.hasOwnProperty(size)) {
-            jerseySizeByStatus.confirmado[size]++
-          }
-        }
-      })
-
-      // Contar talles para pendientes
-      pendingRegistrations.forEach((reg) => {
-        if (reg.talleRemera) {
-          const size = reg.talleRemera.toLowerCase() as keyof JerseySize
-          if (jerseySizeByStatus.pendiente.hasOwnProperty(size)) {
-            jerseySizeByStatus.pendiente[size]++
-          }
-        }
-      })
-
-      const jerseySizes: JerseySize = {
-        xs: 0,
-        s: 0,
-        m: 0,
-        l: 0,
-        xl: 0,
-        xxl: 0,
-        xxxl: 0,
-      }
-
-      filteredForStats.forEach((reg) => {
-        if (reg.talleRemera) {
-          const size = reg.talleRemera.toLowerCase() as keyof JerseySize
-          if (jerseySizes.hasOwnProperty(size)) {
-            jerseySizes[size]++
-          }
-        }
-      })
-
-      // Contar grupos únicos y sus participantes
-      const groupsMap = new Map<string, string[]>()
-      filteredForStats.forEach((reg) => {
-        const grupo = reg.grupoCiclistas || reg.grupoBici || reg.grupo_bici || reg.grupobici || reg.grupo
-        if (grupo && grupo.trim() !== "") {
-          const groupName = grupo.trim()
-          const participantName = `${reg.nombre || ""} ${reg.apellido || ""}`.trim()
-
-          if (!groupsMap.has(groupName)) {
-            groupsMap.set(groupName, [])
-          }
-          if (participantName) {
-            groupsMap.get(groupName)?.push(participantName)
-          }
-        }
-      })
-
-      const groupsInfoArray: GroupInfo[] = Array.from(groupsMap.entries())
-        .map(([nombre, participantes]) => ({
-          nombre,
-          cantidad: participantes.length,
-          participantes: participantes.sort(),
-        }))
-        .sort((a, b) => b.cantidad - a.cantidad)
-
-      setGroupsInfo(groupsInfoArray)
-
-      const registrationsByDay: Record<string, { total: number; rejected: number }> = {}
-
-      const sortedRegistrations = [...registrationsData].sort(
-        (a, b) => a.fechaInscripcion.getTime() - b.fechaInscripcion.getTime(),
-      )
-
-      if (sortedRegistrations.length > 0) {
-        const firstDate = new Date(sortedRegistrations[0].fechaInscripcion)
-        const lastDate = new Date(sortedRegistrations[sortedRegistrations.length - 1].fechaInscripcion)
-
-        const currentDate = new Date(firstDate)
-        while (currentDate <= lastDate) {
-          const dateStr = currentDate.toLocaleDateString()
-          registrationsByDay[dateStr] = { total: 0, rejected: 0 }
-          currentDate.setDate(currentDate.getDate() + 1)
+          if (size in target) target[size]++
         }
       }
+    }
 
-      registrationsData.forEach((reg) => {
-        try {
-          if (reg.fechaInscripcion) {
-            const date = reg.fechaInscripcion.toLocaleDateString()
-            if (!registrationsByDay[date]) {
-              registrationsByDay[date] = { total: 0, rejected: 0 }
-            }
-            registrationsByDay[date].total++
-            if (reg.estado === "rechazado") {
-              registrationsByDay[date].rejected++
-            }
-          }
-        } catch (error) {
-          console.error("Error al procesar fecha:", error)
-        }
-      })
+    countJerseySize(validRegistrations, jerseySizeByStatus.all)
+    countJerseySize(confirmedRegistrations, jerseySizeByStatus.confirmado)
+    countJerseySize(pendingRegistrations, jerseySizeByStatus.pendiente)
 
-      const registrationsByDayArray = Object.entries(registrationsByDay)
-        .map(([date, counts]) => ({
-          date,
-          total: counts.total,
-          rejected: counts.rejected,
-        }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    const jerseySizes: JerseySize = { xs: 0, s: 0, m: 0, l: 0, xl: 0, xxl: 0, xxxl: 0 }
+    countJerseySize(filteredForStats, jerseySizes)
 
-      setStats({
+    // Contar grupos únicos y sus participantes
+    const groupsMap = new Map<string, string[]>()
+    filteredForStats.forEach((reg) => {
+      const grupo = reg.grupoCiclistas || reg.grupoBici || reg.grupo_bici || reg.grupobici || reg.grupo
+      if (grupo && grupo.trim() !== "") {
+        const groupName = grupo.trim()
+        const participantName = `${reg.nombre || ""} ${reg.apellido || ""}`.trim()
+        if (!groupsMap.has(groupName)) groupsMap.set(groupName, [])
+        if (participantName) groupsMap.get(groupName)?.push(participantName)
+      }
+    })
+
+    const groupsInfoArray: GroupInfo[] = Array.from(groupsMap.entries())
+      .map(([nombre, participantes]) => ({
+        nombre,
+        cantidad: participantes.length,
+        participantes: participantes.sort(),
+      }))
+      .sort((a, b) => b.cantidad - a.cantidad)
+
+    const registrationsByDay: Record<string, { total: number; rejected: number }> = {}
+
+    const sortedRegistrations = [...registrationsData].sort(
+      (a, b) => a.fechaInscripcion.getTime() - b.fechaInscripcion.getTime(),
+    )
+
+    if (sortedRegistrations.length > 0) {
+      const firstDate = new Date(sortedRegistrations[0].fechaInscripcion)
+      const lastDate = new Date(sortedRegistrations[sortedRegistrations.length - 1].fechaInscripcion)
+      const currentDate = new Date(firstDate)
+      while (currentDate <= lastDate) {
+        registrationsByDay[currentDate.toLocaleDateString()] = { total: 0, rejected: 0 }
+        currentDate.setDate(currentDate.getDate() + 1)
+      }
+    }
+
+    registrationsData.forEach((reg) => {
+      if (reg.fechaInscripcion) {
+        const date = reg.fechaInscripcion.toLocaleDateString()
+        if (!registrationsByDay[date]) registrationsByDay[date] = { total: 0, rejected: 0 }
+        registrationsByDay[date].total++
+        if (reg.estado === "rechazado") registrationsByDay[date].rejected++
+      }
+    })
+
+    const registrationsByDayArray = Object.entries(registrationsByDay)
+      .map(([date, counts]) => ({ date, total: counts.total, rejected: counts.rejected }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+    return {
+      stats: {
         totalRegistrations: registrationsData.length,
         validRegistrations: validRegistrations.length,
         confirmedRegistrations: confirmedRegistrations.length,
@@ -472,9 +391,14 @@ export default function AdminDashboardPage() {
         jerseySizeByStatus,
         registrationsByDay: registrationsByDayArray,
         groupsCount: groupsInfoArray.length,
-      })
-      setLoading(false)
-  }
+      },
+      peopleWithConditions: conditionsList,
+      celiacPeople: celiacList,
+      groupsInfo: groupsInfoArray,
+    }
+  }, [registrations, statusFilter])
+
+  const loading = ctxLoading
 
   // Inicializar año desde eventSettings
   useEffect(() => {
@@ -491,23 +415,6 @@ export default function AdminDashboardPage() {
       } catch {}
     }
   }, [selectedYear])
-
-  // Calcular años disponibles
-  useEffect(() => {
-    if (allRegistrations.length > 0) {
-      const years = [...new Set(allRegistrations.flatMap((r) => r.años ?? []).filter(Boolean))] as number[]
-      setAvailableYears(years.sort((a, b) => b - a))
-    }
-  }, [allRegistrations])
-
-  // Procesar datos del contexto cuando cambian o cambia el filtro
-  useEffect(() => {
-    if (!ctxLoading && allRegistrations.length > 0) {
-      processRegistrations(allRegistrations, selectedYear)
-    } else if (!ctxLoading) {
-      setLoading(false)
-    }
-  }, [allRegistrations, ctxLoading, statusFilter, selectedYear])
 
   const hasRegistrations = stats.validRegistrations > 0
 

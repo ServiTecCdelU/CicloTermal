@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
-import { db } from "../lib/firebase/firebase-config"
-import { collection, getDocs, query, orderBy } from "firebase/firestore"
+import { orderBy } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
+import { useCachedCollection } from "@/lib/use-cached-firestore"
 
 interface HistoryItem {
   id: string
@@ -141,8 +141,18 @@ function CollapsibleText({ html, imageUrl, contactLink }: { html: string; imageU
 
 export default function HistorySection() {
   const { eventSettings, isFirebaseAvailable } = useFirebaseContext()
-  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([])
-  const [loading, setLoading] = useState(false)
+  const currentYear = eventSettings?.currentYear || new Date().getFullYear()
+  const { data: rawHistory, loading } = useCachedCollection(
+    `ct_historia_${currentYear}`,
+    "historia",
+    [orderBy("order", "asc")],
+    isFirebaseAvailable,
+  )
+
+  const historyItems = useMemo<HistoryItem[]>(() =>
+    rawHistory.filter((d: any) => !d.year || d.year === currentYear) as HistoryItem[],
+  [rawHistory, currentYear])
+
   const [imageModal, setImageModal] = useState<{ show: boolean; src: string; alt: string }>({
     show: false,
     src: "",
@@ -152,43 +162,6 @@ export default function HistorySection() {
   const openImageModal = (src: string, alt: string) => {
     setImageModal({ show: true, src, alt })
   }
-
-  useEffect(() => {
-    const fetchHistoryData = async () => {
-      if (!isFirebaseAvailable) {
-        setHistoryItems([])
-        return
-      }
-
-      setLoading(true)
-      try {
-        const currentYear = eventSettings?.currentYear || new Date().getFullYear()
-        // Optimizar consulta
-        const historyQuery = query(collection(db, "historia"), orderBy("order", "asc"))
-        const querySnapshot = await getDocs(historyQuery)
-
-        const historyData: HistoryItem[] = []
-        querySnapshot.docs.forEach((doc) => {
-          const data = doc.data()
-          if (!data.year || data.year === currentYear) {
-            historyData.push({
-              id: doc.id,
-              ...data,
-            } as HistoryItem)
-          }
-        })
-
-        setHistoryItems(historyData)
-      } catch (error) {
-        console.error("Error fetching history data:", error)
-        setHistoryItems([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchHistoryData()
-  }, [eventSettings, isFirebaseAvailable])
 
   if (loading) {
     return (

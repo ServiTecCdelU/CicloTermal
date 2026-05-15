@@ -2,11 +2,11 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import Link from "next/link"
-import { db } from "../lib/firebase/firebase-config"
-import { collection, getDocs, query, orderBy } from "firebase/firestore"
+import { orderBy } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
+import { useCachedCollection } from "@/lib/use-cached-firestore"
 
 // Tipos TypeScript
 interface Sponsor {
@@ -39,140 +39,66 @@ interface FirebaseContextType {
 
 type ImageProcessingResult = string
 
+// Función tipada para convertir base64 a Data URL
+const processImageData = (imageData: unknown, sponsorName: string): ImageProcessingResult => {
+  if (!imageData || typeof imageData !== "string") return "/placeholder.svg"
+
+  try {
+    if (imageData.startsWith("http://") || imageData.startsWith("https://")) return imageData
+    if (imageData.startsWith("data:image/")) return imageData
+
+    if (imageData.length > 0) {
+      const cleanBase64: string = imageData.replace(/\s/g, "")
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleanBase64)) return "/placeholder.svg"
+
+      let mimeType = "image/jpeg"
+      try {
+        const binaryString: string = atob(cleanBase64.substring(0, 20))
+        const bytes: Uint8Array = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i)
+        if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) mimeType = "image/png"
+        else if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) mimeType = "image/jpeg"
+        else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) mimeType = "image/gif"
+      } catch {}
+
+      return `data:${mimeType};base64,${cleanBase64}`
+    }
+    return "/placeholder.svg"
+  } catch {
+    return "/placeholder.svg"
+  }
+}
+
 export default function SponsorsSection(): JSX.Element {
   const { eventSettings, isFirebaseAvailable }: FirebaseContextType = useFirebaseContext()
-  const [sponsors, setSponsors] = useState<Sponsor[]>([])
-  const [loading, setLoading] = useState<boolean>(false) // Cambiar de true a false
-  const [error, setError] = useState<string | null>(null)
+  const currentYear: number = eventSettings?.currentYear || new Date().getFullYear()
 
-  // Función tipada para convertir base64 a Data URL
-  const processImageData = (imageData: unknown, sponsorName: string): ImageProcessingResult => {
-    if (!imageData || typeof imageData !== "string") {
-      return "/placeholder.svg"
-    }
+  const { data: rawSponsors, loading } = useCachedCollection(
+    `ct_sponsors_${currentYear}`,
+    "sponsors",
+    [orderBy("order", "asc")],
+    isFirebaseAvailable,
+  )
 
-    try {
-      // Si ya es una URL completa (http/https), usarla directamente
-      if (imageData.startsWith("http://") || imageData.startsWith("https://")) {
-        return imageData
-      }
-
-      // Si ya es una Data URL completa, usarla directamente
-      if (imageData.startsWith("data:image/")) {
-        return imageData
-      }
-
-      // Si es base64 puro, agregar el prefijo
-      if (imageData.length > 0) {
-        // Limpiar espacios y saltos de línea
-        const cleanBase64: string = imageData.replace(/\s/g, "")
-
-        // Validar que sea base64 válido
-        if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleanBase64)) {
-          return "/placeholder.svg"
+  const sponsors = useMemo<Sponsor[]>(() => {
+    return rawSponsors
+      .filter((data: any) => !data.year || data.year === currentYear)
+      .map((data: any) => {
+        const sponsorName = data.name || `Sponsor ${data.id}`
+        const imageData = data.imageBase64 || data.image || data.logo || data.logoUrl
+        return {
+          id: data.id,
+          name: sponsorName,
+          logoUrl: processImageData(imageData, sponsorName),
+          url: data.website || data.url || "#",
+          year: data.year,
+          order: typeof data.order === "number" ? data.order : 999,
         }
+      })
+      .sort((a: Sponsor, b: Sponsor) => (a.order ?? 999) - (b.order ?? 999))
+  }, [rawSponsors, currentYear])
 
-        // Detectar tipo de imagen por los primeros caracteres del base64
-        let mimeType = "image/jpeg" // Por defecto
-
-        try {
-          const binaryString: string = atob(cleanBase64.substring(0, 20))
-          const bytes: Uint8Array = new Uint8Array(binaryString.length)
-
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i)
-          }
-
-          // PNG signature: 89 50 4E 47
-          if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
-            mimeType = "image/png"
-          }
-          // JPEG signature: FF D8 FF
-          else if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-            mimeType = "image/jpeg"
-          }
-          // GIF signature: 47 49 46 38
-          else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
-            mimeType = "image/gif"
-          }
-        } catch (detectionError: unknown) {
-          // Error detectando tipo, usar JPEG por defecto
-        }
-
-        const dataUrl: string = `data:${mimeType};base64,${cleanBase64}`
-        return dataUrl
-      }
-
-      return "/placeholder.svg"
-    } catch (error: unknown) {
-      return "/placeholder.svg"
-    }
-  }
-
-  useEffect(() => {
-    const fetchSponsors = async (): Promise<void> => {
-      if (!isFirebaseAvailable) {
-        setSponsors([])
-        return
-      }
-
-      setLoading(true)
-      setError(null)
-
-      try {
-        const currentYear: number = eventSettings?.currentYear || new Date().getFullYear()
-
-        // Optimizar consulta directa
-        const sponsorsQuery = query(collection(db, "sponsors"), orderBy("order", "asc"))
-        const snapshot = await getDocs(sponsorsQuery)
-
-        if (!snapshot.empty) {
-          const sponsorsData: Sponsor[] = []
-
-          snapshot.docs.forEach((doc) => {
-            const data: SponsorFirestoreData = doc.data() as SponsorFirestoreData
-
-            // Filtrar por año en el cliente si es necesario
-            if (!data.year || data.year === currentYear) {
-              const sponsorName: string = data.name || `Sponsor ${doc.id}`
-              const imageData: unknown = data.imageBase64 || data.image || data.logo || data.logoUrl
-              const logoUrl: string = processImageData(imageData, sponsorName)
-
-              const sponsor: Sponsor = {
-                id: doc.id,
-                name: sponsorName,
-                logoUrl: logoUrl,
-                url: data.website || data.url || "#",
-                year: data.year,
-                order: typeof data.order === "number" ? data.order : 999,
-              }
-
-              sponsorsData.push(sponsor)
-            }
-          })
-
-          // Ordenar por order
-          sponsorsData.sort((a: Sponsor, b: Sponsor) => {
-            const orderA = typeof a.order === "number" ? a.order : 999
-            const orderB = typeof b.order === "number" ? b.order : 999
-            return orderA - orderB
-          })
-
-          setSponsors(sponsorsData)
-        } else {
-          setSponsors([])
-        }
-      } catch (error: unknown) {
-        const errorMessage: string = error instanceof Error ? error.message : "Error desconocido"
-        setError(`Error al cargar sponsors: ${errorMessage}`)
-        setSponsors([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchSponsors()
-  }, [eventSettings, isFirebaseAvailable])
+  const error: string | null = null
 
   // Handlers tipados para eventos de imagen
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, sponsorName: string): void => {

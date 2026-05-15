@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { db } from "../lib/firebase/firebase-config"
-import { collection, getDocs, query, where } from "firebase/firestore"
+import { where } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import { useCachedCollection } from "@/lib/use-cached-firestore"
 
 interface PhotoItem {
   id: string
@@ -19,8 +19,20 @@ interface PhotoItem {
 
 export default function PhotosSection() {
   const { isFirebaseAvailable } = useFirebaseContext()
-  const [allFeaturedPhotos, setAllFeaturedPhotos] = useState<PhotoItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: rawPhotos, loading } = useCachedCollection(
+    "ct_galeria_featured",
+    "galeriaFotos",
+    [where("type", "==", "featured")],
+    isFirebaseAvailable,
+  )
+
+  const allFeaturedPhotos = useMemo<PhotoItem[]>(() =>
+    ([...rawPhotos] as PhotoItem[]).sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year
+      return a.order - b.order
+    }),
+  [rawPhotos])
+
   const [currentPage, setCurrentPage] = useState(0)
   const [imageModal, setImageModal] = useState<{ show: boolean; src: string; alt: string }>({
     show: false,
@@ -28,7 +40,7 @@ export default function PhotosSection() {
     alt: "",
   })
 
-  const photosPerPage = 4 // Cambié a 4 fotos por página
+  const photosPerPage = 4
   const totalPages = Math.ceil(allFeaturedPhotos.length / photosPerPage)
   const currentPhotos = allFeaturedPhotos.slice(currentPage * photosPerPage, (currentPage + 1) * photosPerPage)
 
@@ -37,60 +49,12 @@ export default function PhotosSection() {
   }
 
   const nextPage = () => {
-    if (currentPage < totalPages - 1) {
-      setCurrentPage(currentPage + 1)
-    }
+    if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1)
   }
 
   const prevPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(currentPage - 1)
-    }
+    if (currentPage > 0) setCurrentPage(currentPage - 1)
   }
-
-  useEffect(() => {
-    const fetchFeaturedPhotos = async () => {
-      setLoading(true)
-
-      if (!isFirebaseAvailable) {
-        console.log("Firebase no disponible")
-        setAllFeaturedPhotos([])
-        setLoading(false)
-        return
-      }
-
-      try {
-        // Cargar TODAS las fotos destacadas sin filtro de año
-        const featuredQuery = query(collection(db, "galeriaFotos"), where("type", "==", "featured"))
-        const featuredSnapshot = await getDocs(featuredQuery)
-        const featuredData: PhotoItem[] = featuredSnapshot.docs.map(
-          (doc) =>
-            ({
-              id: doc.id,
-              ...doc.data(),
-            }) as PhotoItem,
-        )
-
-        // Ordenar por año descendente y luego por orden
-        const sortedPhotos = featuredData.sort((a, b) => {
-          if (a.year !== b.year) {
-            return b.year - a.year // Año descendente (más reciente primero)
-          }
-          return a.order - b.order // Orden ascendente dentro del mismo año
-        })
-
-        console.log("Fotos destacadas de todos los años encontradas:", sortedPhotos.length, sortedPhotos)
-        setAllFeaturedPhotos(sortedPhotos)
-      } catch (error) {
-        console.error("Error fetching featured photos:", error)
-        setAllFeaturedPhotos([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchFeaturedPhotos()
-  }, [isFirebaseAvailable])
 
   if (loading) {
     return (

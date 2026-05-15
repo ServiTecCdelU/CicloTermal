@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import Image from "next/image"
-import { db } from "@/lib/firebase/firebase-config"
-import { doc, getDoc } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
+import { useCachedDoc } from "@/lib/use-cached-firestore"
 
 interface JerseyFeature {
   id: string
@@ -40,48 +39,27 @@ const defaultJerseyData: JerseyData = {
 
 export default function JerseySection() {
   const { eventSettings, isFirebaseAvailable } = useFirebaseContext()
-  const [jerseyData, setJerseyData] = useState(defaultJerseyData)
-  const [loading, setLoading] = useState(false) // Cambiar de true a false
+  const currentYear = eventSettings?.currentYear || new Date().getFullYear()
 
-  useEffect(() => {
-    const fetchJerseyData = async () => {
-      // Solo cargar si Firebase está disponible y la sección debe mostrarse
-      if (!isFirebaseAvailable) {
-        setJerseyData(defaultJerseyData)
-        return
-      }
+  const { data: rawDoc, loading } = useCachedDoc(
+    `ct_jersey_${currentYear}`,
+    "jersey",
+    "info",
+    isFirebaseAvailable,
+  )
 
-      setLoading(true)
-      try {
-        const currentYear = eventSettings?.currentYear || new Date().getFullYear()
-        const jerseyDoc = doc(db, "jersey", "info")
-        const docSnap = await getDoc(jerseyDoc)
-
-        if (docSnap.exists()) {
-          const data = docSnap.data()
-          if (data.year === currentYear) {
-            const newData = {
-              title: data.title || defaultJerseyData.title,
-              description: data.description || defaultJerseyData.description,
-              imageUrl: data.imageUrl || defaultJerseyData.imageUrl,
-              showSection: data.showSection !== undefined ? data.showSection : defaultJerseyData.showSection,
-              callToActionTitle: data.callToActionTitle || defaultJerseyData.callToActionTitle,
-              callToActionDescription: data.callToActionDescription || defaultJerseyData.callToActionDescription,
-              features: data.features || defaultJerseyData.features,
-            }
-            setJerseyData(newData)
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching jersey data:", error)
-        setJerseyData(defaultJerseyData)
-      } finally {
-        setLoading(false)
-      }
+  const jerseyData = useMemo<JerseyData>(() => {
+    if (!rawDoc || rawDoc.year !== currentYear) return defaultJerseyData
+    return {
+      title: rawDoc.title || defaultJerseyData.title,
+      description: rawDoc.description || defaultJerseyData.description,
+      imageUrl: rawDoc.imageUrl || defaultJerseyData.imageUrl,
+      showSection: rawDoc.showSection !== undefined ? rawDoc.showSection : defaultJerseyData.showSection,
+      callToActionTitle: rawDoc.callToActionTitle || defaultJerseyData.callToActionTitle,
+      callToActionDescription: rawDoc.callToActionDescription || defaultJerseyData.callToActionDescription,
+      features: rawDoc.features || defaultJerseyData.features,
     }
-
-    fetchJerseyData()
-  }, [eventSettings, isFirebaseAvailable])
+  }, [rawDoc, currentYear])
 
   if (!jerseyData.showSection) {
     return null

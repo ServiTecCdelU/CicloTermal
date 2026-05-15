@@ -85,7 +85,7 @@ export default function AdminRegistrationsPage() {
   const [registrations, setRegistrations] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [yearFilter, setYearFilter] = useState<string>("all")
+  const [yearFilter, setYearFilter] = useState<string>(String(new Date().getFullYear()))
   const [healthFilter, setHealthFilter] = useState("all")
   const [celiacFilter, setCeliacFilter] = useState("all")
   const [noteFilter, setNoteFilter] = useState("all")
@@ -864,7 +864,7 @@ export default function AdminRegistrationsPage() {
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
-  const currentItems = filteredRegistrationsData.slice(indexOfFirstItem, indexOfLastItem)
+  const currentItems = useMemo(() => filteredRegistrationsData.slice(indexOfFirstItem, indexOfLastItem), [filteredRegistrationsData, indexOfFirstItem, indexOfLastItem])
   const totalPages = Math.ceil(filteredRegistrationsData.length / itemsPerPage)
 
   const paginate = (pageNumber) => {

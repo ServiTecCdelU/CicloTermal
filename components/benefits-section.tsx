@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   Calendar,
   MapPin,
@@ -19,10 +19,10 @@ import {
   Wrench,
   Truck,
 } from "lucide-react"
-import { db } from "@/lib/firebase/firebase-config"
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
+import { where, orderBy } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import Contador from "@/components/Contador"
+import { useCachedCollection } from "@/lib/use-cached-firestore"
 
 // Tipos TypeScript
 interface EventItem {
@@ -95,80 +95,35 @@ const defaultBenefits: BenefitItem[] = [
 
 export default function BenefitsSection() {
   const { eventSettings, isFirebaseAvailable } = useFirebaseContext()
-  const [eventData, setEventData] = useState<EventItem[]>(defaultEventData)
-  const [benefits, setBenefits] = useState<BenefitItem[]>(defaultBenefits)
-  const [loading, setLoading] = useState(true)
+  const currentYear = eventSettings?.currentYear || new Date().getFullYear()
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!isFirebaseAvailable) {
-        setEventData(defaultEventData.map((i) =>
+  const { data: rawEventData, loading: loadingEvent } = useCachedCollection(
+    `ct_benefits_event_${currentYear}`,
+    "benefits",
+    [where("type", "==", "event"), where("year", "==", currentYear), orderBy("order", "asc")],
+    isFirebaseAvailable,
+  )
+
+  const { data: rawBenefits, loading: loadingBenefits } = useCachedCollection(
+    `ct_benefits_benefit_${currentYear}`,
+    "benefits",
+    [where("type", "==", "benefit"), where("year", "==", currentYear), orderBy("order", "asc")],
+    isFirebaseAvailable,
+  )
+
+  const loading = loadingEvent || loadingBenefits
+
+  const eventData = useMemo<EventItem[]>(() =>
+    rawEventData.length > 0
+      ? rawEventData as EventItem[]
+      : defaultEventData.map((i) =>
           i.label === "Fecha" ? { ...i, value: formatFechaDia(eventSettings?.fechaEvento) } : i
-        ))
-        setBenefits(defaultBenefits)
-        setLoading(false)
-        return
-      }
+        ),
+  [rawEventData, eventSettings?.fechaEvento])
 
-      try {
-        const currentYear = eventSettings?.currentYear || new Date().getFullYear()
-
-        // Fetch event data
-        const eventQuery = query(
-          collection(db, "benefits"),
-          where("type", "==", "event"),
-          where("year", "==", currentYear),
-          orderBy("order", "asc"),
-        )
-        const eventSnapshot = await getDocs(eventQuery)
-
-        if (!eventSnapshot.empty) {
-          const eventItems = eventSnapshot.docs.map(
-            (doc) =>
-              ({
-                id: doc.id,
-                ...doc.data(),
-              }) as EventItem,
-          )
-          setEventData(eventItems)
-        } else {
-          setEventData(defaultEventData.map((i) =>
-            i.label === "Fecha" ? { ...i, value: formatFechaDia(eventSettings?.fechaEvento) } : i
-          ))
-        }
-
-        // Fetch benefits data
-        const benefitsQuery = query(
-          collection(db, "benefits"),
-          where("type", "==", "benefit"),
-          where("year", "==", currentYear),
-          orderBy("order", "asc"),
-        )
-        const benefitsSnapshot = await getDocs(benefitsQuery)
-
-        if (!benefitsSnapshot.empty) {
-          const benefitItems = benefitsSnapshot.docs.map(
-            (doc) =>
-              ({
-                id: doc.id,
-                ...doc.data(),
-              }) as BenefitItem,
-          )
-          setBenefits(benefitItems)
-        }
-      } catch (error) {
-        console.error("Error fetching benefits data:", error)
-        setEventData(defaultEventData.map((i) =>
-          i.label === "Fecha" ? { ...i, value: formatFechaDia(eventSettings?.fechaEvento) } : i
-        ))
-        setBenefits(defaultBenefits)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [eventSettings, isFirebaseAvailable])
+  const benefits = useMemo<BenefitItem[]>(() =>
+    rawBenefits.length > 0 ? rawBenefits as BenefitItem[] : defaultBenefits,
+  [rawBenefits])
 
   const getIcon = (iconName: string, iconType: "lucide" | "image" = "lucide", iconUrl?: string) => {
     if (iconType === "image" && iconUrl) {

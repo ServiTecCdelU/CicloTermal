@@ -1,11 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import Link from "next/link"
 import { MapPin, Phone, Mail, ExternalLink } from "lucide-react"
-import { db } from "@/lib/firebase/firebase-config"
-import { doc, getDoc } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
+import { useCachedDoc } from "@/lib/use-cached-firestore"
 
 // Tipos TypeScript
 interface ContactLink {
@@ -37,42 +36,25 @@ const defaultContactData: ContactData = {
 
 export default function ContactSection() {
   const { eventSettings, isFirebaseAvailable } = useFirebaseContext()
-  const [contactData, setContactData] = useState<ContactData>(defaultContactData)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchContactData = async () => {
-      if (!isFirebaseAvailable) {
-        setContactData(defaultContactData)
-        setLoading(false)
-        return
-      }
+  const { data: rawDoc, loading } = useCachedDoc(
+    "ct_contacto",
+    "contacto",
+    "info",
+    isFirebaseAvailable,
+  )
 
-      try {
-        const contactDoc = doc(db, "contacto", "info")
-        const docSnap = await getDoc(contactDoc)
-
-        if (docSnap.exists()) {
-          const data = docSnap.data()
-          setContactData({
-            address: data.address || defaultContactData.address,
-            phones: Array.isArray(data.phones) ? data.phones : defaultContactData.phones,
-            email: data.email || "",
-            links: Array.isArray(data.links) ? data.links : [],
-            mapUrl: data.mapUrl || defaultContactData.mapUrl,
-            showMap: data.showMap !== undefined ? data.showMap : defaultContactData.showMap,
-          })
-        }
-      } catch (error) {
-        console.error("Error fetching contact data:", error)
-        setContactData(defaultContactData)
-      } finally {
-        setLoading(false)
-      }
+  const contactData = useMemo<ContactData>(() => {
+    if (!rawDoc) return defaultContactData
+    return {
+      address: rawDoc.address || defaultContactData.address,
+      phones: Array.isArray(rawDoc.phones) ? rawDoc.phones : defaultContactData.phones,
+      email: rawDoc.email || "",
+      links: Array.isArray(rawDoc.links) ? rawDoc.links : [],
+      mapUrl: rawDoc.mapUrl || defaultContactData.mapUrl,
+      showMap: rawDoc.showMap !== undefined ? rawDoc.showMap : defaultContactData.showMap,
     }
-
-    fetchContactData()
-  }, [eventSettings, isFirebaseAvailable])
+  }, [rawDoc])
 
   if (loading) {
     return (
