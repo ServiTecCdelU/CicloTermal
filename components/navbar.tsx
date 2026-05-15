@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { HeartIcon } from "@/components/section-title"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -79,11 +80,12 @@ export default function Navbar() {
           <img src="/logo.png" alt="Logo Cicloturismo Termal" className="h-12 w-auto" />
           <span
             className={cn(
-              "font-bold text-gray-900",
-              "text-xl sm:text-2xl lg:text-3xl",
-              "hidden sm:inline"
+              "font-bold hidden sm:inline-flex items-center gap-2",
+              isScrolled ? "text-gray-900" : "text-white drop-shadow-lg"
             )}
+            style={{ fontFamily: "var(--font-marker)", fontSize: "clamp(1.1rem, 2vw, 1.6rem)" }}
           >
+            <HeartIcon size={14} />
             <span className="sm:inline lg:hidden">Cicloturismo</span>
             <span className="hidden lg:inline">Cicloturismo Termal</span>
           </span>
