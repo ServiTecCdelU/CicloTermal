@@ -281,14 +281,14 @@ export default function JerseySection() {
   const [modalOpen, setModalOpen] = useState(false)
 
   const { data: rawDoc, loading } = useCachedDoc(
-    `ct_jersey_${currentYear}`,
+    `ct_jersey_v2_${currentYear}`,
     "jersey",
     "info",
     isFirebaseAvailable,
   )
 
   const jerseyData = useMemo<JerseyData>(() => {
-    if (!rawDoc || rawDoc.year !== currentYear) return defaultJerseyData
+    if (!rawDoc) return defaultJerseyData
     return {
       title: rawDoc.title || defaultJerseyData.title,
       description: rawDoc.description || defaultJerseyData.description,
