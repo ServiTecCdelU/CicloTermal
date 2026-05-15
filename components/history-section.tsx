@@ -140,18 +140,17 @@ function CollapsibleText({ html, imageUrl, contactLink }: { html: string; imageU
 }
 
 export default function HistorySection() {
-  const { eventSettings, isFirebaseAvailable } = useFirebaseContext()
-  const currentYear = eventSettings?.currentYear || new Date().getFullYear()
+  const { isFirebaseAvailable } = useFirebaseContext()
   const { data: rawHistory, loading } = useCachedCollection(
-    `ct_historia_${currentYear}`,
+    "ct_historia",
     "historia",
     [orderBy("order", "asc")],
     isFirebaseAvailable,
   )
 
   const historyItems = useMemo<HistoryItem[]>(() =>
-    rawHistory.filter((d: any) => !d.year || d.year === currentYear) as HistoryItem[],
-  [rawHistory, currentYear])
+    rawHistory as HistoryItem[],
+  [rawHistory])
 
   const [imageModal, setImageModal] = useState<{ show: boolean; src: string; alt: string }>({
     show: false,
