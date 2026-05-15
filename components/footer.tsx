@@ -13,12 +13,12 @@ export default function Footer() {
   const { eventSettings } = useFirebaseContext()
 
   return (
-    <footer className="bg-gradient-to-r from-pink-100 via-violet-100 to-blue-100 py-10 border-t">
+    <footer className="bg-gray-50 py-10 border-t border-gray-200">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 text-center md:center-text-left">
           {/* Información del evento */}
           <div>
-            <h3 className="text-lg font-bold mb-4 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+            <h3 className="text-lg font-bold mb-4 text-gray-900">
               Cicloturismo Termal
             </h3>
             <p className="text-sm text-gray-600 mb-2">Federación, Entre Ríos, Argentina</p>
@@ -27,7 +27,7 @@ export default function Footer() {
 
           {/* Enlaces rápidos */}
           <div>
-            <h3 className="text-lg font-bold mb-4 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+            <h3 className="text-lg font-bold mb-4 text-gray-900">
               Enlaces rápidos
             </h3>
             <ul className="space-y-2 ">
@@ -63,7 +63,7 @@ export default function Footer() {
               href="https://linktr.ee/serviteccdelu"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-pink-600 hover:underline"
+              className="text-red-600 hover:underline"
             >
               servitec
             </a>
@@ -78,7 +78,7 @@ export default function Footer() {
 
 //{/* Redes sociales */}
 {/*<div>
-<h3 className="text-lg font-bold mb-4 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+<h3 className="text-lg font-bold mb-4 text-gray-900">
   Síguenos
 </h3>
 <div className="flex justify-center md:justify-start items-center space-x-6">

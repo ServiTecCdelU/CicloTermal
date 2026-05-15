@@ -147,7 +147,7 @@ export default function BenefitsSection() {
     return (
       <div className="container mx-auto px-4 text-center py-12">
         <div className="flex justify-center items-center space-x-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <p className="text-gray-600">Cargando información del evento...</p>
         </div>
       </div>
@@ -162,10 +162,10 @@ export default function BenefitsSection() {
       {/* Sección Datos del Evento */}
       <div>
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold mb-2 text-gray-900">
             Evento
           </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 mx-auto mb-4"></div>
+          <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">Información importante</p>
         </div>
 
@@ -177,7 +177,7 @@ export default function BenefitsSection() {
             >
               <div className="flex items-center space-x-2 md:space-x-4">
                 <div className="flex-shrink-0">
-                  <div className="h-8 w-8 md:h-12 md:w-12 rounded-full bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 flex items-center justify-center">
+                  <div className="h-8 w-8 md:h-12 md:w-12 rounded-full bg-gray-900 flex items-center justify-center">
                     {getIcon(item.iconName)}
                   </div>
                 </div>
@@ -194,10 +194,10 @@ export default function BenefitsSection() {
       {/* Sección Beneficios de la Inscripción */}
       <div>
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold mb-2 text-gray-900">
             Beneficios de la Inscripción
           </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 mx-auto mb-4"></div>
+          <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">Incluye:</p>
         </div>
 
@@ -209,7 +209,7 @@ export default function BenefitsSection() {
             >
               <div className="flex items-center space-x-2 md:space-x-4">
                 <div className="flex-shrink-0">
-                  <div className="h-8 w-8 md:h-12 md:w-12 rounded-full bg-gradient-to-r from-pink-500 to-violet-500 flex items-center justify-center">
+                  <div className="h-8 w-8 md:h-12 md:w-12 rounded-full bg-gray-900 flex items-center justify-center">
                     {getBenefitIcon(benefit.iconName, benefit.iconType, benefit.iconUrl)}
                   </div>
                 </div>

@@ -22,7 +22,17 @@
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
       "Bash(git pull *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(npx next:*)",
+      "Bash(curl -s http://localhost:3000/admin/dashboard)",
+      "Bash(curl -s http://localhost:3000/admin/registrations)",
+      "Bash(curl:*)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(rm -rf .next)",
+      "Skill(update-config)",
+      "Bash(mkdir -p ~/.claude/skills)",
+      "Read(//c/Users/Emanuel/.claude/**)",
+      "Bash(unzip -o \"C:/Users/Emanuel/Documents/Proyectos/CicloTermal/graphic-designer.skill\")"
     ]
   }
 }

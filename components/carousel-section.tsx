@@ -128,7 +128,7 @@ export default function CarouselSection() {
                   <Link href={slide.buttonUrl}>
                     <Button
                       size="lg"
-                      className="bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 hover:from-pink-600 hover:via-violet-600 hover:to-blue-600"
+                      className="bg-red-600 hover:bg-red-700 text-white"
                     >
                       {slide.buttonText}
                     </Button>

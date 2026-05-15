@@ -115,7 +115,7 @@ export default function SponsorsSection(): JSX.Element {
     return (
       <div className="container mx-auto px-4 text-center py-12">
         <div className="flex justify-center items-center space-x-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <p className="text-gray-600">Cargando sponsors...</p>
         </div>
       </div>
@@ -139,10 +139,10 @@ export default function SponsorsSection(): JSX.Element {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+        <h2 className="text-3xl font-bold mb-2 text-gray-900">
           Nuestros Sponsors
         </h2>
-        <div className="w-24 h-1 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 mx-auto mb-4"></div>
+        <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">Empresas que hacen posible este evento</p>
       </div>
 
@@ -176,7 +176,7 @@ export default function SponsorsSection(): JSX.Element {
                     onLoad={() => handleImageLoad(sponsor.name)}
                   />
                 </div>
-                <p className="text-sm font-medium text-center mt-3 text-gray-700 group-hover:text-blue-600 transition-colors duration-300 line-clamp-2">
+                <p className="text-sm font-medium text-center mt-3 text-gray-700 group-hover:text-red-600 transition-colors duration-300 line-clamp-2">
                   {sponsor.name}
                 </p>
               </Link>
@@ -184,7 +184,7 @@ export default function SponsorsSection(): JSX.Element {
           </div>
 
           {/* Call to Action */}
-          <div className="text-center mt-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
+          <div className="text-center mt-8 bg-gray-50 rounded-lg p-6 border border-gray-200">
             <p className="text-lg text-gray-700 font-medium mb-2">¿Querés ser parte de nuestros sponsors?</p>
             <p className="text-base text-gray-600">
               Contactate con nosotros para conocer las oportunidades de patrocinio

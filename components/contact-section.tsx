@@ -60,7 +60,7 @@ export default function ContactSection() {
     return (
       <div className="container mx-auto px-4 text-center py-12">
         <div className="flex justify-center items-center space-x-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <p className="text-gray-600">Cargando información de contacto...</p>
         </div>
       </div>
@@ -70,10 +70,10 @@ export default function ContactSection() {
   return (
     <div className="container mx-auto px-4">
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+        <h2 className="text-3xl font-bold mb-2 text-gray-900">
           Contacto
         </h2>
-        <div className="w-24 h-1 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 mx-auto mb-4"></div>
+        <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">¿Tenés alguna pregunta? Contactanos</p>
       </div>
 
@@ -81,7 +81,7 @@ export default function ContactSection() {
         <div className="space-y-6">
           {/* Dirección */}
           <div className="flex items-start space-x-3">
-            <MapPin className="h-5 w-5 text-pink-500 mt-1 flex-shrink-0" />
+            <MapPin className="h-5 w-5 text-red-600 mt-1 flex-shrink-0" />
             <div>
               <h3 className="font-medium">Dirección</h3>
               <p className="text-gray-600">{contactData.address}</p>
@@ -91,7 +91,7 @@ export default function ContactSection() {
           {/* Teléfonos */}
           {contactData.phones.length > 0 && (
             <div className="flex items-start space-x-3">
-              <Phone className="h-5 w-5 text-violet-500 mt-1 flex-shrink-0" />
+              <Phone className="h-5 w-5 text-gray-900 mt-1 flex-shrink-0" />
               <div>
                 <h3 className="font-medium">Teléfono{contactData.phones.length > 1 ? "s" : ""}</h3>
                 <div className="space-y-1">
@@ -115,11 +115,11 @@ export default function ContactSection() {
           {/* Email */}
           {contactData.email && (
             <div className="flex items-start space-x-3">
-              <Mail className="h-5 w-5 text-blue-500 mt-1 flex-shrink-0" />
+              <Mail className="h-5 w-5 text-gray-900 mt-1 flex-shrink-0" />
               <div>
                 <h3 className="font-medium">Email</h3>
                 <p className="text-gray-600">
-                  <Link href={`mailto:${contactData.email}`} className="hover:text-blue-500 transition-colors">
+                  <Link href={`mailto:${contactData.email}`} className="hover:text-gray-900 transition-colors">
                     {contactData.email}
                   </Link>
                 </p>
@@ -138,7 +138,7 @@ export default function ContactSection() {
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-gray-600 hover:text-pink-500 transition-colors"
+                    className="inline-flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
                   >
                     <ExternalLink className="h-4 w-4" />
                     <span>{link.title}</span>

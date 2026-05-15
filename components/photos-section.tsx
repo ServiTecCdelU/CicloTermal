@@ -60,7 +60,7 @@ export default function PhotosSection() {
     return (
       <div className="container mx-auto px-4 text-center py-12">
         <div className="flex justify-center items-center space-x-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <p className="text-gray-600">Cargando galería...</p>
         </div>
       </div>
@@ -71,10 +71,10 @@ export default function PhotosSection() {
     <div className="container mx-auto px-4 space-y-16">
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+        <h2 className="text-3xl font-bold mb-6 text-gray-900">
           Fotos Destacadas
         </h2>
-        <div className="w-24 h-1 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 mx-auto mb-8"></div>
+        <div className="w-24 h-1 bg-red-600 mx-auto mb-8"></div>
       </div>
 
       {/* Fotos destacadas con paginación */}
@@ -163,7 +163,7 @@ export default function PhotosSection() {
       {/* Enlace a página completa de fotos */}
       <div className="text-center">
         <Link href="/fotos">
-          <Button variant="outline" className="border-pink-500 text-pink-700 hover:bg-pink-50">
+          <Button variant="outline" className="border-gray-900 text-gray-900 hover:bg-gray-50">
             Ver todas las fotos
           </Button>
         </Link>

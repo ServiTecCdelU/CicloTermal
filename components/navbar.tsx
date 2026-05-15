@@ -69,7 +69,7 @@ export default function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         isScrolled
-          ? "bg-gradient-to-r from-pink-100 via-violet-90 to-blue-100 border-t py-2 shadow-md"
+          ? "bg-white border-b border-gray-200 py-2 shadow-sm"
           : "bg-transparent py-2"
       )}
     >
@@ -79,7 +79,7 @@ export default function Navbar() {
           <img src="/logo.png" alt="Logo Cicloturismo Termal" className="h-12 w-auto" />
           <span
             className={cn(
-              "font-bold bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent",
+              "font-bold text-gray-900",
               "text-xl sm:text-2xl lg:text-3xl",
               "hidden sm:inline"
             )}

@@ -16,7 +16,7 @@ const ContactSection = dynamic(() => import("@/components/contact-section"), { l
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50">
+    <div className="min-h-screen bg-white">
       <Navbar />
       <main>
         <section id="inicio">
@@ -25,7 +25,7 @@ export default function Home() {
         <section id="historia" className="py-16">
           <HistorySection />
         </section>
-        <section id="evento" className="py-16 bg-gradient-to-r from-violet-50 to-blue-50">
+        <section id="evento" className="py-16 bg-gray-50">
           <BenefitsSection />
         </section>
         {/**/}
@@ -33,13 +33,13 @@ export default function Home() {
           <JerseySection />
         </section>
         {/**/}
-        <section id="fotos" className="py-16">
+        <section id="fotos" className="py-16 bg-gray-50">
           <PhotosSection />
         </section>
-        <section id="sponsors" className="py-16 bg-gradient-to-r from-pink-50 to-violet-50">
+        <section id="sponsors" className="py-16">
           <SponsorsSection />
         </section>
-        <section id="contacto" className="py-16">
+        <section id="contacto" className="py-16 bg-gray-50">
           <ContactSection />
         </section>
       </main>

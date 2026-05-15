@@ -153,7 +153,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold bg-gradient-to-r from-pink-600 via-violet-600 to-blue-600 bg-clip-text text-transparent">
+          <DialogTitle className="text-lg font-bold text-gray-900">
             Pedir remera oficial
           </DialogTitle>
         </DialogHeader>
@@ -231,7 +231,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
 
             <div className="space-y-2">
               <Label>Comprobante de pago</Label>
-              <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-pink-400 transition-colors bg-gray-50">
+              <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-red-500 transition-colors bg-gray-50">
                 <div className="flex flex-col items-center">
                   <UploadCloud className="h-6 w-6 text-gray-400 mb-1" />
                   <span className="text-xs text-gray-500">
@@ -249,7 +249,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
               <Button
                 onClick={handleSubmit}
                 disabled={enviando}
-                className="flex-1 bg-gradient-to-r from-pink-500 to-violet-500 text-white hover:from-pink-600 hover:to-violet-600"
+                className="flex-1 bg-red-600 text-white hover:bg-red-700"
               >
                 {enviando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Enviar pedido
@@ -308,7 +308,7 @@ export default function JerseySection() {
     return (
       <div className="container mx-auto px-4 text-center py-12">
         <div className="flex justify-center items-center space-x-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <p className="text-gray-600">Cargando información...</p>
         </div>
       </div>
@@ -320,10 +320,10 @@ export default function JerseySection() {
       <RemeroFormModal open={modalOpen} onClose={() => setModalOpen(false)} />
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold mb-2 text-gray-900">
             {jerseyData.title}
           </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 mx-auto mb-4"></div>
+          <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">Llevá el espíritu del evento contigo</p>
         </div>
 
@@ -347,9 +347,9 @@ export default function JerseySection() {
             {/* Contenido descriptivo */}
             <div className="flex-1 space-y-6 md:space-y-8">
               <div className="space-y-4">
-                <div className="inline-flex items-center px-3 py-1 md:px-4 md:py-2 bg-gradient-to-r from-pink-500/10 via-violet-500/10 to-blue-500/10 rounded-full border border-pink-200">
-                  <span className="text-xs md:text-sm font-medium bg-gradient-to-r from-pink-600 via-violet-600 to-blue-600 bg-clip-text text-transparent">
-                    ✨ Edición Limitada
+                <div className="inline-flex items-center px-3 py-1 md:px-4 md:py-2 bg-red-50 rounded-full border border-red-200">
+                  <span className="text-xs md:text-sm font-medium text-red-600">
+                    Edición Limitada
                   </span>
                 </div>
 
@@ -365,10 +365,10 @@ export default function JerseySection() {
                 {jerseyData.features.map((feature) => (
                   <div
                     key={feature.id}
-                    className="flex items-start space-x-2 bg-gradient-to-r from-pink-500/5 via-violet-500/5 to-blue-500/5 p-2 md:p-3 rounded-lg shadow-sm border border-pink-200/50"
+                    className="flex items-start space-x-2 bg-gray-50 p-2 md:p-3 rounded-lg shadow-sm border border-gray-200"
                   >
                     <div className="flex-shrink-0 mx-1">
-                      <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-gradient-to-r from-pink-500 to-violet-500 flex items-center justify-center">
+                      <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-gray-900 flex items-center justify-center">
                         <span className="text-white font-bold text-xs">✓</span>
                       </div>
                     </div>
@@ -381,15 +381,15 @@ export default function JerseySection() {
               </div>
 
               {/* Call to action con botón */}
-              <div className="p-4 md:p-6 bg-gradient-to-r from-pink-500/5 via-violet-500/5 to-blue-500/5 rounded-2xl border border-pink-200/50">
+              <div className="p-4 md:p-6 bg-gray-50 rounded-2xl border border-gray-200">
                 <div className="text-center space-y-3">
-                  <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-pink-600 via-violet-600 to-blue-600 bg-clip-text text-transparent">
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900">
                     {jerseyData.callToActionTitle}
                   </h3>
                   <p className="text-sm sm:text-base text-gray-600">{jerseyData.callToActionDescription}</p>
                   <Button
                     onClick={() => setModalOpen(true)}
-                    className="bg-gradient-to-r from-pink-500 to-violet-500 text-white hover:from-pink-600 hover:to-violet-600 font-semibold px-6 py-2"
+                    className="bg-red-600 text-white hover:bg-red-700 font-semibold px-6 py-2"
                   >
                     <Shirt className="h-4 w-4 mr-2" />
                     Pedir remera

@@ -111,10 +111,10 @@ export default function Contador() {
     <div className="w-full my-16">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold mb-2 text-gray-900">
             Cuenta Regresiva
           </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 mx-auto mb-4"></div>
+          <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             {eventDay 
               ? "¡Hoy es el día del evento!" 
@@ -143,12 +143,12 @@ export default function Contador() {
 
 function CountdownUnit({ value, label }: { value: number; label: string }) {
   return (
-    <div className="bg-gradient-to-br from-pink-500 via-violet-500 to-blue-500 rounded-lg shadow-lg p-0.5 sm:p-1">
-      <div className="bg-white dark:bg-gray-800 rounded-md sm:rounded-lg backdrop-blur-sm bg-opacity-90 h-16 sm:h-20 md:h-24 flex flex-col items-center justify-center">
-        <div className="text-xl sm:text-2xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500">
+    <div className="bg-gray-900 rounded-lg shadow-lg p-0.5 sm:p-1">
+      <div className="bg-white rounded-md sm:rounded-lg h-16 sm:h-20 md:h-24 flex flex-col items-center justify-center">
+        <div className="text-xl sm:text-2xl md:text-4xl font-bold text-gray-900">
           {value.toString().padStart(2, '0')}
         </div>
-        <div className="text-gray-600 dark:text-gray-300 font-medium text-xs sm:text-sm">
+        <div className="text-gray-600 font-medium text-xs sm:text-sm">
           {label}
         </div>
       </div>

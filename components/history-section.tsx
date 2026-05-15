@@ -23,10 +23,10 @@ function SectionHeader({ logoUrl, title }: { logoUrl: string; title: string }) {
       <div className="relative w-[60px] h-[60px] mb-2">
         <Image src={logoUrl || "/placeholder.svg"} alt={`Logo ${title}`} fill className="object-contain" priority />
       </div>
-      <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-600 via-violet-600 to-blue-600 bg-clip-text text-transparent">
+      <h2 className="text-3xl font-bold text-gray-900">
         {title}
       </h2>
-      <div className="w-24 h-1 bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 mt-2" />
+      <div className="w-24 h-1 bg-red-600 mt-2" />
     </div>
   )
 }
@@ -79,7 +79,7 @@ function CollapsibleText({ html, imageUrl, contactLink }: { html: string; imageU
       if (contactLink && !hasMore) {
         finalHtml =
           html +
-          `<p><strong>Quiero ser parte:</strong> <a href="${contactLink}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Contacto</a></p>`
+          `<p><strong>Quiero ser parte:</strong> <a href="${contactLink}" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline">Contacto</a></p>`
       }
 
       setProcessedContent({
@@ -87,7 +87,7 @@ function CollapsibleText({ html, imageUrl, contactLink }: { html: string; imageU
         fullHtml:
           html +
           (contactLink
-            ? `<p><strong>Quiero ser parte:</strong> <a href="${contactLink}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Contacto</a></p>`
+            ? `<p><strong>Quiero ser parte:</strong> <a href="${contactLink}" target="_blank" rel="noopener noreferrer" class="text-red-600 hover:underline">Contacto</a></p>`
             : ""),
         hasMore,
       })
@@ -107,7 +107,7 @@ function CollapsibleText({ html, imageUrl, contactLink }: { html: string; imageU
             <div style={{ textAlign: "justify" }} dangerouslySetInnerHTML={{ __html: processedContent.previewHtml }} />
             <button
               onClick={() => setShowModal(true)}
-              className="mt-2 text-blue-600 font-medium hover:underline focus:outline-none"
+              className="mt-2 text-red-600 font-medium hover:underline focus:outline-none"
             >
               Leer más
             </button>
@@ -119,7 +119,7 @@ function CollapsibleText({ html, imageUrl, contactLink }: { html: string; imageU
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4">
-          <div className="bg-gradient-to-r from-pink-100 via-violet-100 to-blue-100 mt-2 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl relative">
+          <div className="bg-white mt-2 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl relative border border-gray-200">
             <button
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
               onClick={() => setShowModal(false)}
@@ -128,7 +128,7 @@ function CollapsibleText({ html, imageUrl, contactLink }: { html: string; imageU
             </button>
             <div className="p-4 sm:p-6 text-justify max-w-prose mx-auto text-sm sm:text-base">
               <div dangerouslySetInnerHTML={{ __html: processedContent.fullHtml }} />
-              <button onClick={() => setShowModal(false)} className="mt-4 text-blue-600 font-medium hover:underline">
+              <button onClick={() => setShowModal(false)} className="mt-4 text-red-600 font-medium hover:underline">
                 Cerrar
               </button>
             </div>
@@ -166,7 +166,7 @@ export default function HistorySection() {
     return (
       <div className="container mx-auto px-4 text-center py-12">
         <div className="flex justify-center items-center space-x-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <p className="text-gray-600">Cargando historia...</p>
         </div>
       </div>
