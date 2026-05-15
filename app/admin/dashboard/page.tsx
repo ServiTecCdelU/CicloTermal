@@ -228,14 +228,21 @@ export default function AdminDashboardPage() {
   // Años disponibles derivados
   const availableYears = useMemo(() => {
     if (allRegistrations.length === 0) return []
-    const years = [...new Set(allRegistrations.flatMap((r: any) => r.años ?? []).filter(Boolean))] as number[]
+    const years = [...new Set(allRegistrations.flatMap((r: any) => {
+      if (Array.isArray(r.años)) return r.años
+      if (r.año) return [r.año]
+      return []
+    }).filter(Boolean))] as number[]
     return years.sort((a, b) => b - a)
   }, [allRegistrations])
 
   // Registrations filtradas por año
   const registrations = useMemo<Registration[]>(() => {
     return allRegistrations
-      .filter((r: any) => (r.años ?? []).includes(selectedYear))
+      .filter((r: any) => {
+        const años = Array.isArray(r.años) ? r.años : r.año ? [r.año] : []
+        return años.includes(selectedYear)
+      })
       .map((r: any) => {
         let fechaInscripcion: Date
         if (r.fechaInscripcion instanceof Date) {

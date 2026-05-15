@@ -32,7 +32,12 @@
       "Skill(update-config)",
       "Bash(mkdir -p ~/.claude/skills)",
       "Read(//c/Users/Emanuel/.claude/**)",
-      "Bash(unzip -o \"C:/Users/Emanuel/Documents/Proyectos/CicloTermal/graphic-designer.skill\")"
+      "Bash(unzip -o \"C:/Users/Emanuel/Documents/Proyectos/CicloTermal/graphic-designer.skill\")",
+      "Bash(netstat -ano)",
+      "Bash(taskkill:*)",
+      "Bash(cmd:*)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(powershell:*)"
     ]
   }
 }

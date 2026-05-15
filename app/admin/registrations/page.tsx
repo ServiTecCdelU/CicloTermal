@@ -156,7 +156,11 @@ export default function AdminRegistrationsPage() {
       return (b.numeroInscripcion || 0) - (a.numeroInscripcion || 0)
     })
 
-    const years = [...new Set(processed.flatMap((r: any) => r.años || []).filter(Boolean))]
+    const years = [...new Set(processed.flatMap((r: any) => {
+      if (Array.isArray(r.años)) return r.años
+      if (r.año) return [r.año]
+      return []
+    }).filter(Boolean))]
     setAvailableYears((years as number[]).sort((a, b) => b - a))
     setRegistrations(processed)
   }
@@ -816,7 +820,10 @@ export default function AdminRegistrationsPage() {
 
     const matchesStatus = statusFilter === "all" || registration.estado === statusFilter
     const matchesYear =
-      yearFilter === "all" || (registration.años ?? []).includes(Number(yearFilter))
+      yearFilter === "all" || (() => {
+        const años = Array.isArray(registration.años) ? registration.años : registration.año ? [registration.año] : []
+        return años.includes(Number(yearFilter))
+      })()
     const healthInfo = parseHealthConditions(registration.condicionSalud)
     const matchesHealth =
       healthFilter === "all" ||

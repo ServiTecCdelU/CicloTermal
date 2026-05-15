@@ -5,7 +5,7 @@ import { collection, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase/firebase-config"
 
 
-const CACHE_KEY = "ciclotermal_registrations_v2"
+const CACHE_KEY = "ciclotermal_registrations_v3"
 const CACHE_TTL = 30 * 60 * 1000 // 30 minutos
 
 interface AdminDataContextType {
@@ -105,7 +105,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         return tb - ta
       })
       setRegistrations(data)
-      saveToCacheForKey(CACHE_KEY, data)
+      if (data.length > 0) saveToCacheForKey(CACHE_KEY, data)
     } catch (error) {
       console.error("Error fetching registrations:", error)
     } finally {
