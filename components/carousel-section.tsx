@@ -4,13 +4,20 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 
-const slides = [
+function formatSubtitle(fechaEvento?: string) {
+  if (!fechaEvento) return "Cicloturismo Termal de Federación"
+  const [y, m, d] = fechaEvento.split("-").map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
+}
+
+const staticSlides = [
   {
     id: "default-1",
     imageUrl: "/foto 1.jpg?height=600&width=1200",
     title: "Cicloturismo Termal de Federación",
-    subtitle: "Segunda Edición - 12 de octubre de 2025",
+    subtitle: null, // se reemplaza con fecha dinámica
     buttonText: "Inscripción Cerrada",
     buttonUrl: "",
   },
@@ -50,13 +57,16 @@ const slides = [
     id: "default-6",
     imageUrl: "/foto 6.jpg?height=600&width=1200",
     title: "Cicloturismo Termal de Federación",
-    subtitle: "Segunda Edición - 12 de octubre de 2025",
+    subtitle: null, // se reemplaza con fecha dinámica
     buttonText: "Inscripción Cerrada",
     buttonUrl: "",
   },
 ]
 
 export default function CarouselSection() {
+  const { eventSettings } = useFirebaseContext()
+  const fechaLabel = formatSubtitle(eventSettings?.fechaEvento)
+  const slides = staticSlides.map((s) => ({ ...s, subtitle: s.subtitle ?? fechaLabel }))
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
 

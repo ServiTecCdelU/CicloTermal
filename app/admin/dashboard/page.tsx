@@ -483,6 +483,15 @@ export default function AdminDashboardPage() {
     }
   }, [eventSettings])
 
+  // Guardar selección de año en localStorage para que AdminDataProvider la use
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("ciclotermal_selected_year", String(selectedYear))
+      } catch {}
+    }
+  }, [selectedYear])
+
   // Calcular años disponibles
   useEffect(() => {
     if (allRegistrations.length > 0) {

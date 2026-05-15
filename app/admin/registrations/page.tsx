@@ -175,6 +175,15 @@ export default function AdminRegistrationsPage() {
     }
   }, [eventSettings])
 
+  // Persistir la selección de año y pedir recarga del contexto
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("ciclotermal_selected_year", yearFilter === "all" ? "" : yearFilter)
+      } catch {}
+    }
+  }, [yearFilter])
+
   // Sincronizar con datos del contexto compartido
   useEffect(() => {
     if (!ctxLoading && ctxRegistrations.length > 0) {

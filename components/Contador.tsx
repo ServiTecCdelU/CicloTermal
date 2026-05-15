@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 
 type TimeLeft = {
   days: number
@@ -9,55 +10,34 @@ type TimeLeft = {
   seconds: number
 }
 
-interface ContadorProps {
-  eventDate?: string // Opcional: fecha específica del evento en formato ISO
-}
+// Fallback hardcodeado si no hay fecha en Firebase
+const FALLBACK = { dia: 12, mes: 10, anio: 2025, hora: 7, minuto: 30 }
 
-export default function Contador({ eventDate }: ContadorProps) {
-  // CONFIGURACIÓN FÁCIL: Define tu fecha del evento aquí
-  const eventConfig = {
-    dia: 12,          // Día del evento (1-31)
-    mes: 10,           // Mes del evento (1-12)
-    anio: 2025,       // Año del evento
-    hora: 7,          // Hora del evento (0-23)
-    minuto: 30,       // Minuto del evento (0-59)
-    segundo: 0        // Segundo del evento (0-59)
+export default function Contador() {
+  const { eventSettings } = useFirebaseContext()
+
+  const createTargetDate = (nextYear = false) => {
+    const fechaEvento = eventSettings?.fechaEvento
+    if (fechaEvento) {
+      const [y, m, d] = fechaEvento.split("-").map(Number)
+      const year = nextYear ? y + 1 : y
+      return new Date(year, m - 1, d, FALLBACK.hora, FALLBACK.minuto, 0)
+    }
+    const year = nextYear ? new Date().getFullYear() + 1 : FALLBACK.anio
+    return new Date(year, FALLBACK.mes - 1, FALLBACK.dia, FALLBACK.hora, FALLBACK.minuto, 0)
   }
   
-  // Creamos la fecha objetivo a partir de la configuración
-  const createTargetDate = (useNextYear = false) => {
-    // Si se proporciona eventDate como prop, lo usamos
-    if (eventDate && !useNextYear) {
-      return new Date(eventDate)
-    }
-    
-    // Si no, usamos la configuración manual
-    // Los meses en JavaScript van de 0-11, por eso restamos 1 al mes
-    let year = eventConfig.anio
-    
-    // Si useNextYear es true, calculamos para el año siguiente
-    if (useNextYear) {
-      const now = new Date()
-      year = now.getFullYear() + 1
-    }
-    
-    return new Date(
-      year, 
-      eventConfig.mes - 1, 
-      eventConfig.dia, 
-      eventConfig.hora, 
-      eventConfig.minuto, 
-      eventConfig.segundo
-    )
-  }
-  
-  const [targetDate, setTargetDate] = useState(createTargetDate())
+  const [targetDate, setTargetDate] = useState(() => createTargetDate())
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 })
   const [loading, setLoading] = useState(true)
   const [isNextYear, setIsNextYear] = useState(false)
-
   const [eventDay, setEventDay] = useState(false)
-  
+
+  useEffect(() => {
+    setTargetDate(createTargetDate())
+    setIsNextYear(false)
+  }, [eventSettings?.fechaEvento])
+
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date()
@@ -79,13 +59,11 @@ export default function Contador({ eventDate }: ContadorProps) {
           setEventDay(false)
         }
         
-        // Si ya pasó el día del evento y aún no estamos calculando para el próximo año
         if (!isNextYear) {
           setIsNextYear(true)
           setTargetDate(createTargetDate(true))
-          return // Salimos para que la próxima ejecución calcule con la nueva fecha
+          return
         } else {
-          // Si ya estamos en modo "próximo año" pero ha pasado de nuevo, actualizamos al siguiente año
           setTargetDate(new Date(
             targetDate.getFullYear() + 1,
             targetDate.getMonth(),
@@ -178,16 +156,3 @@ function CountdownUnit({ value, label }: { value: number; label: string }) {
   )
 }
 
-/*
-INSTRUCCIONES PARA CAMBIAR LA FECHA DEL EVENTO:
---------------------------------------------------
-1. Encuentra la sección "CONFIGURACIÓN FÁCIL" al inicio del componente
-2. Modifica los valores numéricos según tus necesidades:
-   - dia: día del mes (1-31)
-   - mes: número del mes (1-12)
-   - anio: año del evento (ej: 2025)
-   - hora: hora en formato 24h (0-23)
-   - minuto: minutos (0-59)
-   - segundo: segundos (0-59)
-3. Guarda el archivo y el contador se actualizará automáticamente
-*/

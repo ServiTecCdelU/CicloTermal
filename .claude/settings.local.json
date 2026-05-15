@@ -12,7 +12,17 @@
       "Bash(vercel link:*)",
       "Bash(vercel project:*)",
       "Bash(npm show:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(Remove-Item \"C:/Proyectos GIT/ciclotermal/CicloTermal/app/api/upload/route.js\")",
+      "Bash(Remove-Item -Recurse \"C:/Proyectos GIT/ciclotermal/CicloTermal/app/api/upload\" -ErrorAction SilentlyContinue)",
+      "Bash(Write-Output \"ok\")",
+      "PowerShell([System.IO.File]::ReadAllText\\(\"C:\\\\Proyectos GIT\\\\ciclotermal\\\\CicloTermal\\\\chat.md\"\\))",
+      "PowerShell(\\(Get-Content \"C:\\\\Proyectos GIT\\\\ciclotermal\\\\CicloTermal\\\\app\\\\admin\\\\dashboard\\\\page.tsx\"\\).Count; \\(Get-Content \"C:\\\\Proyectos GIT\\\\ciclotermal\\\\CicloTermal\\\\app\\\\admin\\\\registrations\\\\page.tsx\"\\).Count)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)"
     ]
   }
 }

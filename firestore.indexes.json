@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "participantesCicloTermal",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "años", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "fechaInscripcion", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -62,6 +62,12 @@ const iconMap = {
   Truck,
 }
 
+function formatFechaDia(fechaEvento?: string) {
+  if (!fechaEvento) return "12 de Octubre"
+  const [y, m, d] = fechaEvento.split("-").map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString("es-AR", { day: "numeric", month: "long" })
+}
+
 // Datos predeterminados
 const defaultEventData: EventItem[] = [
   { id: "1", label: "Fecha", value: "12 de Octubre", iconName: "Calendar", order: 0 },
@@ -96,7 +102,9 @@ export default function BenefitsSection() {
   useEffect(() => {
     const fetchData = async () => {
       if (!isFirebaseAvailable) {
-        setEventData(defaultEventData)
+        setEventData(defaultEventData.map((i) =>
+          i.label === "Fecha" ? { ...i, value: formatFechaDia(eventSettings?.fechaEvento) } : i
+        ))
         setBenefits(defaultBenefits)
         setLoading(false)
         return
@@ -123,6 +131,10 @@ export default function BenefitsSection() {
               }) as EventItem,
           )
           setEventData(eventItems)
+        } else {
+          setEventData(defaultEventData.map((i) =>
+            i.label === "Fecha" ? { ...i, value: formatFechaDia(eventSettings?.fechaEvento) } : i
+          ))
         }
 
         // Fetch benefits data
@@ -146,7 +158,9 @@ export default function BenefitsSection() {
         }
       } catch (error) {
         console.error("Error fetching benefits data:", error)
-        setEventData(defaultEventData)
+        setEventData(defaultEventData.map((i) =>
+          i.label === "Fecha" ? { ...i, value: formatFechaDia(eventSettings?.fechaEvento) } : i
+        ))
         setBenefits(defaultBenefits)
       } finally {
         setLoading(false)

@@ -79,6 +79,7 @@ TAREAS
    - ID de cada doc = DNI del participante
    - Agregar campo `años: [2025]` a cada uno
    - Eliminar campo `year`
+   (ya esta)
 
 2. FORMULARIO DE INSCRIPCIÓN
    - Mover app/inscripcion/page.tsx → app/inscripcion/[año]/page.tsx
@@ -95,6 +96,20 @@ TAREAS
    - El filtro por año en listados usa: where("años", "array-contains", 2026)
    - Eliminar cualquier uso del campo `year`
 
-4. SETTINGS
-   - Crear UI en admin/settings para gestionar ciclos (habilitar, deshabilitar, fechas)
-   - Leer/escribir en `configuracion/inscripciones`
+4. SETTINGS ✅
+   - UI en admin/settings gestiona todos los ciclos: toggle, fechaDesde, fechaHasta, "Agregar año"
+   - Lee/escribe en `configuracion/inscripciones`
+
+5. cosas para sacar ✅
+  - Eliminada la alerta "sin remera"
+
+6. cosas que no andan ✅
+  - DNI es ahora el primer campo (col-span-2, destacado)
+  - Fix bug closure: onBlur usa e.target.value para el lookup (no formData stale)
+
+7. optimiza completamente la inscripcion...
+  - mas rapida
+  - que ande en todos los dispositivos
+  - optimizalo
+
+8. fijate y analiza si crees que falta o hay que editar algo mas

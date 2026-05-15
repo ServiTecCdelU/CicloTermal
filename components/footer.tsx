@@ -1,7 +1,17 @@
+"use client"
+
 import Link from "next/link"
-//import { Facebook, Instagram, Twitter } from "lucide-react"
+import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
+
+function formatFecha(fechaEvento?: string) {
+  if (!fechaEvento) return "Federación, Entre Ríos"
+  const [y, m, d] = fechaEvento.split("-").map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
+}
 
 export default function Footer() {
+  const { eventSettings } = useFirebaseContext()
+
   return (
     <footer className="bg-gradient-to-r from-pink-100 via-violet-100 to-blue-100 py-10 border-t">
       <div className="container mx-auto px-4">
@@ -12,7 +22,7 @@ export default function Footer() {
               Cicloturismo Termal
             </h3>
             <p className="text-sm text-gray-600 mb-2">Federación, Entre Ríos, Argentina</p>
-            <p className="text-sm text-gray-600">12 de octubre de 2025</p>
+            <p className="text-sm text-gray-600">{formatFecha(eventSettings?.fechaEvento)}</p>
           </div>
 
           {/* Enlaces rápidos */}
