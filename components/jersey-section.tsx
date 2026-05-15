@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Shirt, Search, CheckCircle2, UploadCloud } from "lucide-react"
+import { Loader2, Shirt, Search, CheckCircle2, UploadCloud, Plus, Trash2, PencilLine } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
 interface JerseyFeature {
@@ -48,15 +48,22 @@ const defaultJerseyData: JerseyData = {
 
 const talles = ["S", "M", "L", "XL", "XXL"]
 
+interface RemeraItem {
+  talle: string
+  cantidad: number
+}
+
 function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { toast } = useToast()
   const [step, setStep] = useState<"dni" | "form" | "success">("dni")
   const [dni, setDni] = useState("")
   const [nombre, setNombre] = useState("")
   const [telefono, setTelefono] = useState("")
-  const [talle, setTalle] = useState("")
+  const [items, setItems] = useState<RemeraItem[]>([{ talle: "", cantidad: 1 }])
   const [comprobante, setComprobante] = useState<File | null>(null)
   const [estaRegistrado, setEstaRegistrado] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [existingTieneComprobante, setExistingTieneComprobante] = useState(false)
   const [buscando, setBuscando] = useState(false)
   const [enviando, setEnviando] = useState(false)
 
@@ -65,9 +72,11 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     setDni("")
     setNombre("")
     setTelefono("")
-    setTalle("")
+    setItems([{ talle: "", cantidad: 1 }])
     setComprobante(null)
     setEstaRegistrado(false)
+    setIsEditing(false)
+    setExistingTieneComprobante(false)
     onClose()
   }
 
@@ -78,9 +87,10 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     }
     setBuscando(true)
     try {
-      const snap = await getDoc(doc(db, "participantesCicloTermal", dni.trim()))
-      if (snap.exists()) {
-        const data = snap.data()
+      // Buscar inscripción
+      const partSnap = await getDoc(doc(db, "participantesCicloTermal", dni.trim()))
+      if (partSnap.exists()) {
+        const data = partSnap.data()
         setNombre(`${data.nombre || ""} ${data.apellido || ""}`.trim())
         setTelefono(data.telefono || "")
         setEstaRegistrado(true)
@@ -89,12 +99,44 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
         setTelefono("")
         setEstaRegistrado(false)
       }
+
+      // Buscar pedido de remera existente
+      const remeraSnap = await getDoc(doc(db, "remera", dni.trim()))
+      if (remeraSnap.exists()) {
+        const rd = remeraSnap.data()
+        if (rd.items?.length) {
+          setItems(rd.items)
+        } else if (rd.talle) {
+          setItems([{ talle: rd.talle, cantidad: 1 }])
+        }
+        if (!partSnap.exists()) {
+          setNombre(rd.nombre || "")
+          setTelefono(rd.telefono || "")
+        }
+        setExistingTieneComprobante(rd.tieneComprobante ?? !!rd.comprobanteBase64)
+        setIsEditing(true)
+      }
+
       setStep("form")
     } catch {
       toast({ title: "Error", description: "No se pudo consultar el DNI.", variant: "destructive" })
     } finally {
       setBuscando(false)
     }
+  }
+
+  const addItem = () => {
+    if (items.length >= 5) return
+    setItems((prev) => [...prev, { talle: "", cantidad: 1 }])
+  }
+
+  const removeItem = (idx: number) => {
+    if (items.length <= 1) return
+    setItems((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const updateItem = (idx: number, field: keyof RemeraItem, value: string | number) => {
+    setItems((prev) => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,23 +166,42 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const handleSubmit = async () => {
     if (!nombre.trim()) { toast({ title: "Nombre requerido", variant: "destructive" }); return }
     if (!telefono.trim()) { toast({ title: "Teléfono requerido", variant: "destructive" }); return }
-    if (!talle) { toast({ title: "Seleccioná un talle", variant: "destructive" }); return }
-    if (!comprobante) { toast({ title: "Subí el comprobante", variant: "destructive" }); return }
+
+    const validItems = items.filter((i) => i.talle && i.cantidad >= 1)
+    if (validItems.length === 0) {
+      toast({ title: "Seleccioná al menos un talle", variant: "destructive" })
+      return
+    }
+
+    if (!comprobante && !existingTieneComprobante) {
+      toast({ title: "Subí el comprobante de pago", variant: "destructive" })
+      return
+    }
 
     setEnviando(true)
     try {
-      const comprobanteBase64 = await convertToBase64(comprobante)
-      await setDoc(doc(db, "remera", dni.trim()), {
-        dni: dni.trim(),
-        nombre: nombre.trim(),
-        telefono: telefono.trim(),
-        talle,
-        comprobanteBase64,
-        nombreArchivo: comprobante.name,
-        estaRegistrado,
-        estado: "pendiente",
-        fechaSolicitud: new Date().toISOString(),
-      })
+      if (comprobante) {
+        const comprobanteBase64 = await convertToBase64(comprobante)
+        await setDoc(doc(db, "remera_comprobantes", dni.trim()), {
+          comprobanteBase64,
+          nombreArchivo: comprobante.name,
+        })
+      }
+
+      await setDoc(
+        doc(db, "remera", dni.trim()),
+        {
+          dni: dni.trim(),
+          nombre: nombre.trim(),
+          telefono: telefono.trim(),
+          items: validItems,
+          tieneComprobante: !!comprobante || existingTieneComprobante,
+          estaRegistrado,
+          ...(isEditing ? {} : { estado: "pendiente", fechaSolicitud: new Date().toISOString() }),
+        },
+        { merge: true }
+      )
+
       setStep("success")
     } catch {
       toast({ title: "Error al guardar", description: "Intentá de nuevo.", variant: "destructive" })
@@ -154,7 +215,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-gray-900">
-            Pedir remera oficial
+            {isEditing ? "Editar pedido de remera" : "Pedir remera oficial"}
           </DialogTitle>
         </DialogHeader>
 
@@ -175,19 +236,25 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
                   {buscando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">Ingresá tu DNI para cargar tus datos automáticamente.</p>
+              <p className="text-xs text-gray-500">Si ya tenés un pedido, podés editarlo con tu DNI.</p>
             </div>
           </div>
         )}
 
         {step === "form" && (
           <div className="space-y-4">
-            {!estaRegistrado && (
+            {isEditing && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm px-3 py-2 rounded-md flex items-center gap-2">
+                <PencilLine className="h-4 w-4 shrink-0" />
+                Ya tenés un pedido registrado. Podés modificarlo.
+              </div>
+            )}
+            {!isEditing && !estaRegistrado && (
               <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-2 rounded-md">
                 No encontramos tu inscripción. La remera se retira el día del evento.
               </div>
             )}
-            {estaRegistrado && (
+            {!isEditing && estaRegistrado && (
               <div className="bg-green-50 border border-green-200 text-green-800 text-sm px-3 py-2 rounded-md">
                 Inscripción encontrada. Datos precargados.
               </div>
@@ -215,22 +282,58 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
               />
             </div>
 
+            {/* Items: talle + cantidad */}
             <div className="space-y-2">
-              <Label>Talle</Label>
-              <Select value={talle} onValueChange={setTalle}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccioná tu talle" />
-                </SelectTrigger>
-                <SelectContent>
-                  {talles.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Talles</Label>
+              <div className="space-y-2">
+                {items.map((item, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <Select value={item.talle} onValueChange={(v) => updateItem(idx, "talle", v)}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Talle" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {talles.map((t) => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={item.cantidad}
+                      onChange={(e) => updateItem(idx, "cantidad", Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-16 text-center"
+                    />
+                    {items.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-gray-400 hover:text-red-500"
+                        onClick={() => removeItem(idx)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {items.length < 5 && (
+                  <Button variant="outline" size="sm" onClick={addItem} className="w-full text-xs gap-1">
+                    <Plus className="h-3 w-3" />
+                    Agregar talle
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Comprobante de pago</Label>
+              <Label>
+                Comprobante de pago
+                {existingTieneComprobante && (
+                  <span className="ml-2 text-xs text-gray-400 font-normal">(ya tenés uno subido, podés reemplazarlo)</span>
+                )}
+              </Label>
               <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-red-500 transition-colors bg-gray-50">
                 <div className="flex flex-col items-center">
                   <UploadCloud className="h-6 w-6 text-gray-400 mb-1" />
@@ -252,7 +355,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
                 className="flex-1 bg-red-600 text-white hover:bg-red-700"
               >
                 {enviando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Enviar pedido
+                {isEditing ? "Guardar cambios" : "Enviar pedido"}
               </Button>
             </div>
           </div>
@@ -262,9 +365,13 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
           <div className="flex flex-col items-center gap-4 py-6 text-center">
             <CheckCircle2 className="h-16 w-16 text-green-500" />
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">¡Pedido registrado!</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isEditing ? "¡Pedido actualizado!" : "¡Pedido registrado!"}
+              </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Tu solicitud de remera fue enviada. Nos pondremos en contacto.
+                {isEditing
+                  ? "Tu pedido fue actualizado correctamente."
+                  : "Tu solicitud de remera fue enviada. Nos pondremos en contacto."}
               </p>
             </div>
             <Button onClick={handleClose} className="mt-2">Cerrar</Button>

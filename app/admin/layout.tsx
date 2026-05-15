@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { auth } from "@/lib/firebase/firebase-config"
+import { auth, db } from "@/lib/firebase/firebase-config"
+import { collection, getDocs, query, where } from "firebase/firestore"
 import AdminSidebar from "@/components/admin/admin-sidebar"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { AdminDataProvider } from "@/lib/admin-data-context"
@@ -15,6 +16,7 @@ export default function AdminLayout({ children }) {
   const pathname = usePathname()
   const { isFirebaseAvailable } = useFirebaseContext()
   const [loading, setLoading] = useState(true)
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isFirebaseAvailable) {
@@ -22,10 +24,28 @@ export default function AdminLayout({ children }) {
       return
     }
 
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user && pathname !== "/admin") {
         router.push("/admin")
+        setLoading(false)
+        return
       }
+
+      if (user) {
+        try {
+          const snap = await getDocs(query(collection(db, "admins"), where("email", "==", user.email)))
+          if (!snap.empty) {
+            const role = snap.docs[0].data().role as string
+            setUserRole(role)
+            if (role === "remera" && pathname !== "/admin/remera" && pathname !== "/admin") {
+              router.push("/admin/remera")
+            }
+          }
+        } catch {
+          // Si falla la consulta de rol, dejar pasar (el usuario ya autenticó)
+        }
+      }
+
       setLoading(false)
     })
 
@@ -70,7 +90,7 @@ export default function AdminLayout({ children }) {
   return (
     <AdminDataProvider>
       <div className="flex min-h-screen bg-gradient-to-br from-pink-50 to-blue-50">
-        <AdminSidebar />
+        <AdminSidebar userRole={userRole} />
         <div className="flex-1 p-4 md:p-6">{children}</div>
       </div>
     </AdminDataProvider>

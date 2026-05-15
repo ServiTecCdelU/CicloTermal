@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, getDocs, doc, updateDoc, orderBy, query } from "firebase/firestore"
+import { collection, getDocs, doc, updateDoc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase/firebase-config"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,14 +12,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Loader2, Search, Shirt, Eye, RefreshCw } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
+interface RemeraItem {
+  talle: string
+  cantidad: number
+}
+
 interface RemeraDoc {
   id: string
   dni: string
   nombre: string
   telefono: string
-  talle: string
-  comprobanteBase64?: string
-  nombreArchivo?: string
+  talle?: string // legacy
+  items?: RemeraItem[] // nuevo
+  tieneComprobante: boolean
   estaRegistrado: boolean
   estado: "pendiente" | "entregado"
   fechaSolicitud: string
@@ -30,21 +35,41 @@ const estadoColors: Record<string, string> = {
   entregado: "bg-green-100 text-green-800 border-green-300",
 }
 
-export default function RemerapAdminPage() {
+function formatItems(r: RemeraDoc): string {
+  if (r.items?.length) {
+    return r.items.map((i) => `${i.talle}×${i.cantidad}`).join(", ")
+  }
+  return r.talle || "—"
+}
+
+export default function RemeraAdminPage() {
   const { toast } = useToast()
   const [remeras, setRemeras] = useState<RemeraDoc[]>([])
   const [loading, setLoading] = useState(true)
   const [busqueda, setBusqueda] = useState("")
   const [filtroEstado, setFiltroEstado] = useState("todos")
   const [filtroTalle, setFiltroTalle] = useState("todos")
-  const [comprobanteModal, setComprobanteModal] = useState<RemeraDoc | null>(null)
   const [actualizando, setActualizando] = useState<string | null>(null)
+
+  // Comprobante lazy + caché
+  const [comprobanteCache, setComprobanteCache] = useState<Record<string, string>>({})
+  const [fetchingComprobante, setFetchingComprobante] = useState<string | null>(null)
+  const [comprobanteModal, setComprobanteModal] = useState<{ record: RemeraDoc; base64: string } | null>(null)
 
   const fetchRemeras = async () => {
     setLoading(true)
     try {
       const snap = await getDocs(collection(db, "remera"))
-      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as RemeraDoc[]
+      const docs = snap.docs.map((d) => {
+        const data = d.data()
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { comprobanteBase64, nombreArchivo, ...rest } = data
+        return {
+          id: d.id,
+          ...rest,
+          tieneComprobante: rest.tieneComprobante ?? !!comprobanteBase64,
+        } as RemeraDoc
+      })
       docs.sort((a, b) => new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime())
       setRemeras(docs)
     } catch {
@@ -55,6 +80,37 @@ export default function RemerapAdminPage() {
   }
 
   useEffect(() => { fetchRemeras() }, [])
+
+  const verComprobante = async (r: RemeraDoc) => {
+    if (comprobanteCache[r.id]) {
+      setComprobanteModal({ record: r, base64: comprobanteCache[r.id] })
+      return
+    }
+    setFetchingComprobante(r.id)
+    try {
+      // Intentar colección separada (nuevos registros)
+      const compSnap = await getDoc(doc(db, "remera_comprobantes", r.id))
+      if (compSnap.exists() && compSnap.data().comprobanteBase64) {
+        const b64 = compSnap.data().comprobanteBase64 as string
+        setComprobanteCache((p) => ({ ...p, [r.id]: b64 }))
+        setComprobanteModal({ record: r, base64: b64 })
+        return
+      }
+      // Fallback: doc principal (registros viejos)
+      const mainSnap = await getDoc(doc(db, "remera", r.id))
+      if (mainSnap.exists() && mainSnap.data().comprobanteBase64) {
+        const b64 = mainSnap.data().comprobanteBase64 as string
+        setComprobanteCache((p) => ({ ...p, [r.id]: b64 }))
+        setComprobanteModal({ record: r, base64: b64 })
+        return
+      }
+      toast({ title: "Comprobante no disponible", variant: "destructive" })
+    } catch {
+      toast({ title: "Error al cargar comprobante", variant: "destructive" })
+    } finally {
+      setFetchingComprobante(null)
+    }
+  }
 
   const cambiarEstado = async (id: string, estado: "pendiente" | "entregado") => {
     setActualizando(id)
@@ -75,12 +131,21 @@ export default function RemerapAdminPage() {
       r.dni?.includes(busqueda) ||
       r.telefono?.includes(busqueda)
     const matchEstado = filtroEstado === "todos" || r.estado === filtroEstado
-    const matchTalle = filtroTalle === "todos" || r.talle === filtroTalle
+    const matchTalle =
+      filtroTalle === "todos" ||
+      (r.items ? r.items.some((i) => i.talle === filtroTalle) : r.talle === filtroTalle)
     return matchBusqueda && matchEstado && matchTalle
   })
 
+  // Cuenta unidades por talle (considera cantidad en items)
   const conteoTalles = remeras.reduce<Record<string, number>>((acc, r) => {
-    acc[r.talle] = (acc[r.talle] || 0) + 1
+    if (r.items?.length) {
+      r.items.forEach((item) => {
+        acc[item.talle] = (acc[item.talle] || 0) + item.cantidad
+      })
+    } else if (r.talle) {
+      acc[r.talle] = (acc[r.talle] || 0) + 1
+    }
     return acc
   }, {})
 
@@ -172,7 +237,7 @@ export default function RemerapAdminPage() {
                 <th className="px-4 py-3 text-left font-medium">Nombre</th>
                 <th className="px-4 py-3 text-left font-medium">DNI</th>
                 <th className="px-4 py-3 text-left font-medium">Teléfono</th>
-                <th className="px-4 py-3 text-center font-medium">Talle</th>
+                <th className="px-4 py-3 text-center font-medium">Talles</th>
                 <th className="px-4 py-3 text-center font-medium">Inscripto</th>
                 <th className="px-4 py-3 text-left font-medium">Fecha</th>
                 <th className="px-4 py-3 text-center font-medium">Estado</th>
@@ -188,7 +253,7 @@ export default function RemerapAdminPage() {
                   <td className="px-4 py-3 text-gray-600">{r.telefono}</td>
                   <td className="px-4 py-3 text-center">
                     <span className="inline-block px-2 py-0.5 bg-violet-100 text-violet-700 rounded font-semibold text-xs">
-                      {r.talle}
+                      {formatItems(r)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -203,14 +268,18 @@ export default function RemerapAdminPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {r.comprobanteBase64 ? (
+                    {r.tieneComprobante ? (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setComprobanteModal(r)}
+                        onClick={() => verComprobante(r)}
+                        disabled={fetchingComprobante === r.id}
                         className="h-7 px-2"
                       >
-                        <Eye className="h-4 w-4" />
+                        {fetchingComprobante === r.id
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Eye className="h-4 w-4" />
+                        }
                       </Button>
                     ) : (
                       <span className="text-gray-300 text-xs">—</span>
@@ -249,18 +318,18 @@ export default function RemerapAdminPage() {
       <Dialog open={!!comprobanteModal} onOpenChange={(v) => { if (!v) setComprobanteModal(null) }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Comprobante — {comprobanteModal?.nombre}</DialogTitle>
+            <DialogTitle>Comprobante — {comprobanteModal?.record.nombre}</DialogTitle>
           </DialogHeader>
-          {comprobanteModal?.comprobanteBase64 && (
-            comprobanteModal.comprobanteBase64.startsWith("data:application/pdf") ? (
+          {comprobanteModal?.base64 && (
+            comprobanteModal.base64.startsWith("data:application/pdf") ? (
               <iframe
-                src={comprobanteModal.comprobanteBase64}
+                src={comprobanteModal.base64}
                 className="w-full h-96 rounded border"
                 title="comprobante"
               />
             ) : (
               <img
-                src={comprobanteModal.comprobanteBase64}
+                src={comprobanteModal.base64}
                 alt="Comprobante"
                 className="w-full rounded border object-contain max-h-96"
               />

@@ -38,11 +38,15 @@ const navItems = [
   },
 ]
 
-export default function AdminNavbar() {
+export default function AdminNavbar({ userRole }: { userRole?: string | null }) {
   const pathname = usePathname()
   const { toast } = useToast()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+
+  const filteredNavItems = userRole === "remera"
+    ? navItems.filter((item) => item.href === "/admin/remera")
+    : navItems
 
   // Add scroll event listener
   useEffect(() => {
@@ -83,7 +87,7 @@ export default function AdminNavbar() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-1">
-              {navItems.map((item) => (
+              {filteredNavItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -133,7 +137,7 @@ export default function AdminNavbar() {
           isMobileMenuOpen ? "max-h-64" : "max-h-0"
         )}>
           <div className="container mx-auto px-4 py-2 flex flex-col space-y-1">
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

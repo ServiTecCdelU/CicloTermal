@@ -58,10 +58,10 @@ export default function LoginPage() {
         
         // Verificar si el usuario tiene rol de administrador
         if (adminData.role === "admin") {
-          // El usuario es administrador aprobado, redirigir al dashboard
           router.push("/admin/dashboard")
+        } else if (adminData.role === "remera") {
+          router.push("/admin/remera")
         } else {
-          // El usuario está pendiente de aprobación
           await auth.signOut()
           setError("Tu cuenta está pendiente de aprobación por un administrador.")
         }
@@ -120,6 +120,8 @@ export default function LoginPage() {
         try { await updateDoc(adminDoc.ref, { lastLogin: new Date() }) } catch {}
         if (adminData.role === "admin") {
           router.push("/admin/dashboard")
+        } else if (adminData.role === "remera") {
+          router.push("/admin/remera")
         } else {
           await auth.signOut()
           setError("Tu cuenta está pendiente de aprobación por un administrador.")
