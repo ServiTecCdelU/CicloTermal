@@ -19,8 +19,10 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 text-center md:center-text-left">
           {/* Información del evento */}
           <div>
-            <h3 className="text-lg font-bold mb-4 text-gray-900">
+            <h3 className="text-lg font-bold mb-4 text-gray-900 flex items-center justify-center gap-2" style={{ fontFamily: "var(--font-marker)" }}>
+              <HeartIcon size={14} />
               Cicloturismo Termal
+              <HeartIcon size={14} />
             </h3>
             <p className="text-sm text-gray-600 mb-2">Federación, Entre Ríos, Argentina</p>
             <p className="text-sm text-gray-600">{formatFecha(eventSettings?.fechaEvento)}</p>
@@ -28,8 +30,10 @@ export default function Footer() {
 
           {/* Enlaces rápidos */}
           <div>
-            <h3 className="text-lg font-bold mb-4 text-gray-900">
+            <h3 className="text-lg font-bold mb-4 text-gray-900 flex items-center justify-center gap-2" style={{ fontFamily: "var(--font-marker)" }}>
+              <HeartIcon size={14} />
               Enlaces rápidos
+              <HeartIcon size={14} />
             </h3>
             <ul className="space-y-2 ">
               {[
