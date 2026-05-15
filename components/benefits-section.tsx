@@ -220,12 +220,6 @@ export default function BenefitsSection() {
             </div>
           ))}
         </div>
-        {/* Caja roja con opacidad */}
-        <div className="max-w-6xl mx-auto mt-6">
-          <div className="bg-red-50 border border-red-300 text-red-800 text-center py-3 px-4 rounded-md font-semibold">
-            El cupo de los Jerseys oficiales del evento son de 200. Una vez pasado ese numero ya no se incluye el Jersey en las inscripciones.
-          </div>
-        </div>
       </div>
     </div>
   )

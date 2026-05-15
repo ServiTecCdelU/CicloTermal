@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/firebase/firebase-config"
 import { signOut } from "firebase/auth"
 import { useToast } from "@/components/ui/use-toast"
-import { LayoutDashboard, Users, FileEdit, Settings, LogOut, Menu, X, ChevronDown } from "lucide-react"
+import { LayoutDashboard, Users, FileEdit, Settings, LogOut, Menu, X, ChevronDown, Shirt } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
@@ -20,6 +20,11 @@ const navItems = [
     title: "Inscripciones",
     href: "/admin/registrations",
     icon: <Users className="h-5 w-5" />,
+  },
+  {
+    title: "Remera",
+    href: "/admin/remera",
+    icon: <Shirt className="h-5 w-5" />,
   },
   {
     title: "Contenido",

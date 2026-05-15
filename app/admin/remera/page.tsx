@@ -1,0 +1,273 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { collection, getDocs, doc, updateDoc, orderBy, query } from "firebase/firestore"
+import { db } from "@/lib/firebase/firebase-config"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Loader2, Search, Shirt, Eye, RefreshCw } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+
+interface RemeraDoc {
+  id: string
+  dni: string
+  nombre: string
+  telefono: string
+  talle: string
+  comprobanteBase64?: string
+  nombreArchivo?: string
+  estaRegistrado: boolean
+  estado: "pendiente" | "entregado"
+  fechaSolicitud: string
+}
+
+const estadoColors: Record<string, string> = {
+  pendiente: "bg-yellow-100 text-yellow-800 border-yellow-300",
+  entregado: "bg-green-100 text-green-800 border-green-300",
+}
+
+export default function RemerapAdminPage() {
+  const { toast } = useToast()
+  const [remeras, setRemeras] = useState<RemeraDoc[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busqueda, setBusqueda] = useState("")
+  const [filtroEstado, setFiltroEstado] = useState("todos")
+  const [filtroTalle, setFiltroTalle] = useState("todos")
+  const [comprobanteModal, setComprobanteModal] = useState<RemeraDoc | null>(null)
+  const [actualizando, setActualizando] = useState<string | null>(null)
+
+  const fetchRemeras = async () => {
+    setLoading(true)
+    try {
+      const snap = await getDocs(collection(db, "remera"))
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as RemeraDoc[]
+      docs.sort((a, b) => new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime())
+      setRemeras(docs)
+    } catch {
+      toast({ title: "Error al cargar remeras", variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchRemeras() }, [])
+
+  const cambiarEstado = async (id: string, estado: "pendiente" | "entregado") => {
+    setActualizando(id)
+    try {
+      await updateDoc(doc(db, "remera", id), { estado })
+      setRemeras((prev) => prev.map((r) => r.id === id ? { ...r, estado } : r))
+    } catch {
+      toast({ title: "Error al actualizar estado", variant: "destructive" })
+    } finally {
+      setActualizando(null)
+    }
+  }
+
+  const filtradas = remeras.filter((r) => {
+    const matchBusqueda =
+      !busqueda ||
+      r.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      r.dni?.includes(busqueda) ||
+      r.telefono?.includes(busqueda)
+    const matchEstado = filtroEstado === "todos" || r.estado === filtroEstado
+    const matchTalle = filtroTalle === "todos" || r.talle === filtroTalle
+    return matchBusqueda && matchEstado && matchTalle
+  })
+
+  const conteoTalles = remeras.reduce<Record<string, number>>((acc, r) => {
+    acc[r.talle] = (acc[r.talle] || 0) + 1
+    return acc
+  }, {})
+
+  const formatFecha = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString("es-AR", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      })
+    } catch { return iso }
+  }
+
+  return (
+    <div className="space-y-6 pt-16">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+            Pedidos de Remera
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">{remeras.length} pedidos en total</p>
+        </div>
+        <Button variant="outline" onClick={fetchRemeras} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          Actualizar
+        </Button>
+      </div>
+
+      {/* Resumen por talle */}
+      <div className="grid grid-cols-5 gap-3">
+        {["S", "M", "L", "XL", "XXL"].map((t) => (
+          <Card key={t} className="text-center">
+            <CardContent className="pt-4 pb-3">
+              <div className="text-2xl font-bold text-violet-600">{conteoTalles[t] || 0}</div>
+              <div className="text-xs text-gray-500 font-medium mt-1">Talle {t}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Buscar por nombre, DNI o teléfono..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="pendiente">Pendiente</SelectItem>
+            <SelectItem value="entregado">Entregado</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filtroTalle} onValueChange={setFiltroTalle}>
+          <SelectTrigger className="w-full sm:w-36">
+            <SelectValue placeholder="Talle" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            {["S", "M", "L", "XL", "XXL"].map((t) => (
+              <SelectItem key={t} value={t}>{t}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Tabla */}
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+        </div>
+      ) : filtradas.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
+          <Shirt className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p>Sin resultados</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-gray-50 text-gray-600">
+                <th className="px-4 py-3 text-left font-medium">Nombre</th>
+                <th className="px-4 py-3 text-left font-medium">DNI</th>
+                <th className="px-4 py-3 text-left font-medium">Teléfono</th>
+                <th className="px-4 py-3 text-center font-medium">Talle</th>
+                <th className="px-4 py-3 text-center font-medium">Inscripto</th>
+                <th className="px-4 py-3 text-left font-medium">Fecha</th>
+                <th className="px-4 py-3 text-center font-medium">Estado</th>
+                <th className="px-4 py-3 text-center font-medium">Comprobante</th>
+                <th className="px-4 py-3 text-center font-medium">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtradas.map((r) => (
+                <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 font-medium">{r.nombre}</td>
+                  <td className="px-4 py-3 text-gray-600">{r.dni}</td>
+                  <td className="px-4 py-3 text-gray-600">{r.telefono}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="inline-block px-2 py-0.5 bg-violet-100 text-violet-700 rounded font-semibold text-xs">
+                      {r.talle}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${r.estaRegistrado ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+                      {r.estaRegistrado ? "Sí" : "No"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{formatFecha(r.fechaSolicitud)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${estadoColors[r.estado] || ""}`}>
+                      {r.estado}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {r.comprobanteBase64 ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setComprobanteModal(r)}
+                        className="h-7 px-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <span className="text-gray-300 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {r.estado === "pendiente" ? (
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
+                        disabled={actualizando === r.id}
+                        onClick={() => cambiarEstado(r.id, "entregado")}
+                      >
+                        {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Marcar entregado"}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        disabled={actualizando === r.id}
+                        onClick={() => cambiarEstado(r.id, "pendiente")}
+                      >
+                        {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Revertir"}
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Modal comprobante */}
+      <Dialog open={!!comprobanteModal} onOpenChange={(v) => { if (!v) setComprobanteModal(null) }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Comprobante — {comprobanteModal?.nombre}</DialogTitle>
+          </DialogHeader>
+          {comprobanteModal?.comprobanteBase64 && (
+            comprobanteModal.comprobanteBase64.startsWith("data:application/pdf") ? (
+              <iframe
+                src={comprobanteModal.comprobanteBase64}
+                className="w-full h-96 rounded border"
+                title="comprobante"
+              />
+            ) : (
+              <img
+                src={comprobanteModal.comprobanteBase64}
+                alt="Comprobante"
+                className="w-full rounded border object-contain max-h-96"
+              />
+            )
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
