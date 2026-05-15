@@ -175,14 +175,12 @@ export default function AdminRegistrationsPage() {
     }
   }, [eventSettings])
 
-  // Persistir la selección de año y pedir recarga del contexto
+  // Si el año seleccionado no tiene datos, auto-seleccionar el más reciente disponible
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("ciclotermal_selected_year", yearFilter === "all" ? "" : yearFilter)
-      } catch {}
+    if (availableYears.length > 0 && yearFilter !== "all" && !availableYears.includes(Number(yearFilter))) {
+      setYearFilter(String(availableYears[0]))
     }
-  }, [yearFilter])
+  }, [availableYears])
 
   // Sincronizar con datos del contexto compartido
   useEffect(() => {

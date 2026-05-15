@@ -407,14 +407,12 @@ export default function AdminDashboardPage() {
     }
   }, [eventSettings])
 
-  // Guardar selección de año en localStorage para que AdminDataProvider la use
+  // Si el año seleccionado no tiene datos, auto-seleccionar el más reciente disponible
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("ciclotermal_selected_year", String(selectedYear))
-      } catch {}
+    if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
+      setSelectedYear(availableYears[0])
     }
-  }, [selectedYear])
+  }, [availableYears])
 
   const hasRegistrations = stats.validRegistrations > 0
 

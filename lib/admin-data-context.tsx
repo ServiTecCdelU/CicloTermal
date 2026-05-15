@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import { collection, getDocs, query, orderBy } from "firebase/firestore"
+import { collection, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase/firebase-config"
 
 
@@ -98,9 +98,12 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     setLoadingRegistrations(true)
     try {
       const ref = collection(db, "participantesCicloTermal")
-      const q = query(ref, orderBy("fechaInscripcion", "desc"))
-      const snapshot = await getDocs(q)
-      const data = snapshot.docs.map(mapDoc)
+      const snapshot = await getDocs(ref)
+      const data = snapshot.docs.map(mapDoc).sort((a, b) => {
+        const ta = a.fechaInscripcion instanceof Date ? a.fechaInscripcion.getTime() : 0
+        const tb = b.fechaInscripcion instanceof Date ? b.fechaInscripcion.getTime() : 0
+        return tb - ta
+      })
       setRegistrations(data)
       saveToCacheForKey(CACHE_KEY, data)
     } catch (error) {
