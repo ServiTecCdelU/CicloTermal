@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import Image from "next/image"
 import { SectionTitle } from "@/components/section-title"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedDoc } from "@/lib/use-cached-firestore"
@@ -331,12 +330,11 @@ export default function JerseySection() {
             <div className="relative w-[240px] h-[240px] md:w-[400px] md:h-[400px] flex-shrink-0 mx-auto md:mx-0">
               <div className="relative bg-white rounded-2xl shadow-xl p-6 md:p-8 transform hover:scale-105 transition-transform duration-300 w-full h-full">
                 <div className="relative w-full h-full overflow-hidden rounded-xl">
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src={jerseyData.imageUrl || "/placeholder.svg?height=600&width=600"}
                     alt={jerseyData.title}
-                    fill
-                    className="object-contain hover:scale-110 transition-transform duration-500"
-                    priority
+                    className="w-full h-full object-contain hover:scale-110 transition-transform duration-500"
                   />
                 </div>
               </div>
