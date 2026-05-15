@@ -88,6 +88,7 @@ export default function Navbar() {
             <HeartIcon size={14} />
             <span className="sm:inline lg:hidden">Cicloturismo</span>
             <span className="hidden lg:inline">Cicloturismo Termal</span>
+            <HeartIcon size={14} />
           </span>
         </Link>
 
