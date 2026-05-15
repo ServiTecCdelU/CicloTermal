@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { db } from "@/lib/firebase/firebase-config"
 import { collection, getDocs, orderBy, query, doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore"
 import { useAdminData } from "@/lib/admin-data-context"
+import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import {
   Search,
   Filter,
@@ -80,10 +81,11 @@ const formatDate = (dateString) => {
 
 export default function AdminRegistrationsPage() {
   const { registrations: ctxRegistrations, loadingRegistrations: ctxLoading, refreshRegistrations } = useAdminData()
+  const { eventSettings } = useFirebaseContext()
   const [registrations, setRegistrations] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [yearFilter, setYearFilter] = useState("all")
+  const [yearFilter, setYearFilter] = useState<string>("all")
   const [healthFilter, setHealthFilter] = useState("all")
   const [celiacFilter, setCeliacFilter] = useState("all")
   const [noteFilter, setNoteFilter] = useState("all")
@@ -165,6 +167,13 @@ export default function AdminRegistrationsPage() {
     await refreshRegistrations()
     setTimeout(() => setRefreshing(false), 1000)
   }
+
+  // Inicializar año por defecto desde eventSettings
+  useEffect(() => {
+    if (eventSettings?.currentYear) {
+      setYearFilter(String(eventSettings.currentYear))
+    }
+  }, [eventSettings])
 
   // Sincronizar con datos del contexto compartido
   useEffect(() => {
@@ -800,7 +809,7 @@ export default function AdminRegistrationsPage() {
 
     const matchesStatus = statusFilter === "all" || registration.estado === statusFilter
     const matchesYear =
-      yearFilter === "all" || registration.fechaInscripcion?.getFullYear() === Number.parseInt(yearFilter)
+      yearFilter === "all" || (registration.años ?? []).includes(Number(yearFilter))
     const healthInfo = parseHealthConditions(registration.condicionSalud)
     const matchesHealth =
       healthFilter === "all" ||

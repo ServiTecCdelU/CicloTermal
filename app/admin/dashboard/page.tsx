@@ -215,6 +215,8 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState<boolean>(true)
   const [timeFilter, setTimeFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [availableYears, setAvailableYears] = useState<number[]>([])
   const [refreshing, setRefreshing] = useState<boolean>(false)
   const [activeStatsFilter, setActiveStatsFilter] = useState<string>("all")
 
@@ -256,10 +258,10 @@ export default function AdminDashboardPage() {
     setTimeout(() => setRefreshing(false), 1000)
   }
 
-  const processRegistrations = (sourceData: any[]) => {
-    const currentYear = new Date().getFullYear()
+  const processRegistrations = (sourceData: any[], year?: number) => {
+    const targetYear = year ?? selectedYear
     const registrationsData: Registration[] = sourceData
-      .filter((r) => r.años?.includes(currentYear))
+      .filter((r) => (r.años ?? []).includes(targetYear))
       .map((r) => {
         let fechaInscripcion: Date
         if (r.fechaInscripcion instanceof Date) {
@@ -474,14 +476,29 @@ export default function AdminDashboardPage() {
       setLoading(false)
   }
 
+  // Inicializar año desde eventSettings
+  useEffect(() => {
+    if (eventSettings?.currentYear) {
+      setSelectedYear(eventSettings.currentYear)
+    }
+  }, [eventSettings])
+
+  // Calcular años disponibles
+  useEffect(() => {
+    if (allRegistrations.length > 0) {
+      const years = [...new Set(allRegistrations.flatMap((r) => r.años ?? []).filter(Boolean))] as number[]
+      setAvailableYears(years.sort((a, b) => b - a))
+    }
+  }, [allRegistrations])
+
   // Procesar datos del contexto cuando cambian o cambia el filtro
   useEffect(() => {
     if (!ctxLoading && allRegistrations.length > 0) {
-      processRegistrations(allRegistrations)
+      processRegistrations(allRegistrations, selectedYear)
     } else if (!ctxLoading) {
       setLoading(false)
     }
-  }, [allRegistrations, ctxLoading, statusFilter])
+  }, [allRegistrations, ctxLoading, statusFilter, selectedYear])
 
   const hasRegistrations = stats.validRegistrations > 0
 
@@ -642,7 +659,7 @@ export default function AdminDashboardPage() {
             Panel de Administración
           </h1>
           <p className="text-muted-foreground mt-1 md:mt-2 text-center max-w-xl text-sm md:text-base">
-            Estadísticas y análisis {new Date().getFullYear()}
+            Estadísticas y análisis {selectedYear}
           </p>
         </motion.div>
 
@@ -678,6 +695,19 @@ export default function AdminDashboardPage() {
             </Button>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+              <SelectTrigger className="w-full sm:w-[120px] md:w-[140px] bg-white h-8 md:h-9 text-xs md:text-sm">
+                <div className="flex items-center gap-1 md:gap-2">
+                  <CalendarDays className="h-3 md:h-4 w-3 md:w-4" />
+                  <SelectValue placeholder="Año" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map((y) => (
+                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-[160px] md:w-[180px] bg-white h-8 md:h-9 text-xs md:text-sm">
                 <div className="flex items-center gap-1 md:gap-2">
@@ -694,7 +724,7 @@ export default function AdminDashboardPage() {
             <Select value={timeFilter} onValueChange={setTimeFilter}>
               <SelectTrigger className="w-full sm:w-[160px] md:w-[180px] bg-white h-8 md:h-9 text-xs md:text-sm">
                 <div className="flex items-center gap-1 md:gap-2">
-                  <CalendarDays className="h-3 md:h-4 w-3 md:w-4" />
+                  <Calendar className="h-3 md:h-4 w-3 md:w-4" />
                   <SelectValue placeholder="Periodo" />
                 </div>
               </SelectTrigger>

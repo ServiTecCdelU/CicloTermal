@@ -4,6 +4,9 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase/firebase-config"
 
+const CACHE_KEY = "ciclotermal_registrations_v1"
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+
 interface AdminDataContextType {
   registrations: any[]
   expenses: any[]
@@ -27,6 +30,55 @@ export const useAdminData = () => useContext(AdminDataContext)
 const isBase64Data = (str: any) =>
   typeof str === "string" && (str.startsWith("data:") || str.startsWith("iVBOR") || str.includes("JVBERi0"))
 
+const parseFecha = (value: any): Date | null => {
+  if (!value) return null
+  if (typeof value?.toDate === "function") return value.toDate()
+  if (typeof value === "string" || typeof value === "number") return new Date(value)
+  if (value instanceof Date) return value
+  return null
+}
+
+const mapDoc = (docSnap: any) => {
+  const d = docSnap.data()
+  return {
+    id: docSnap.id,
+    ...d,
+    imagenBase64: undefined,
+    comprobantePagoUrl: d.comprobantePagoUrl && !isBase64Data(d.comprobantePagoUrl)
+      ? d.comprobantePagoUrl
+      : undefined,
+    hasComprobante: !!(d.imagenBase64 || d.comprobantePagoUrl),
+    fechaInscripcion: parseFecha(d.fechaInscripcion),
+  }
+}
+
+const loadFromCache = (): any[] | null => {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const { data, ts } = JSON.parse(raw)
+    if (Date.now() - ts > CACHE_TTL) return null
+    return data.map((r: any) => ({
+      ...r,
+      fechaInscripcion: r.fechaInscripcion ? new Date(r.fechaInscripcion) : null,
+    }))
+  } catch {
+    return null
+  }
+}
+
+const saveToCache = (data: any[]) => {
+  if (typeof window === "undefined") return
+  try {
+    const serializable = data.map((r) => ({
+      ...r,
+      fechaInscripcion: r.fechaInscripcion instanceof Date ? r.fechaInscripcion.toISOString() : null,
+    }))
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data: serializable, ts: Date.now() }))
+  } catch {}
+}
+
 export function AdminDataProvider({ children }: { children: ReactNode }) {
   const [registrations, setRegistrations] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
@@ -39,22 +91,9 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       const ref = collection(db, "participantesCicloTermal")
       const q = query(ref, orderBy("fechaInscripcion", "desc"))
       const snapshot = await getDocs(q)
-
-      const data = snapshot.docs.map((docSnap) => {
-        const d = docSnap.data()
-        return {
-          id: docSnap.id,
-          ...d,
-          imagenBase64: undefined,
-          comprobantePagoUrl: d.comprobantePagoUrl && !isBase64Data(d.comprobantePagoUrl)
-            ? d.comprobantePagoUrl
-            : undefined,
-          hasComprobante: !!(d.imagenBase64 || d.comprobantePagoUrl),
-          fechaInscripcion: d.fechaInscripcion?.toDate?.() || null,
-        }
-      })
-
+      const data = snapshot.docs.map(mapDoc)
       setRegistrations(data)
+      saveToCache(data)
     } catch (error) {
       console.error("Error fetching registrations:", error)
     } finally {
@@ -67,16 +106,10 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     try {
       const ref = collection(db, "gastos2025")
       const snapshot = await getDocs(ref)
-
       const data = snapshot.docs.map((docSnap) => {
         const d = docSnap.data()
-        return {
-          id: docSnap.id,
-          ...d,
-          fecha: d.fecha?.toDate?.() || new Date(),
-        }
+        return { id: docSnap.id, ...d, fecha: parseFecha(d.fecha) || new Date() }
       })
-
       setExpenses(data.sort((a, b) => b.fecha.getTime() - a.fecha.getTime()))
     } catch (error) {
       console.error("Error fetching expenses:", error)
@@ -85,8 +118,22 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const refreshRegistrations = useCallback(async () => {
+    if (typeof window !== "undefined") {
+      try { localStorage.removeItem(CACHE_KEY) } catch {}
+    }
+    await fetchRegistrations()
+  }, [fetchRegistrations])
+
   useEffect(() => {
-    fetchRegistrations()
+    // Mostrar caché inmediatamente si está fresca
+    const cached = loadFromCache()
+    if (cached) {
+      setRegistrations(cached)
+      setLoadingRegistrations(false)
+    } else {
+      fetchRegistrations()
+    }
     fetchExpenses()
   }, [fetchRegistrations, fetchExpenses])
 
@@ -97,7 +144,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         expenses,
         loadingRegistrations,
         loadingExpenses,
-        refreshRegistrations: fetchRegistrations,
+        refreshRegistrations,
         refreshExpenses: fetchExpenses,
       }}
     >
