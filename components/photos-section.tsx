@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { SectionTitle } from "@/components/section-title"
 import { Button } from "@/components/ui/button"
 import { where } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
@@ -71,10 +72,7 @@ export default function PhotosSection() {
     <div className="container mx-auto px-4 space-y-16">
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-3xl font-bold mb-6 text-gray-900">
-          Fotos Destacadas
-        </h2>
-        <div className="w-24 h-1 bg-red-600 mx-auto mb-8"></div>
+        <SectionTitle>Fotos Destacadas</SectionTitle>
       </div>
 
       {/* Fotos destacadas con paginación */}

@@ -5,6 +5,7 @@ import Image from "next/image"
 import { orderBy } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedCollection } from "@/lib/use-cached-firestore"
+import { SectionTitle } from "@/components/section-title"
 
 interface HistoryItem {
   id: string
@@ -20,13 +21,10 @@ interface HistoryItem {
 function SectionHeader({ logoUrl, title }: { logoUrl: string; title: string }) {
   return (
     <div className="flex flex-col items-center text-center mb-8">
-      <div className="relative w-[60px] h-[60px] mb-2">
+      <div className="relative w-[60px] h-[60px] mb-3">
         <Image src={logoUrl || "/placeholder.svg"} alt={`Logo ${title}`} fill className="object-contain" priority />
       </div>
-      <h2 className="text-3xl font-bold text-gray-900">
-        {title}
-      </h2>
-      <div className="w-24 h-1 bg-red-600 mt-2" />
+      <SectionTitle>{title}</SectionTitle>
     </div>
   )
 }

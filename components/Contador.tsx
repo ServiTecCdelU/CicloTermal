@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
+import { SectionTitle, BikeIcon } from "@/components/section-title"
 
 type TimeLeft = {
   days: number
@@ -111,17 +112,18 @@ export default function Contador() {
     <div className="w-full my-16">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-2 text-gray-900">
-            Cuenta Regresiva
-          </h2>
-          <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <SectionTitle>Cuenta Regresiva</SectionTitle>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mt-4">
             {eventDay 
               ? "¡Hoy es el día del evento!" 
               : isNextYear 
                 ? "¡El evento de este año ya pasó! Tiempo para la próxima edición:" 
                 : "Prepárate, el evento comienza en:"}
           </p>
+        </div>
+
+        <div className="flex justify-center mb-4">
+          <BikeIcon size={52} className="opacity-70" />
         </div>
 
         <div className="grid grid-cols-4 gap-1 sm:gap-2 md:gap-4 max-w-full mx-auto px-1">

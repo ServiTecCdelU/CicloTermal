@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
+import { SectionTitle } from "@/components/section-title"
 import { orderBy } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedCollection } from "@/lib/use-cached-firestore"
@@ -139,11 +140,8 @@ export default function SponsorsSection(): JSX.Element {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold mb-2 text-gray-900">
-          Nuestros Sponsors
-        </h2>
-        <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">Empresas que hacen posible este evento</p>
+        <SectionTitle>Nuestros Sponsors</SectionTitle>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto mt-4">Empresas que hacen posible este evento</p>
       </div>
 
       {/* Sponsors Grid */}

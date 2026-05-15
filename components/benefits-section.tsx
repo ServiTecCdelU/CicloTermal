@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { SectionTitle } from "@/components/section-title"
 import {
   Calendar,
   MapPin,
@@ -162,11 +163,8 @@ export default function BenefitsSection() {
       {/* Sección Datos del Evento */}
       <div>
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-2 text-gray-900">
-            Evento
-          </h2>
-          <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">Información importante</p>
+          <SectionTitle>Evento</SectionTitle>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mt-4">Información importante</p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6 max-w-6xl mx-auto">
@@ -194,11 +192,8 @@ export default function BenefitsSection() {
       {/* Sección Beneficios de la Inscripción */}
       <div>
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-2 text-gray-900">
-            Beneficios de la Inscripción
-          </h2>
-          <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">Incluye:</p>
+          <SectionTitle>Beneficios de la Inscripción</SectionTitle>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mt-4">Incluye:</p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 max-w-6xl mx-auto">

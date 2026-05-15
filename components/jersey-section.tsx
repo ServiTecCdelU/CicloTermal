@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Image from "next/image"
+import { SectionTitle } from "@/components/section-title"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedDoc } from "@/lib/use-cached-firestore"
 import { db } from "@/lib/firebase/firebase-config"
@@ -320,11 +321,8 @@ export default function JerseySection() {
       <RemeroFormModal open={modalOpen} onClose={() => setModalOpen(false)} />
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-2 text-gray-900">
-            {jerseyData.title}
-          </h2>
-          <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">Llevá el espíritu del evento contigo</p>
+          <SectionTitle>{jerseyData.title}</SectionTitle>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mt-4">Llevá el espíritu del evento contigo</p>
         </div>
 
         <div className="max-w-6xl mx-auto">

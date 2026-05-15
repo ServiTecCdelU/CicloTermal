@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
+import { SectionTitle } from "@/components/section-title"
 import { MapPin, Phone, Mail, ExternalLink } from "lucide-react"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedDoc } from "@/lib/use-cached-firestore"
@@ -70,11 +71,8 @@ export default function ContactSection() {
   return (
     <div className="container mx-auto px-4">
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold mb-2 text-gray-900">
-          Contacto
-        </h2>
-        <div className="w-24 h-1 bg-red-600 mx-auto mb-4"></div>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">¿Tenés alguna pregunta? Contactanos</p>
+        <SectionTitle>Contacto</SectionTitle>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto mt-4">¿Tenés alguna pregunta? Contactanos</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-10 max-w-6xl mx-auto">

@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
+import { BikeIcon } from "@/components/section-title"
 
 function formatSubtitle(fechaEvento?: string) {
   if (!fechaEvento) return "Cicloturismo Termal de Federación"
@@ -163,7 +164,7 @@ export default function CarouselSection() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
             {slides.map((_, index) => (
               <button
                 key={index}
@@ -172,6 +173,10 @@ export default function CarouselSection() {
                 aria-label={`Go to slide ${index + 1}`}
               />
             ))}
+          </div>
+          {/* Bici decorativa bottom-right */}
+          <div className="absolute bottom-6 right-6 opacity-25 hidden md:block">
+            <BikeIcon size={80} color="white" />
           </div>
         </>
       )}

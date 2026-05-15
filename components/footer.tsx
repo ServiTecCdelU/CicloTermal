@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
+import { BikeIcon, HeartIcon } from "@/components/section-title"
 
 function formatFecha(fechaEvento?: string) {
   if (!fechaEvento) return "Federación, Entre Ríos"
@@ -52,8 +53,15 @@ export default function Footer() {
           
         </div>
 
+        {/* Bici decorativa */}
+        <div className="flex items-center justify-center gap-3 mt-8 mb-4">
+          <BikeIcon size={36} className="opacity-40" />
+          <HeartIcon size={14} />
+          <BikeIcon size={36} className="opacity-40 scale-x-[-1]" />
+        </div>
+
         {/* Derechos y créditos */}
-        <div className="mt-10 pt-6 border-t border-gray-200 text-center space-y-2">
+        <div className="pt-6 border-t border-gray-200 text-center space-y-2">
           <p className="text-sm text-gray-600">
             &copy; {new Date().getFullYear()} Cicloturismo Termal de Federación. Todos los derechos reservados.
           </p>
