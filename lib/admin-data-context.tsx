@@ -1,11 +1,11 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
+import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase/firebase-config"
-import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 
-const CACHE_KEY_BASE = "ciclotermal_registrations_v1"
+
+const CACHE_KEY = "ciclotermal_registrations_v2"
 const CACHE_TTL = 30 * 60 * 1000 // 30 minutos
 
 interface AdminDataContextType {
@@ -79,31 +79,15 @@ const saveToCacheForKey = (key: string, data: any[]) => {
 }
 
 export function AdminDataProvider({ children }: { children: ReactNode }) {
-  const { eventSettings } = useFirebaseContext()
   const [registrations, setRegistrations] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [loadingRegistrations, setLoadingRegistrations] = useState(true)
   const [loadingExpenses, setLoadingExpenses] = useState(true)
 
-  // Determina el año a cargar: preferir selección del usuario en localStorage, luego eventSettings.currentYear, luego año actual
-  const determineYearToLoad = () => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("ciclotermal_selected_year")
-      if (stored) {
-        const n = Number(stored)
-        if (!Number.isNaN(n)) return n
-      }
-    }
-    return eventSettings?.currentYear || new Date().getFullYear()
-  }
-
-  const fetchRegistrations = useCallback(async (year?: number, forceRefresh = false) => {
-    const yearToLoad = year ?? determineYearToLoad()
-    const cacheKey = `${CACHE_KEY_BASE}_${yearToLoad}`
-
+  const fetchRegistrations = useCallback(async (_year?: number, forceRefresh = false) => {
     // Mostrar caché inmediatamente si existe (incluso si está vencida)
     if (!forceRefresh) {
-      const cached = loadFromCacheForKey(cacheKey)
+      const cached = loadFromCacheForKey(CACHE_KEY)
       if (cached) {
         setRegistrations(cached)
         setLoadingRegistrations(false)
@@ -114,17 +98,17 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     setLoadingRegistrations(true)
     try {
       const ref = collection(db, "participantesCicloTermal")
-      const q = query(ref, where("años", "array-contains", yearToLoad), orderBy("fechaInscripcion", "desc"))
+      const q = query(ref, orderBy("fechaInscripcion", "desc"))
       const snapshot = await getDocs(q)
       const data = snapshot.docs.map(mapDoc)
       setRegistrations(data)
-      saveToCacheForKey(cacheKey, data)
+      saveToCacheForKey(CACHE_KEY, data)
     } catch (error) {
       console.error("Error fetching registrations:", error)
     } finally {
       setLoadingRegistrations(false)
     }
-  }, [eventSettings])
+  }, [])
 
   const fetchExpenses = useCallback(async () => {
     setLoadingExpenses(true)
@@ -144,40 +128,37 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // refreshRegistrations acepta opcionalmente un año para forzar recarga de ese año
-  const refreshRegistrations = useCallback(async (year?: number) => {
+  const refreshRegistrations = useCallback(async (_year?: number) => {
     if (typeof window !== "undefined") {
       try {
-        const key = `${CACHE_KEY_BASE}_${year ?? determineYearToLoad()}`
-        localStorage.removeItem(key)
+        localStorage.removeItem(CACHE_KEY)
       } catch {}
     }
-    await fetchRegistrations(year, true)
+    await fetchRegistrations(undefined, true)
   }, [fetchRegistrations])
 
   useEffect(() => {
-    const yearToLoad = determineYearToLoad()
-    const cacheKey = `${CACHE_KEY_BASE}_${yearToLoad}`
-
     // Primero: mostrar caché (fresca o vencida) para render instantáneo
-    const freshCache = loadFromCacheForKey(cacheKey)
+    const freshCache = loadFromCacheForKey(CACHE_KEY)
     if (freshCache) {
       setRegistrations(freshCache)
       setLoadingRegistrations(false)
-      return // Caché fresca, no re-fetch
+      fetchExpenses()
+      return
     }
 
-    const staleCache = loadFromCacheForKey(cacheKey, true)
+    const staleCache = loadFromCacheForKey(CACHE_KEY, true)
     if (staleCache) {
       setRegistrations(staleCache)
       setLoadingRegistrations(false)
       // Refrescar en background sin mostrar loading
-      fetchRegistrations(yearToLoad, true)
+      fetchRegistrations(undefined, true)
     } else {
-      fetchRegistrations(yearToLoad)
+      fetchRegistrations()
     }
 
     fetchExpenses()
-  }, [fetchRegistrations, fetchExpenses, eventSettings])
+  }, [fetchRegistrations, fetchExpenses])
 
   return (
     <AdminDataContext.Provider
