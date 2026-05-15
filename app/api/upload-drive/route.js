@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { NextResponse } from "next/server"
 import { uploadToGoogleDrive } from "@/lib/google-drive"
 import { adminAuth } from "@/lib/firebase/admin"
