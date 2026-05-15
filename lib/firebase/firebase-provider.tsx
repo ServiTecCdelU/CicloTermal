@@ -101,8 +101,12 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
         if (ciclosSnap.exists()) {
           setCiclosConfig(ciclosSnap.data().ciclos || [])
         }
-      } catch (error) {
-        console.error("Error fetching event settings:", error)
+      } catch (error: any) {
+        if (error?.code === "unavailable" || error?.message?.includes("offline")) {
+          // Firestore sin conexión — modo offline, no es un error crítico
+        } else {
+          console.warn("Error fetching event settings:", error)
+        }
         setEventSettings({
           cupoMaximo: 300,
           precio: 35000,
