@@ -51,6 +51,15 @@ if (typeof window !== "undefined") {
   emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_KEY_INSCRIPCION!)
 }
 
+// ─── PALETA DEL EVENTO ── cambiar estos valores cada año ────────
+const AMARILLO      = "#C8E000"  // Lima brillante (top remera)
+const VERDE         = "#3CB83C"  // Verde medio
+const CELESTE       = "#20C8B8"  // Turquesa/celeste (hem remera)
+const AMARILLO_SOFT = "#F3FAC0"  // Fondo suave amarillo
+const VERDE_SOFT    = "#C8EEC8"  // Fondo suave verde
+const CELESTE_SOFT  = "#C0EEEA"  // Fondo suave celeste
+// ────────────────────────────────────────────────────────────────
+
 const gruposCiclistas = [
   "Team Riders", "Pedal Power", "Grand Team Bike Cdelu", "Ciclo Materos", "Los Despacito",
   "Kamikaze MTB", "Rural Bike concepcion", "En Bici Ando", "Desafiando Caminos", "Los Tiernitos",
@@ -181,6 +190,7 @@ export default function InscripcionAño() {
   const topRef = useRef(null)
   const [birthDate, setBirthDate] = useState(undefined)
   const [grupoCiclistasOpen, setGrupoCiclistasOpen] = useState(false)
+  const [gruposFirebase, setGruposFirebase] = useState<string[]>([])
   const [dniLookingUp, setDniLookingUp] = useState(false)
   const [dniFound, setDniFound] = useState(false)
   const [formData, setFormData] = useState(emptyForm)
@@ -218,6 +228,16 @@ export default function InscripcionAño() {
     }
     check()
   }, [añoParam])
+
+  useEffect(() => {
+    const loadGrupos = async () => {
+      try {
+        const snap = await getDoc(doc(db, "configuracion", "grupos"))
+        if (snap.exists()) setGruposFirebase(snap.data().lista || [])
+      } catch {}
+    }
+    loadGrupos()
+  }, [])
 
   const parseFecha = (s: string): Date | null => {
     for (const fmt of ["yyyy-MM-dd", "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy"]) {
@@ -502,6 +522,18 @@ export default function InscripcionAño() {
 
       await sendAdminNotificationEmail({ ...perfilPersonal, ...datosCiclo })
 
+      // Guardar grupo nuevo si no estaba en la lista
+      const grupoIngresado = formData.grupoCiclistas.trim()
+      if (grupoIngresado && grupoIngresado !== "No pertenezco a ninguno") {
+        const todosActuales = [...new Set([...gruposCiclistas, ...gruposFirebase])]
+        if (!todosActuales.some((g) => g.toLowerCase() === grupoIngresado.toLowerCase())) {
+          try {
+            await setDoc(doc(db, "configuracion", "grupos"), { lista: arrayUnion(grupoIngresado) }, { merge: true })
+            setGruposFirebase((prev) => [...prev, grupoIngresado])
+          } catch {}
+        }
+      }
+
       setSubmitted(true)
       setShowSuccessDialog(true)
     } catch (error) {
@@ -525,7 +557,7 @@ export default function InscripcionAño() {
 
   if (cicloStatus === "not_found" || cicloStatus === "disabled") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full shadow-lg">
           <CardHeader className="bg-gradient-to-r from-gray-100 to-gray-200 rounded-t-lg">
             <CardTitle className="text-2xl font-bold text-center text-gray-700">Inscripción no disponible</CardTitle>
@@ -550,7 +582,7 @@ export default function InscripcionAño() {
 
   if (cicloStatus === "closed") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full shadow-lg">
           <CardHeader className="bg-gradient-to-r from-amber-100 to-orange-100 rounded-t-lg">
             <CardTitle className="text-2xl font-bold text-center text-amber-700">Inscripción cerrada</CardTitle>
@@ -704,30 +736,63 @@ export default function InscripcionAño() {
                     <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5 text-indigo-500" />Grupo de ciclistas *</span>
                     {fieldErrors.grupoCiclistas && <span className="text-red-500 text-xs">{fieldErrors.grupoCiclistas}</span>}
                   </Label>
-                  <Popover open={grupoCiclistasOpen} onOpenChange={setGrupoCiclistasOpen}>
-                    <PopoverTrigger asChild>
-                      <Input
-                        id="grupoCiclistas" name="grupoCiclistas" value={formData.grupoCiclistas}
-                        onChange={(e) => setFormData({ ...formData, grupoCiclistas: e.target.value })}
-                        placeholder="Escriba o seleccione su grupo"
-                      />
-                    </PopoverTrigger>
-                    <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-                      <div className="max-h-[200px] overflow-y-auto p-1">
-                        <Button variant="ghost" size="sm" className="justify-start font-normal text-left h-auto py-1.5 w-full"
-                          onClick={() => { handleSelectChange("grupoCiclistas", "No pertenezco a ninguno"); setGrupoCiclistasOpen(false) }}>
-                          No pertenezco a ninguno
-                        </Button>
-                        {gruposCiclistas.map((g) => (
-                          <Button key={g} variant="ghost" size="sm" className="justify-start font-normal text-left h-auto py-1.5 w-full"
-                            onClick={() => { handleSelectChange("grupoCiclistas", g); setGrupoCiclistasOpen(false) }}>
-                            {g}
-                          </Button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  <p className="text-xs text-gray-500">Escriba el nombre de su grupo o seleccione uno de la lista.</p>
+                  {(() => {
+                    const todosLosGrupos = [...new Set([...gruposCiclistas, ...gruposFirebase])]
+                    const q = formData.grupoCiclistas.toLowerCase().trim()
+                    const opcionesFiltradas = q
+                      ? todosLosGrupos.filter((g) => g.toLowerCase().includes(q))
+                      : todosLosGrupos
+                    const noPertenece = "No pertenezco a ninguno"
+                    const mostrarNoPertenece = !q || noPertenece.toLowerCase().includes(q)
+                    const exactMatch = todosLosGrupos.some((g) => g.toLowerCase() === q) || q === noPertenece.toLowerCase()
+                    const sugerido = !exactMatch && q.length >= 3
+                      ? todosLosGrupos.find((g) => g.toLowerCase().includes(q))
+                      : null
+                    return (
+                      <Popover open={grupoCiclistasOpen} onOpenChange={setGrupoCiclistasOpen}>
+                        <PopoverTrigger asChild>
+                          <Input
+                            id="grupoCiclistas" name="grupoCiclistas" value={formData.grupoCiclistas}
+                            onChange={(e) => { setFormData({ ...formData, grupoCiclistas: e.target.value }); setGrupoCiclistasOpen(true) }}
+                            onFocus={() => setGrupoCiclistasOpen(true)}
+                            placeholder="Escriba o seleccione su grupo"
+                            className={fieldErrors.grupoCiclistas ? "border-red-500" : ""}
+                            autoComplete="off"
+                          />
+                        </PopoverTrigger>
+                        <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+                          <div className="max-h-[220px] overflow-y-auto p-1">
+                            {sugerido && (
+                              <div className="border-b mb-1 pb-1">
+                                <p className="text-xs text-gray-400 px-2 pt-1">¿Quisiste decir?</p>
+                                <Button variant="ghost" size="sm"
+                                  className="justify-start font-medium text-left h-auto py-1.5 w-full text-indigo-700 hover:bg-indigo-50"
+                                  onClick={() => { handleSelectChange("grupoCiclistas", sugerido); setGrupoCiclistasOpen(false) }}>
+                                  → {sugerido}
+                                </Button>
+                              </div>
+                            )}
+                            {mostrarNoPertenece && (
+                              <Button variant="ghost" size="sm" className="justify-start font-normal text-left h-auto py-1.5 w-full"
+                                onClick={() => { handleSelectChange("grupoCiclistas", noPertenece); setGrupoCiclistasOpen(false) }}>
+                                {noPertenece}
+                              </Button>
+                            )}
+                            {opcionesFiltradas.map((g) => (
+                              <Button key={g} variant="ghost" size="sm" className="justify-start font-normal text-left h-auto py-1.5 w-full"
+                                onClick={() => { handleSelectChange("grupoCiclistas", g); setGrupoCiclistasOpen(false) }}>
+                                {g}
+                              </Button>
+                            ))}
+                            {q && opcionesFiltradas.length === 0 && !mostrarNoPertenece && (
+                              <p className="text-xs text-gray-400 px-2 py-2">No se encontraron grupos. Se guardará "{formData.grupoCiclistas}" al inscribirse.</p>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )
+                  })()}
+                  <p className="text-xs text-gray-500">Escriba el nombre de su grupo o seleccione uno de la lista. Si no existe, se guardará automáticamente.</p>
                 </div>
               </div>
             </div>
@@ -873,7 +938,7 @@ export default function InscripcionAño() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50 pb-10">
+    <div className="min-h-screen bg-gray-50 pb-10">
       <ToastContainer toasts={toasts} />
       <main className="container mx-auto px-4 py-8">
         <div ref={topRef}></div>
@@ -923,11 +988,11 @@ export default function InscripcionAño() {
         </Dialog>
 
         <Card className="max-w-4xl mx-auto shadow-lg border-0">
-          <CardHeader className="bg-gradient-to-r from-pink-100 to-blue-100 rounded-t-lg">
-            <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+          <CardHeader className="rounded-t-lg" style={{ background: `linear-gradient(90deg, ${AMARILLO}, ${VERDE}, ${CELESTE})` }}>
+            <CardTitle className="text-3xl font-bold text-center text-gray-900 drop-shadow-sm">
               Inscripción Cicloturismo Termal {añoParam}
             </CardTitle>
-            <CardDescription className="text-center text-gray-700">
+            <CardDescription className="text-center text-gray-800 font-medium">
               Complete el formulario para registrarse en el evento
             </CardDescription>
           </CardHeader>
@@ -946,12 +1011,12 @@ export default function InscripcionAño() {
                 </Button>
               )}
               {currentStep < totalSteps ? (
-                <Button type="button" onClick={nextStep} className="flex items-center gap-1 bg-gradient-to-r from-pink-500 to-blue-600 hover:from-pink-600 hover:to-blue-700">
+                <Button type="button" onClick={nextStep} className="flex items-center gap-1 text-gray-900 font-semibold border-0" style={{ background: `linear-gradient(90deg, ${VERDE}, ${CELESTE})` }}>
                   Siguiente
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               ) : (
-                <Button type="submit" className="flex-1 bg-gradient-to-r from-pink-500 to-blue-600 hover:from-pink-600 hover:to-blue-700" disabled={isSubmitting} onClick={handleSubmit}>
+                <Button type="submit" className="flex-1 text-gray-900 font-semibold border-0" style={{ background: `linear-gradient(90deg, ${VERDE}, ${CELESTE})` }} disabled={isSubmitting} onClick={handleSubmit}>
                   {isSubmitting ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando inscripción...</>
                   ) : (
@@ -974,7 +1039,18 @@ export default function InscripcionAño() {
           </CardFooter>
         </Card>
 
-        <div className="text-center mt-8 text-sm text-gray-500">
+        <div className="text-center mt-8 text-sm text-gray-500 space-y-4">
+          <a
+            href="https://linktr.ee/serviteccdelu"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex flex-col items-center gap-2 group"
+          >
+            <span className="text-sm font-black text-gray-600 group-hover:text-gray-900 transition-colors">
+              Página web desarrollada por
+            </span>
+            <img src="/ServiTec.png" alt="ServiTec" className="h-28 object-contain group-hover:scale-105 transition-transform" />
+          </a>
           <p>© {añoParam} Cicloturismo Termal - Todos los derechos reservados</p>
         </div>
       </main>
