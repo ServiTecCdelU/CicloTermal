@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, getDocs, doc, updateDoc, getDoc } from "firebase/firestore"
+import { collection, getDocs, doc, updateDoc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase/firebase-config"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loader2, Search, Shirt, Eye, RefreshCw } from "lucide-react"
+import { Loader2, Search, Shirt, Eye, RefreshCw, Save } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
 interface RemeraItem {
@@ -56,6 +56,9 @@ export default function RemeraAdminPage() {
   const [fetchingComprobante, setFetchingComprobante] = useState<string | null>(null)
   const [comprobanteModal, setComprobanteModal] = useState<{ record: RemeraDoc; base64: string } | null>(null)
 
+  const [alias, setAlias] = useState("")
+  const [aliasGuardando, setAliasGuardando] = useState(false)
+
   const fetchRemeras = async () => {
     setLoading(true)
     try {
@@ -79,7 +82,24 @@ export default function RemeraAdminPage() {
     }
   }
 
-  useEffect(() => { fetchRemeras() }, [])
+  useEffect(() => {
+    fetchRemeras()
+    getDoc(doc(db, "settings", "remera")).then((snap) => {
+      if (snap.exists()) setAlias(snap.data().alias ?? "")
+    })
+  }, [])
+
+  const guardarAlias = async () => {
+    setAliasGuardando(true)
+    try {
+      await setDoc(doc(db, "settings", "remera"), { alias }, { merge: true })
+      toast({ title: "Alias guardado" })
+    } catch {
+      toast({ title: "Error al guardar alias", variant: "destructive" })
+    } finally {
+      setAliasGuardando(false)
+    }
+  }
 
   const verComprobante = async (r: RemeraDoc) => {
     if (comprobanteCache[r.id]) {
@@ -170,6 +190,23 @@ export default function RemeraAdminPage() {
         <Button variant="outline" onClick={fetchRemeras} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           Actualizar
+        </Button>
+      </div>
+
+      {/* Alias de pago */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <label className="text-sm font-medium text-gray-700 mb-1 block">Alias para pago (visible en el formulario de pedido)</label>
+          <Input
+            value={alias}
+            onChange={(e) => setAlias(e.target.value)}
+            placeholder="Ej: ciclotermal.remera"
+            className="max-w-sm"
+          />
+        </div>
+        <Button onClick={guardarAlias} disabled={aliasGuardando} size="sm" className="mt-5">
+          {aliasGuardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+          Guardar
         </Button>
       </div>
 

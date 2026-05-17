@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { SectionTitle } from "@/components/section-title"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedDoc } from "@/lib/use-cached-firestore"
@@ -66,6 +66,13 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const [existingTieneComprobante, setExistingTieneComprobante] = useState(false)
   const [buscando, setBuscando] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [aliasRemera, setAliasRemera] = useState<string | null>(null)
+
+  useEffect(() => {
+    getDoc(doc(db, "settings", "remera")).then((snap) => {
+      if (snap.exists()) setAliasRemera(snap.data().alias ?? null)
+    })
+  }, [])
 
   const handleClose = () => {
     setStep("dni")
@@ -325,6 +332,13 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
                   </Button>
                 )}
               </div>
+            </div>
+
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 space-y-1">
+              <p className="font-semibold">Precio: $32.000 por remera</p>
+              {aliasRemera && (
+                <p>Alias para transferir: <span className="font-semibold">{aliasRemera}</span></p>
+              )}
             </div>
 
             <div className="space-y-2">
