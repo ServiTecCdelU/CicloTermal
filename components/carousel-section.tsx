@@ -65,9 +65,18 @@ const staticSlides = [
 ]
 
 export default function CarouselSection() {
-  const { eventSettings } = useFirebaseContext()
+  const { eventSettings, ciclosConfig } = useFirebaseContext()
   const fechaLabel = formatSubtitle(eventSettings?.fechaEvento)
-  const slides = staticSlides.map((s) => ({ ...s, subtitle: s.subtitle ?? fechaLabel }))
+  const cicloActivo = ciclosConfig.find((c) => c.habilitado)
+  const slides = staticSlides.map((s) => {
+    const base = { ...s, subtitle: s.subtitle ?? fechaLabel }
+    if (base.buttonText === "Inscripción Cerrada") {
+      if (cicloActivo) {
+        return { ...base, buttonText: `Inscripción ${cicloActivo.año}`, buttonUrl: `/inscripcion/${cicloActivo.año}` }
+      }
+    }
+    return base
+  })
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
 

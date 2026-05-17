@@ -45,6 +45,34 @@ export function VisuallyHidden({ children }: { children: React.ReactNode }) {
   )
 }
 
+function MobileInscripcionLink({ onClose }: { onClose: () => void }) {
+  const { ciclosConfig } = useFirebaseContext()
+  const cicloActivo = ciclosConfig.find((c) => c.habilitado)
+  if (!cicloActivo) return null
+  return (
+    <Link
+      href={`/inscripcion/${cicloActivo.año}`}
+      onClick={onClose}
+      className="text-lg font-medium transition-colors hover:text-primary text-red-600"
+    >
+      Inscripción {cicloActivo.año}
+    </Link>
+  )
+}
+
+function NavInscripcionButton({ isScrolled: _isScrolled }: { isScrolled: boolean }) {
+  const { ciclosConfig } = useFirebaseContext()
+  const cicloActivo = ciclosConfig.find((c) => c.habilitado)
+  if (!cicloActivo) return null
+  return (
+    <Link href={`/inscripcion/${cicloActivo.año}`}>
+      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+        Inscripción {cicloActivo.año}
+      </Button>
+    </Link>
+  )
+}
+
 export default function Navbar() {
   const pathname = usePathname()
   const [isScrolled, setIsScrolled] = useState(false)
@@ -108,7 +136,7 @@ export default function Navbar() {
               {item.name}
             </Link>
           ))}
-         
+          <NavInscripcionButton isScrolled={isScrolled} />
         </nav>
 
         {/* Navegación Móvil (desde lg para abajo) */}
@@ -154,9 +182,7 @@ export default function Navbar() {
                   {index === 0 && <HeartIcon size={14} />}
                 </Link>
               ))}
-              <Link href="/inscripcion" onClick={() => setIsMobileMenuOpen(false)}>
-               
-              </Link>
+              <MobileInscripcionLink onClose={() => setIsMobileMenuOpen(false)} />
             </nav>
           </SheetContent>
         </Sheet>
