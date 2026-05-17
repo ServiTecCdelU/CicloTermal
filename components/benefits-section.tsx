@@ -64,14 +64,14 @@ const iconMap = {
 }
 
 function formatFechaDia(fechaEvento?: string) {
-  if (!fechaEvento) return "12 de Octubre"
+  if (!fechaEvento) return "11 de octubre"
   const [y, m, d] = fechaEvento.split("-").map(Number)
   return new Date(y, m - 1, d).toLocaleDateString("es-AR", { day: "numeric", month: "long" })
 }
 
 // Datos predeterminados
 const defaultEventData: EventItem[] = [
-  { id: "1", label: "Fecha", value: "12 de Octubre", iconName: "Calendar", order: 0 },
+  { id: "1", label: "Fecha", value: "11 de octubre", iconName: "Calendar", order: 0 },
   { id: "2", label: "Distancia", value: "50 KM caminos rurales", iconName: "Route", order: 1 },
   { id: "3", label: "Ubicación", value: "Federación, Entre Ríos, Argentina", iconName: "MapPin", order: 2 },
   { id: "4", label: "Nivel", value: "Intermedio - Avanzado", iconName: "TrendingUp", order: 3 },

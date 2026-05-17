@@ -484,7 +484,7 @@ export default function BenefitsEditor() {
                       id="event-value"
                       value={eventFormData.value}
                       onChange={(e) => setEventFormData((prev) => ({ ...prev, value: e.target.value }))}
-                      placeholder="Ej: 12 de Octubre"
+                      placeholder="Ej: 11 de octubre"
                       required
                     />
                   </div>

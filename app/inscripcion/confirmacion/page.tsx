@@ -28,7 +28,7 @@ export default function ConfirmationPage() {
               confirmación de tu inscripción.
               Su inscripción es sin remera, ya que no hay más talles disponibles
             </p>
-            <p>Recuerda que el evento se realizará el 12 de octubre de 2025 en Federación, Entre Ríos.</p>
+            <p>Recuerda que el evento se realizará el 11 de octubre de 2026 en Federación, Entre Ríos.</p>
             <p className="font-medium">¡Gracias por ser parte de esta experiencia!</p>
           </CardContent>
           
