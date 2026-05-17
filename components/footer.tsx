@@ -65,20 +65,24 @@ export default function Footer() {
         </div>
 
         {/* Derechos y créditos */}
-        <div className="pt-6 border-t border-gray-200 text-center space-y-2">
+        <div className="pt-6 border-t border-gray-200 text-center space-y-4">
+          <a
+            href="https://linktr.ee/serviteccdelu"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex flex-col items-center gap-2 group"
+          >
+            <span className="text-sm font-black text-gray-600 group-hover:text-gray-900 transition-colors">
+              Página web desarrollada por
+            </span>
+            <img
+              src="/ServiTec.png"
+              alt="ServiTec"
+              className="h-28 object-contain group-hover:scale-105 transition-transform"
+            />
+          </a>
           <p className="text-sm text-gray-600">
             &copy; {new Date().getFullYear()} Cicloturismo Termal de Federación. Todos los derechos reservados.
-          </p>
-          <p className="text-sm text-gray-600">
-            Desarrollado por{" "}
-            <a
-              href="https://linktr.ee/serviteccdelu"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-red-600 hover:underline"
-            >
-              servitec
-            </a>
           </p>
         </div>
       </div>
