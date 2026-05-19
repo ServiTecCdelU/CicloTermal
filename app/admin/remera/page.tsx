@@ -294,17 +294,17 @@ export default function RemeraAdminPage() {
                   {r.estado === "pendiente" ? (
                     <Button
                       size="sm"
-                      className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white flex-1"
+                      className="h-7 text-[11px] px-2 bg-green-600 hover:bg-green-700 text-white"
                       disabled={actualizando === r.id}
                       onClick={() => cambiarEstado(r.id, "entregado")}
                     >
-                      {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Marcar entregado"}
+                      {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Entregado"}
                     </Button>
                   ) : (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 text-xs flex-1"
+                      className="h-7 text-[11px] px-2"
                       disabled={actualizando === r.id}
                       onClick={() => cambiarEstado(r.id, "pendiente")}
                     >
