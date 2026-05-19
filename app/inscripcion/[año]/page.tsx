@@ -196,6 +196,12 @@ export default function InscripcionAño() {
   const [formData, setFormData] = useState(emptyForm)
   const [datosPago1, setDatosPago1] = useState("")
   const [datosPago2, setDatosPago2] = useState("")
+  const [confirmacionData, setConfirmacionData] = useState({
+    titulo: "¡Inscripción Exitosa!",
+    descripcion: `Tu inscripción al Cicloturismo Termal ${añoParam} ha sido registrada exitosamente.`,
+    mensaje: "Pronto recibirás un correo de confirmación con todos los detalles.\nRecuerda presentar tu DNI el día del evento para la acreditación.",
+    infoExtra: "• Presentate con tu DNI el día del evento.\n• Lugar de acreditación: Frente al predio de la Terminal de Ómnibus de Federación.\n• Horario de acreditación: 7:30 AM\n• Horario de salida: 8:30 AM",
+  })
 
   const totalSteps = 3
 
@@ -204,9 +210,10 @@ export default function InscripcionAño() {
     if (!añoParam || isNaN(añoParam)) { setCicloStatus("not_found"); return }
     const check = async () => {
       try {
-        const [ciclosSnap, settingsSnap] = await Promise.all([
+        const [ciclosSnap, settingsSnap, confirmSnap] = await Promise.all([
           getDoc(doc(db, "configuracion", "inscripciones")),
           getDoc(doc(db, "settings", "eventSettings")),
+          getDoc(doc(db, "settings", "confirmacion")),
         ])
         if (!ciclosSnap.exists()) { setCicloStatus("not_found"); return }
         const ciclos: any[] = ciclosSnap.data().ciclos || []
@@ -220,6 +227,15 @@ export default function InscripcionAño() {
           const d = settingsSnap.data()
           setDatosPago1(d.datosPago1 ?? "")
           setDatosPago2(d.datosPago2 ?? "")
+        }
+        if (confirmSnap.exists()) {
+          const d = confirmSnap.data()
+          setConfirmacionData((prev) => ({
+            titulo: d.titulo || prev.titulo,
+            descripcion: d.descripcion || prev.descripcion,
+            mensaje: d.mensaje || prev.mensaje,
+            infoExtra: d.infoExtra || prev.infoExtra,
+          }))
         }
         setCicloStatus("open")
       } catch {
@@ -955,26 +971,30 @@ export default function InscripcionAño() {
               <div className="mx-auto w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 className="h-10 w-10 text-green-500" />
               </div>
-              <DialogTitle className="text-2xl font-bold text-white text-center">¡Inscripción Exitosa!</DialogTitle>
+              <DialogTitle className="text-2xl font-bold text-white text-center">{confirmacionData.titulo}</DialogTitle>
             </div>
             <div className="p-6">
               <DialogDescription className="text-gray-700 text-base mb-4">
-                <div className="mb-3">Tu inscripción al <span className="font-semibold">Cicloturismo Termal {añoParam}</span> ha sido registrada exitosamente.</div>
-                <div className="mb-3">Pronto recibirás un correo de confirmación con todos los detalles.</div>
-                <div>Recuerda presentar tu DNI el día del evento para la acreditación.</div>
+                {confirmacionData.descripcion.split("\n").map((line, i) => (
+                  <div key={i} className="mb-3">{line}</div>
+                ))}
+                {confirmacionData.mensaje.split("\n").map((line, i) => (
+                  <div key={`m${i}`} className="mb-3">{line}</div>
+                ))}
               </DialogDescription>
-              <div className="bg-green-50 border border-green-100 rounded-lg p-4 mb-4">
-                <h4 className="text-green-800 font-medium flex items-center gap-2 mb-2">
-                  <Info className="h-4 w-4" />
-                  Información importante
-                </h4>
-                <ul className="text-green-700 text-sm space-y-1">
-                  <li>• Presentate con tu DNI el día del evento.</li>
-                  <li>• Lugar de acreditación: <a href="https://maps.app.goo.gl/sKgRGozptoXJrpY17" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Frente al predio de la Terminal de Ómnibus de Federación</a>.</li>
-                  <li>• Horario de acreditación: 7:30 AM</li>
-                  <li>• Horario de salida: 8:30 AM</li>
-                </ul>
-              </div>
+              {confirmacionData.infoExtra && (
+                <div className="bg-green-50 border border-green-100 rounded-lg p-4 mb-4">
+                  <h4 className="text-green-800 font-medium flex items-center gap-2 mb-2">
+                    <Info className="h-4 w-4" />
+                    Información importante
+                  </h4>
+                  <ul className="text-green-700 text-sm space-y-1">
+                    {confirmacionData.infoExtra.split("\n").map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
             <DialogFooter className="bg-gray-50 p-4 flex flex-col gap-2">
               <Button id="understood-button" onClick={handleCloseSuccessDialog} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
