@@ -188,6 +188,67 @@ export default function BenefitsSection() {
       {/* Contador */}
       <Contador />
 
+      {/* Sección Itinerario */}
+      {hasItinerary && (
+        <div>
+          <div className="text-center mb-12">
+            <SectionTitle>Itinerario</SectionTitle>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mt-4">Programa de actividades</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+            {[sabado, domingo].filter(Boolean).map((day) => {
+              if (!day?.content) return null
+              const isSabado = day.day === "sabado"
+              const lines = day.content.split("\n").map((l) => l.trim()).filter((l) => l.length > 0)
+              return (
+                <div
+                  key={day.day}
+                  className="rounded-2xl shadow-xl overflow-hidden border border-gray-100"
+                >
+                  {/* Day header */}
+                  <div className={`px-6 py-5 ${isSabado ? "bg-gradient-to-br from-indigo-900 via-violet-800 to-purple-700" : "bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-400"}`}>
+                    <div className="flex items-center gap-4 text-white">
+                      <div className={`h-12 w-12 rounded-full flex items-center justify-center ${isSabado ? "bg-white/15" : "bg-white/20"}`}>
+                        {isSabado ? <Moon className="h-6 w-6" /> : <Sunrise className="h-6 w-6" />}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-xl leading-tight">
+                          {day.title}{day.time ? ` | ${day.time}` : ""}
+                        </h3>
+                        {day.subtitle && (
+                          <p className="text-sm opacity-90 font-semibold mt-0.5">{day.subtitle}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Content items */}
+                  <div className="bg-white p-3 md:p-4">
+                    <div className="space-y-1.5">
+                      {lines.map((line, i) => (
+                        <div
+                          key={i}
+                          className={`flex items-start gap-2.5 rounded-xl px-3.5 py-2.5 text-sm transition-colors ${
+                            isSabado
+                              ? "bg-indigo-50/60 hover:bg-indigo-50 border border-indigo-100/60"
+                              : "bg-amber-50/60 hover:bg-amber-50 border border-amber-100/60"
+                          }`}
+                        >
+                          <div className={`h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0 ${
+                            isSabado ? "bg-indigo-400" : "bg-amber-400"
+                          }`} />
+                          <span className="text-gray-700 leading-snug">{line}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Sección Datos del Evento */}
       <div>
         <div className="text-center mb-12">
@@ -216,50 +277,6 @@ export default function BenefitsSection() {
           ))}
         </div>
       </div>
-
-      {/* Sección Itinerario */}
-      {hasItinerary && (
-        <div>
-          <div className="text-center mb-12">
-            <SectionTitle>Itinerario</SectionTitle>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto mt-4">Programa de actividades</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-            {[sabado, domingo].filter(Boolean).map((day) => {
-              if (!day?.content) return null
-              const isSabado = day.day === "sabado"
-              return (
-                <div
-                  key={day.day}
-                  className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
-                >
-                  {/* Day header */}
-                  <div className={`px-5 py-4 ${isSabado ? "bg-gradient-to-r from-indigo-900 to-violet-800" : "bg-gradient-to-r from-orange-500 to-amber-500"}`}>
-                    <div className="flex items-center gap-3 text-white">
-                      {isSabado ? <Moon className="h-6 w-6" /> : <Sunrise className="h-6 w-6" />}
-                      <div>
-                        <h3 className="font-bold text-lg leading-tight">
-                          {day.title}{day.time ? ` | ${day.time}` : ""}
-                        </h3>
-                        {day.subtitle && (
-                          <p className="text-sm opacity-90 font-medium">{day.subtitle}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Content */}
-                  <div className="p-5">
-                    <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-                      {day.content}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Sección Beneficios de la Inscripción */}
       <div>
