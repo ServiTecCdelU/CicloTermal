@@ -41,12 +41,12 @@ const defaultJerseyData: JerseyData = {
   features: [
     { id: "1", title: "Material Premium", description: "Tela transpirable y cómoda" },
     { id: "2", title: "Diseño Exclusivo", description: "Solo para participantes" },
-    { id: "3", title: "Todos los Talles", description: "S, M, L, XL, XXL" },
+    { id: "3", title: "Todos los Talles", description: "XS a 5XL" },
     { id: "4", title: "Recuerdo Único", description: "Lleva el evento contigo" },
   ],
 }
 
-const talles = ["S", "M", "L", "XL", "XXL"]
+const talles = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"]
 
 interface RemeraItem {
   talle: string

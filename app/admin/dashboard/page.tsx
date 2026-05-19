@@ -424,7 +424,7 @@ export default function AdminDashboardPage() {
   ].filter((item) => item.value > 0), [stats.maleCount, stats.femaleCount, stats.otherCount])
 
   const jerseySizeData = useMemo<ChartDataItem[]>(() => {
-    const sizeOrder = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+    const sizeOrder = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"]
     return Object.entries(stats.jerseySize)
       .map(([size, count]) => ({ name: size.toUpperCase(), value: count }))
       .filter((item) => item.value > 0)

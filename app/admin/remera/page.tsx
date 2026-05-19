@@ -211,12 +211,12 @@ export default function RemeraAdminPage() {
       </div>
 
       {/* Resumen por talle */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-        {["S", "M", "L", "XL", "XXL"].map((t) => (
+      <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2 sm:gap-3">
+        {["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"].map((t) => (
           <Card key={t} className="text-center">
             <CardContent className="p-3 sm:pt-4 sm:pb-3">
               <div className="text-xl sm:text-2xl font-bold text-violet-600">{conteoTalles[t] || 0}</div>
-              <div className="text-xs text-gray-500 font-medium mt-0.5 sm:mt-1">Talle {t}</div>
+              <div className="text-xs text-gray-500 font-medium mt-0.5 sm:mt-1">{t}</div>
             </CardContent>
           </Card>
         ))}
@@ -249,7 +249,7 @@ export default function RemeraAdminPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos</SelectItem>
-            {["S", "M", "L", "XL", "XXL"].map((t) => (
+            {["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"].map((t) => (
               <SelectItem key={t} value={t}>{t}</SelectItem>
             ))}
           </SelectContent>
