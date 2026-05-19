@@ -56,7 +56,6 @@ export function useCachedCollection(
     if (cached) {
       setData(cached)
       setLoading(false)
-      return
     }
 
     let cancelled = false
@@ -100,7 +99,6 @@ export function useCachedDoc(
     if (cached) {
       setData(cached)
       setLoading(false)
-      return
     }
 
     let cancelled = false
