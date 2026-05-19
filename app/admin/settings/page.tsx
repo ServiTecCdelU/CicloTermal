@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { db } from "@/lib/firebase/firebase-config"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ExternalLink, Plus, Settings2, ToggleLeft } from "lucide-react"
+import { ExternalLink, Plus, Settings2, ToggleLeft, CheckCircle } from "lucide-react"
 import type { CicloConfig } from "@/lib/firebase/firebase-provider"
 
 const CURRENT_YEAR = new Date().getFullYear()
@@ -47,13 +47,21 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState(emptySettings)
   const [ciclos, setCiclos] = useState<CicloConfig[]>([])
   const [ciclosEdit, setCiclosEdit] = useState<CicloConfig[]>([])
+  const [confirmacion, setConfirmacion] = useState({
+    titulo: "¡Inscripción Exitosa!",
+    descripcion: "Tu inscripción al Cicloturismo Termal 2026 ha sido registrada exitosamente.",
+    mensaje: "Pronto recibirás un correo de confirmación con todos los detalles.\nRecuerda presentar tu DNI el día del evento para la acreditación.",
+    infoExtra: "• Presentate con tu DNI el día del evento.\n• Lugar de acreditación: Frente al predio de la Terminal de Ómnibus de Federación.\n• Horario de acreditación: 7:30 AM\n• Horario de salida: 8:30 AM",
+  })
+  const [savingConfirmacion, setSavingConfirmacion] = useState(false)
 
   useEffect(() => {
     const fetch = async () => {
       try {
-        const [settingsSnap, ciclosSnap] = await Promise.all([
+        const [settingsSnap, ciclosSnap, confirmSnap] = await Promise.all([
           getDoc(doc(db, "settings", "eventSettings")),
           getDoc(doc(db, "configuracion", "inscripciones")),
+          getDoc(doc(db, "settings", "confirmacion")),
         ])
         if (settingsSnap.exists()) {
           const d = settingsSnap.data()
@@ -72,6 +80,15 @@ export default function AdminSettingsPage() {
           const data = ciclosSnap.data().ciclos ?? []
           setCiclos(data)
           setCiclosEdit(data)
+        }
+        if (confirmSnap.exists()) {
+          const d = confirmSnap.data()
+          setConfirmacion((prev) => ({
+            titulo: d.titulo ?? prev.titulo,
+            descripcion: d.descripcion ?? prev.descripcion,
+            mensaje: d.mensaje ?? prev.mensaje,
+            infoExtra: d.infoExtra ?? prev.infoExtra,
+          }))
         }
       } catch (error) {
         console.error("Error cargando configuración:", error)
@@ -99,7 +116,19 @@ export default function AdminSettingsPage() {
     }
   }
 
-  const updateCicloEdit = (año: number, field: keyof CicloConfig, value: any) => {
+  const saveConfirmacion = async () => {
+    setSavingConfirmacion(true)
+    try {
+      await setDoc(doc(db, "settings", "confirmacion"), confirmacion)
+      toast({ title: "Mensaje de confirmación guardado" })
+    } catch {
+      toast({ title: "Error al guardar", variant: "destructive" })
+    } finally {
+      setSavingConfirmacion(false)
+    }
+  }
+
+  const updateCicloEdit =(año: number, field: keyof CicloConfig, value: any) => {
     setCiclosEdit((prev) => prev.map((c) => (c.año === año ? { ...c, [field]: value } : c)))
   }
 
@@ -365,6 +394,58 @@ export default function AdminSettingsPage() {
         <CardFooter className="flex justify-end border-t pt-4">
           <Button onClick={saveSettings} disabled={saving}>
             {saving ? "Guardando..." : "Guardar cambios"}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <CheckCircle className="h-5 w-5 text-muted-foreground" />
+            Mensaje de Inscripción Exitosa
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Título</Label>
+            <Input
+              value={confirmacion.titulo}
+              onChange={(e) => setConfirmacion({ ...confirmacion, titulo: e.target.value })}
+              placeholder="¡Inscripción Exitosa!"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Descripción</Label>
+            <Textarea
+              value={confirmacion.descripcion}
+              onChange={(e) => setConfirmacion({ ...confirmacion, descripcion: e.target.value })}
+              rows={2}
+              placeholder="Tu inscripción ha sido registrada exitosamente."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Mensaje adicional</Label>
+            <Textarea
+              value={confirmacion.mensaje}
+              onChange={(e) => setConfirmacion({ ...confirmacion, mensaje: e.target.value })}
+              rows={3}
+              placeholder="Pronto recibirás un correo de confirmación..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Información importante</Label>
+            <Textarea
+              value={confirmacion.infoExtra}
+              onChange={(e) => setConfirmacion({ ...confirmacion, infoExtra: e.target.value })}
+              rows={5}
+              placeholder={"• Presentate con tu DNI el día del evento.\n• Lugar de acreditación: ..."}
+            />
+            <p className="text-xs text-muted-foreground">Usá un punto (•) al inicio de cada línea para listar ítems.</p>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-end border-t pt-4">
+          <Button onClick={saveConfirmacion} disabled={savingConfirmacion}>
+            {savingConfirmacion ? "Guardando..." : "Guardar mensaje"}
           </Button>
         </CardFooter>
       </Card>
