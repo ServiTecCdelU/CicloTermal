@@ -765,47 +765,46 @@ export default function InscripcionAño() {
                       ? todosLosGrupos.find((g) => g.toLowerCase().includes(q))
                       : null
                     return (
-                      <Popover open={grupoCiclistasOpen} onOpenChange={setGrupoCiclistasOpen}>
-                        <PopoverTrigger asChild>
-                          <Input
-                            id="grupoCiclistas" name="grupoCiclistas" value={formData.grupoCiclistas}
-                            onChange={(e) => { setFormData({ ...formData, grupoCiclistas: e.target.value }); setGrupoCiclistasOpen(true) }}
-                            onFocus={() => setGrupoCiclistasOpen(true)}
-                            placeholder="Escriba o seleccione su grupo"
-                            className={fieldErrors.grupoCiclistas ? "border-red-500" : ""}
-                            autoComplete="off"
-                          />
-                        </PopoverTrigger>
-                        <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-                          <div className="max-h-[220px] overflow-y-auto p-1">
+                      <div className="relative">
+                        <Input
+                          id="grupoCiclistas" name="grupoCiclistas" value={formData.grupoCiclistas}
+                          onChange={(e) => { setFormData({ ...formData, grupoCiclistas: e.target.value }); setGrupoCiclistasOpen(true) }}
+                          onFocus={() => setGrupoCiclistasOpen(true)}
+                          onBlur={() => setTimeout(() => setGrupoCiclistasOpen(false), 150)}
+                          placeholder="Escriba o seleccione su grupo"
+                          className={fieldErrors.grupoCiclistas ? "border-red-500" : ""}
+                          autoComplete="off"
+                        />
+                        {grupoCiclistasOpen && (
+                          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-[220px] overflow-y-auto p-1">
                             {sugerido && (
                               <div className="border-b mb-1 pb-1">
                                 <p className="text-xs text-gray-400 px-2 pt-1">¿Quisiste decir?</p>
-                                <Button variant="ghost" size="sm"
-                                  className="justify-start font-medium text-left h-auto py-1.5 w-full text-indigo-700 hover:bg-indigo-50"
-                                  onClick={() => { handleSelectChange("grupoCiclistas", sugerido); setGrupoCiclistasOpen(false) }}>
+                                <button type="button"
+                                  className="w-full text-left px-2 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-50 rounded"
+                                  onMouseDown={(e) => { e.preventDefault(); handleSelectChange("grupoCiclistas", sugerido); setGrupoCiclistasOpen(false) }}>
                                   → {sugerido}
-                                </Button>
+                                </button>
                               </div>
                             )}
                             {mostrarNoPertenece && (
-                              <Button variant="ghost" size="sm" className="justify-start font-normal text-left h-auto py-1.5 w-full"
-                                onClick={() => { handleSelectChange("grupoCiclistas", noPertenece); setGrupoCiclistasOpen(false) }}>
+                              <button type="button" className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 rounded"
+                                onMouseDown={(e) => { e.preventDefault(); handleSelectChange("grupoCiclistas", noPertenece); setGrupoCiclistasOpen(false) }}>
                                 {noPertenece}
-                              </Button>
+                              </button>
                             )}
                             {opcionesFiltradas.map((g) => (
-                              <Button key={g} variant="ghost" size="sm" className="justify-start font-normal text-left h-auto py-1.5 w-full"
-                                onClick={() => { handleSelectChange("grupoCiclistas", g); setGrupoCiclistasOpen(false) }}>
+                              <button key={g} type="button" className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 rounded"
+                                onMouseDown={(e) => { e.preventDefault(); handleSelectChange("grupoCiclistas", g); setGrupoCiclistasOpen(false) }}>
                                 {g}
-                              </Button>
+                              </button>
                             ))}
                             {q && opcionesFiltradas.length === 0 && !mostrarNoPertenece && (
-                              <p className="text-xs text-gray-400 px-2 py-2">No se encontraron grupos. Se guardará "{formData.grupoCiclistas}" al inscribirse.</p>
+                              <p className="text-xs text-gray-400 px-2 py-2">No se encontraron grupos. Se guardará &quot;{formData.grupoCiclistas}&quot; al inscribirse.</p>
                             )}
                           </div>
-                        </PopoverContent>
-                      </Popover>
+                        )}
+                      </div>
                     )
                   })()}
                   <p className="text-xs text-gray-500">Escriba el nombre de su grupo o seleccione uno de la lista. Si no existe, se guardará automáticamente.</p>
