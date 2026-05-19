@@ -25,6 +25,7 @@ const emptySettings: {
   datosPago2: string
   currentYear: number
   fechaEvento: string
+  edicion: string
 } = {
   cupoMaximo: 300,
   precio: 35000,
@@ -33,6 +34,7 @@ const emptySettings: {
   datosPago2: "",
   currentYear: CURRENT_YEAR,
   fechaEvento: "",
+  edicion: "",
 }
 
 export default function AdminSettingsPage() {
@@ -63,6 +65,7 @@ export default function AdminSettingsPage() {
             datosPago2: d.datosPago2 ?? "",
             currentYear: d.currentYear ?? CURRENT_YEAR,
             fechaEvento: d.fechaEvento ?? "",
+            edicion: d.edicion ?? "",
           })
         }
         if (ciclosSnap.exists()) {
@@ -242,6 +245,22 @@ export default function AdminSettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+
+          <div className="space-y-2">
+            <Label htmlFor="edicion">Nombre de la edición</Label>
+            <Input
+              id="edicion"
+              name="edicion"
+              value={settings.edicion ?? ""}
+              onChange={handleInputChange}
+              placeholder="Ej: Segunda Edición, Tercera Edición..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Se muestra en el sitio público y en las redes sociales.
+            </p>
+          </div>
+
+          <div className="border-t" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">

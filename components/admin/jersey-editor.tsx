@@ -77,7 +77,7 @@ export default function JerseyEditor() {
   const [jerseyData, setJerseyData] = useState<JerseyData>({
     title: "Remera Oficial del Evento",
     description:
-      "Diseño exclusivo para la Segunda Edición del Cicloturismo Termal de Federación. Confeccionada con materiales de alta calidad, perfecta para ciclistas que buscan comodidad y estilo.",
+      "Diseño exclusivo del Cicloturismo Termal de Federación. Confeccionada con materiales de alta calidad, perfecta para ciclistas que buscan comodidad y estilo.",
     imageUrl: "/placeholder.svg?height=600&width=600",
     showSection: true,
     year: new Date().getFullYear(),

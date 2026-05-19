@@ -14,13 +14,13 @@ const permanentMarker = Permanent_Marker({
 })
 
 export const metadata: Metadata = {
-  title: "Cicloturismo Termal de Federación - Segunda Edición",
-  description: "Evento de cicloturismo en Federación, Entre Ríos, Argentina - 11 de octubre de 2026",
+  title: "Cicloturismo Termal de Federación",
+  description: "Evento de cicloturismo en Federación, Entre Ríos, Argentina",
   generator: "v0.dev",
   metadataBase: new URL("https://ciclo-turismo.vercel.app"),
   openGraph: {
-    title: "Cicloturismo Termal de Federación - Segunda Edición",
-    description: "Evento de cicloturismo en Federación, Entre Ríos, Argentina - 11 de octubre de 2026",
+    title: "Cicloturismo Termal de Federación",
+    description: "Evento de cicloturismo en Federación, Entre Ríos, Argentina",
     siteName: "Cicloturismo Termal",
     images: [
       {
@@ -33,8 +33,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cicloturismo Termal de Federación - Segunda Edición",
-    description: "Evento de cicloturismo en Federación, Entre Ríos, Argentina - 11 de octubre de 2026",
+    title: "Cicloturismo Termal de Federación",
+    description: "Evento de cicloturismo en Federación, Entre Ríos, Argentina",
     images: ["/logo 1.jpg"],
   },
 }

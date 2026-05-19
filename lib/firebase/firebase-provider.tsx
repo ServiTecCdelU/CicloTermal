@@ -76,6 +76,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
           metodoPago: "Transferencia bancaria",
           inscripcionesAbiertas: true,
           currentYear: new Date().getFullYear(),
+          edicion: "",
         })
         return
       }
@@ -93,6 +94,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
             metodoPago: "Transferencia bancaria",
             inscripcionesAbiertas: true,
             currentYear: new Date().getFullYear(),
+            edicion: "",
           })
         }
 
@@ -113,6 +115,7 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
           metodoPago: "Transferencia bancaria",
           inscripcionesAbiertas: true,
           currentYear: new Date().getFullYear(),
+          edicion: "",
         })
       }
     }

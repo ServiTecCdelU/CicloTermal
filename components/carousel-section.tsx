@@ -138,7 +138,7 @@ export default function CarouselSection() {
                 <HeartIcon size={20} />
               </div>
               <p className="text-lg md:text-xl mb-8 max-w-2xl">
-                {slide.subtitle || "Segunda Edición - 11 de octubre de 2026"}
+                {slide.subtitle || [eventSettings?.edicion, formatSubtitle(eventSettings?.fechaEvento)].filter(Boolean).join(" - ")}
               </p>
               {slide.buttonText &&
                 (slide.buttonUrl ? (
