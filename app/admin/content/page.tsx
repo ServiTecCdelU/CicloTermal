@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Images, Shirt, Gift, Camera, Award, Phone, FileText, ChevronLeft, ChevronRight } from "lucide-react"
+import { Images, Shirt, Gift, Camera, Award, Phone, FileText, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import CarouselEditor from "@/components/admin/carousel-editor"
 import JerseyEditor from "@/components/admin/jersey-editor"
@@ -13,6 +13,7 @@ import PhotosEditor from "@/components/admin/photos-editor"
 import ContactEditor from "@/components/admin/contact-editor"
 import FormEditor from "@/components/admin/form-editor"
 import HistoryEditor from "@/components/admin/history-editor"
+import ItineraryEditor from "@/components/admin/itinerary-editor"
 
 const tabs = [
   {
@@ -26,6 +27,12 @@ const tabs = [
     label: "Beneficios",
     icon: Gift,
     description: "Edita la lista de beneficios incluidos en la inscripción",
+  },
+  {
+    value: "itinerario",
+    label: "Itinerario",
+    icon: CalendarDays,
+    description: "Edita el itinerario de cada dia del evento",
   },
   {
     value: "jersey",
@@ -134,7 +141,7 @@ export default function AdminContentPage() {
         {/* Desktop Tabs */}
         <Tabs defaultValue="sponsors" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="hidden lg:block">
-            <TabsList className="grid grid-cols-6 h-auto p-1">
+            <TabsList className="grid grid-cols-7 h-auto p-1">
               {tabs.map((tab) => (
                 <TabsTrigger key={tab.value} value={tab.value} className="flex flex-col items-center gap-1 p-3 h-auto">
                   <tab.icon className="h-4 w-4" />
@@ -200,6 +207,18 @@ export default function AdminContentPage() {
               </CardHeader>
               <CardContent className="p-4 lg:p-6">
                 <BenefitsEditor />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="itinerario">
+            <Card>
+              <CardHeader className="hidden lg:block">
+                <CardTitle>Itinerario del Evento</CardTitle>
+                <CardDescription>Edita el itinerario de cada dia del evento</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 lg:p-6">
+                <ItineraryEditor />
               </CardContent>
             </Card>
           </TabsContent>

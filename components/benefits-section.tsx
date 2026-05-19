@@ -23,7 +23,8 @@ import {
 import { where, orderBy } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import Contador from "@/components/Contador"
-import { useCachedCollection } from "@/lib/use-cached-firestore"
+import { useCachedCollection, useCachedDoc } from "@/lib/use-cached-firestore"
+import { Moon, Sunrise, MapPin as MapPinIcon, Clock as ClockIcon, Route as RouteIcon } from "lucide-react"
 
 // Tipos TypeScript
 interface EventItem {
@@ -94,6 +95,15 @@ const defaultBenefits: BenefitItem[] = [
   { id: "8", text: "Vehículo de apoyo", iconName: "Truck", iconType: "lucide", order: 7 },
 ]
 
+interface ItineraryDay {
+  day: string
+  title: string
+  time: string
+  subtitle: string
+  content: string
+  year: number
+}
+
 export default function BenefitsSection() {
   const { eventSettings, isFirebaseAvailable } = useFirebaseContext()
   const currentYear = eventSettings?.currentYear || new Date().getFullYear()
@@ -111,6 +121,24 @@ export default function BenefitsSection() {
     [where("type", "==", "benefit"), where("year", "==", currentYear), orderBy("order", "asc")],
     isFirebaseAvailable,
   )
+
+  const { data: sabadoData } = useCachedDoc(
+    `ct_itinerario_sabado_${currentYear}`,
+    "itinerario",
+    `${currentYear}_sabado`,
+    isFirebaseAvailable,
+  )
+
+  const { data: domingoData } = useCachedDoc(
+    `ct_itinerario_domingo_${currentYear}`,
+    "itinerario",
+    `${currentYear}_domingo`,
+    isFirebaseAvailable,
+  )
+
+  const sabado = sabadoData as ItineraryDay | null
+  const domingo = domingoData as ItineraryDay | null
+  const hasItinerary = !!(sabado?.content || domingo?.content)
 
   const loading = loadingEvent || loadingBenefits
 
@@ -188,6 +216,50 @@ export default function BenefitsSection() {
           ))}
         </div>
       </div>
+
+      {/* Sección Itinerario */}
+      {hasItinerary && (
+        <div>
+          <div className="text-center mb-12">
+            <SectionTitle>Itinerario</SectionTitle>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mt-4">Programa de actividades</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+            {[sabado, domingo].filter(Boolean).map((day) => {
+              if (!day?.content) return null
+              const isSabado = day.day === "sabado"
+              return (
+                <div
+                  key={day.day}
+                  className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
+                >
+                  {/* Day header */}
+                  <div className={`px-5 py-4 ${isSabado ? "bg-gradient-to-r from-indigo-900 to-violet-800" : "bg-gradient-to-r from-orange-500 to-amber-500"}`}>
+                    <div className="flex items-center gap-3 text-white">
+                      {isSabado ? <Moon className="h-6 w-6" /> : <Sunrise className="h-6 w-6" />}
+                      <div>
+                        <h3 className="font-bold text-lg leading-tight">
+                          {day.title}{day.time ? ` | ${day.time}` : ""}
+                        </h3>
+                        {day.subtitle && (
+                          <p className="text-sm opacity-90 font-medium">{day.subtitle}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Content */}
+                  <div className="p-5">
+                    <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                      {day.content}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Sección Beneficios de la Inscripción */}
       <div>
