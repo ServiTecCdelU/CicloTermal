@@ -284,7 +284,7 @@ export default function RemeraAdminPage() {
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[11px] text-gray-400 truncate">
-                    {r.dni} · {r.telefono} · {formatFecha(r.fechaSolicitud)}
+                    {r.dni} · {r.telefono}
                   </p>
                   <div className="flex items-center gap-1 shrink-0">
                     {r.tieneComprobante && (
@@ -419,6 +419,7 @@ export default function RemeraAdminPage() {
         <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Comprobante — {comprobanteModal?.record.nombre}</DialogTitle>
+            <p className="text-xs text-gray-500">Pedido: {comprobanteModal?.record.fechaSolicitud ? formatFecha(comprobanteModal.record.fechaSolicitud) : "—"}</p>
           </DialogHeader>
           {comprobanteModal?.base64 && (
             comprobanteModal.base64.startsWith("data:application/pdf") ? (
