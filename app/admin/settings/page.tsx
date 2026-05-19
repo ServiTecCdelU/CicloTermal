@@ -163,9 +163,9 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 px-4 sm:px-0">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configuración del Evento</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Configuración del Evento</h1>
         <p className="text-muted-foreground mt-1">Parámetros generales del cicloturismo</p>
       </div>
 
@@ -195,7 +195,7 @@ export default function AdminSettingsPage() {
                   disabled={savingCiclo === ciclo.año}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-sm">Fecha desde</Label>
                   <Input
@@ -213,7 +213,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                 <Button
                   size="sm"
                   onClick={() => saveCicloFechas(ciclo.año)}
@@ -269,7 +269,7 @@ export default function AdminSettingsPage() {
                 value={String(settings.currentYear)}
                 onValueChange={(v) => setSettings({ ...settings, currentYear: Number(v) })}
               >
-                <SelectTrigger id="currentYear" className="w-40">
+                <SelectTrigger id="currentYear" className="w-full sm:w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

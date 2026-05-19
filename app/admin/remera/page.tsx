@@ -180,43 +180,43 @@ export default function RemeraAdminPage() {
 
   return (
     <div className="space-y-6 pt-16">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-pink-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
             Pedidos de Remera
           </h1>
           <p className="text-sm text-gray-500 mt-1">{remeras.length} pedidos en total</p>
         </div>
-        <Button variant="outline" onClick={fetchRemeras} disabled={loading}>
+        <Button variant="outline" onClick={fetchRemeras} disabled={loading} className="w-full sm:w-auto">
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           Actualizar
         </Button>
       </div>
 
       {/* Alias de pago */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <label className="text-sm font-medium text-gray-700 mb-1 block">Alias para pago (visible en el formulario de pedido)</label>
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 block">Alias para pago (visible en el formulario de pedido)</label>
+        <div className="flex flex-col sm:flex-row gap-2">
           <Input
             value={alias}
             onChange={(e) => setAlias(e.target.value)}
             placeholder="Ej: ciclotermal.remera"
-            className="max-w-sm"
+            className="flex-1"
           />
+          <Button onClick={guardarAlias} disabled={aliasGuardando} size="sm" className="w-full sm:w-auto">
+            {aliasGuardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+            Guardar
+          </Button>
         </div>
-        <Button onClick={guardarAlias} disabled={aliasGuardando} size="sm" className="mt-5">
-          {aliasGuardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-          Guardar
-        </Button>
       </div>
 
       {/* Resumen por talle */}
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
         {["S", "M", "L", "XL", "XXL"].map((t) => (
           <Card key={t} className="text-center">
-            <CardContent className="pt-4 pb-3">
-              <div className="text-2xl font-bold text-violet-600">{conteoTalles[t] || 0}</div>
-              <div className="text-xs text-gray-500 font-medium mt-1">Talle {t}</div>
+            <CardContent className="p-3 sm:pt-4 sm:pb-3">
+              <div className="text-xl sm:text-2xl font-bold text-violet-600">{conteoTalles[t] || 0}</div>
+              <div className="text-xs text-gray-500 font-medium mt-0.5 sm:mt-1">Talle {t}</div>
             </CardContent>
           </Card>
         ))}
@@ -267,93 +267,159 @@ export default function RemeraAdminPage() {
           <p>Sin resultados</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-gray-50 text-gray-600">
-                <th className="px-4 py-3 text-left font-medium">Nombre</th>
-                <th className="px-4 py-3 text-left font-medium">DNI</th>
-                <th className="px-4 py-3 text-left font-medium">Teléfono</th>
-                <th className="px-4 py-3 text-center font-medium">Talles</th>
-                <th className="px-4 py-3 text-center font-medium">Inscripto</th>
-                <th className="px-4 py-3 text-left font-medium">Fecha</th>
-                <th className="px-4 py-3 text-center font-medium">Estado</th>
-                <th className="px-4 py-3 text-center font-medium">Comprobante</th>
-                <th className="px-4 py-3 text-center font-medium">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtradas.map((r) => (
-                <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium">{r.nombre}</td>
-                  <td className="px-4 py-3 text-gray-600">{r.dni}</td>
-                  <td className="px-4 py-3 text-gray-600">{r.telefono}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-block px-2 py-0.5 bg-violet-100 text-violet-700 rounded font-semibold text-xs">
-                      {formatItems(r)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${r.estaRegistrado ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
-                      {r.estaRegistrado ? "Sí" : "No"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{formatFecha(r.fechaSolicitud)}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${estadoColors[r.estado] || ""}`}>
-                      {r.estado}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {r.tieneComprobante ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => verComprobante(r)}
-                        disabled={fetchingComprobante === r.id}
-                        className="h-7 px-2"
-                      >
-                        {fetchingComprobante === r.id
-                          ? <Loader2 className="h-4 w-4 animate-spin" />
-                          : <Eye className="h-4 w-4" />
-                        }
-                      </Button>
-                    ) : (
-                      <span className="text-gray-300 text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {r.estado === "pendiente" ? (
-                      <Button
-                        size="sm"
-                        className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
-                        disabled={actualizando === r.id}
-                        onClick={() => cambiarEstado(r.id, "entregado")}
-                      >
-                        {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Marcar entregado"}
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        disabled={actualizando === r.id}
-                        onClick={() => cambiarEstado(r.id, "pendiente")}
-                      >
-                        {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Revertir"}
-                      </Button>
-                    )}
-                  </td>
+        <>
+          {/* Mobile: cards */}
+          <div className="space-y-3 md:hidden">
+            {filtradas.map((r) => (
+              <div key={r.id} className="rounded-xl border bg-white shadow-sm p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{r.nombre}</p>
+                    <p className="text-xs text-gray-500">{r.dni} · {r.telefono}</p>
+                  </div>
+                  <span className={`shrink-0 inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${estadoColors[r.estado] || ""}`}>
+                    {r.estado}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded font-semibold">
+                    {formatItems(r)}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded font-medium ${r.estaRegistrado ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+                    {r.estaRegistrado ? "Inscripto" : "No inscripto"}
+                  </span>
+                  <span className="text-gray-400">{formatFecha(r.fechaSolicitud)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {r.estado === "pendiente" ? (
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white flex-1"
+                      disabled={actualizando === r.id}
+                      onClick={() => cambiarEstado(r.id, "entregado")}
+                    >
+                      {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Marcar entregado"}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs flex-1"
+                      disabled={actualizando === r.id}
+                      onClick={() => cambiarEstado(r.id, "pendiente")}
+                    >
+                      {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Revertir"}
+                    </Button>
+                  )}
+                  {r.tieneComprobante && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => verComprobante(r)}
+                      disabled={fetchingComprobante === r.id}
+                      className="h-8 px-3"
+                    >
+                      {fetchingComprobante === r.id
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <><Eye className="h-4 w-4 mr-1" /> Ver</>
+                      }
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: tabla */}
+          <div className="hidden md:block overflow-x-auto rounded-xl border bg-white shadow-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50 text-gray-600">
+                  <th className="px-4 py-3 text-left font-medium">Nombre</th>
+                  <th className="px-4 py-3 text-left font-medium">DNI</th>
+                  <th className="px-4 py-3 text-left font-medium">Teléfono</th>
+                  <th className="px-4 py-3 text-center font-medium">Talles</th>
+                  <th className="px-4 py-3 text-center font-medium">Inscripto</th>
+                  <th className="px-4 py-3 text-left font-medium">Fecha</th>
+                  <th className="px-4 py-3 text-center font-medium">Estado</th>
+                  <th className="px-4 py-3 text-center font-medium">Comprobante</th>
+                  <th className="px-4 py-3 text-center font-medium">Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtradas.map((r) => (
+                  <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-medium">{r.nombre}</td>
+                    <td className="px-4 py-3 text-gray-600">{r.dni}</td>
+                    <td className="px-4 py-3 text-gray-600">{r.telefono}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-block px-2 py-0.5 bg-violet-100 text-violet-700 rounded font-semibold text-xs">
+                        {formatItems(r)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${r.estaRegistrado ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+                        {r.estaRegistrado ? "Sí" : "No"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{formatFecha(r.fechaSolicitud)}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${estadoColors[r.estado] || ""}`}>
+                        {r.estado}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {r.tieneComprobante ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => verComprobante(r)}
+                          disabled={fetchingComprobante === r.id}
+                          className="h-7 px-2"
+                        >
+                          {fetchingComprobante === r.id
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <Eye className="h-4 w-4" />
+                          }
+                        </Button>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {r.estado === "pendiente" ? (
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
+                          disabled={actualizando === r.id}
+                          onClick={() => cambiarEstado(r.id, "entregado")}
+                        >
+                          {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Marcar entregado"}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          disabled={actualizando === r.id}
+                          onClick={() => cambiarEstado(r.id, "pendiente")}
+                        >
+                          {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Revertir"}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+
       )}
 
       {/* Modal comprobante */}
       <Dialog open={!!comprobanteModal} onOpenChange={(v) => { if (!v) setComprobanteModal(null) }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Comprobante — {comprobanteModal?.record.nombre}</DialogTitle>
           </DialogHeader>
