@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { SectionTitle } from "@/components/section-title"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedDoc } from "@/lib/use-cached-firestore"
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Shirt, Search, CheckCircle2, UploadCloud, Plus, Trash2, PencilLine } from "lucide-react"
+import { Loader2, Shirt, CheckCircle2, UploadCloud, Plus, Trash2, PencilLine, RefreshCw } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
 interface JerseyFeature {
@@ -55,7 +55,7 @@ interface RemeraItem {
 
 function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { toast } = useToast()
-  const [step, setStep] = useState<"dni" | "form" | "success">("dni")
+  const [step, setStep] = useState<"form" | "success">("form")
   const [dni, setDni] = useState("")
   const [nombre, setNombre] = useState("")
   const [telefono, setTelefono] = useState("")
@@ -67,6 +67,8 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const [buscando, setBuscando] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [aliasRemera, setAliasRemera] = useState<string | null>(null)
+  const [dniBuscado, setDniBuscado] = useState(false)
+  const [showTablaTalles, setShowTablaTalles] = useState(false)
 
   useEffect(() => {
     getDoc(doc(db, "settings", "remera")).then((snap) => {
@@ -74,8 +76,62 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     })
   }, [])
 
+  const lastDniBuscado = useRef("")
+
+  // Buscar automáticamente cuando el DNI tiene 7 u 8 dígitos
+  useEffect(() => {
+    const dniLimpio = dni.trim()
+    if (/^\d{7,8}$/.test(dniLimpio) && dniLimpio !== lastDniBuscado.current) {
+      lastDniBuscado.current = dniLimpio
+      buscarPorDniAuto(dniLimpio)
+    }
+  }, [dni])
+
+  const buscarPorDniAuto = async (dniVal: string) => {
+    setBuscando(true)
+    try {
+      const partSnap = await getDoc(doc(db, "participantesCicloTermal", dniVal))
+      if (partSnap.exists()) {
+        const data = partSnap.data()
+        setNombre(`${data.nombre || ""} ${data.apellido || ""}`.trim())
+        setTelefono(data.telefono || "")
+        setEstaRegistrado(true)
+      } else {
+        setNombre("")
+        setTelefono("")
+        setEstaRegistrado(false)
+      }
+
+      const remeraSnap = await getDoc(doc(db, "remera", dniVal))
+      if (remeraSnap.exists()) {
+        const rd = remeraSnap.data()
+        if (rd.items?.length) {
+          setItems(rd.items)
+        } else if (rd.talle) {
+          setItems([{ talle: rd.talle, cantidad: 1 }])
+        }
+        if (!partSnap.exists()) {
+          setNombre(rd.nombre || "")
+          setTelefono(rd.telefono || "")
+        }
+        setExistingTieneComprobante(rd.tieneComprobante ?? !!rd.comprobanteBase64)
+        setIsEditing(true)
+      } else {
+        setItems([{ talle: "", cantidad: 1 }])
+        setIsEditing(false)
+        setExistingTieneComprobante(false)
+      }
+
+      setDniBuscado(true)
+    } catch {
+      // silencioso en auto-búsqueda
+    } finally {
+      setBuscando(false)
+    }
+  }
+
   const handleClose = () => {
-    setStep("dni")
+    setStep("form")
     setDni("")
     setNombre("")
     setTelefono("")
@@ -84,6 +140,8 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     setEstaRegistrado(false)
     setIsEditing(false)
     setExistingTieneComprobante(false)
+    setDniBuscado(false)
+    lastDniBuscado.current = ""
     onClose()
   }
 
@@ -122,9 +180,13 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
         }
         setExistingTieneComprobante(rd.tieneComprobante ?? !!rd.comprobanteBase64)
         setIsEditing(true)
+      } else {
+        setItems([{ talle: "", cantidad: 1 }])
+        setIsEditing(false)
+        setExistingTieneComprobante(false)
       }
 
-      setStep("form")
+      setDniBuscado(true)
     } catch {
       toast({ title: "Error", description: "No se pudo consultar el DNI.", variant: "destructive" })
     } finally {
@@ -218,6 +280,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -226,7 +289,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
           </DialogTitle>
         </DialogHeader>
 
-        {step === "dni" && (
+        {step === "form" && (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="dni-input">DNI</Label>
@@ -239,29 +302,25 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
                   maxLength={8}
                   onKeyDown={(e) => e.key === "Enter" && buscarPorDni()}
                 />
-                <Button onClick={buscarPorDni} disabled={buscando} className="shrink-0">
-                  {buscando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                <Button onClick={buscarPorDni} disabled={buscando} className="shrink-0" variant="outline" title="Cargar datos por DNI">
+                  {buscando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">Si ya tenés un pedido, podés editarlo con tu DNI.</p>
+              <p className="text-xs text-gray-500">Ingresá tu DNI y presioná el botón para cargar tus datos.</p>
             </div>
-          </div>
-        )}
 
-        {step === "form" && (
-          <div className="space-y-4">
-            {isEditing && (
+            {dniBuscado && isEditing && (
               <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm px-3 py-2 rounded-md flex items-center gap-2">
                 <PencilLine className="h-4 w-4 shrink-0" />
                 Ya tenés un pedido registrado. Podés modificarlo.
               </div>
             )}
-            {!isEditing && !estaRegistrado && (
+            {dniBuscado && !isEditing && !estaRegistrado && (
               <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-2 rounded-md">
                 No encontramos tu inscripción. La remera se retira el día del evento.
               </div>
             )}
-            {!isEditing && estaRegistrado && (
+            {dniBuscado && !isEditing && estaRegistrado && (
               <div className="bg-green-50 border border-green-200 text-green-800 text-sm px-3 py-2 rounded-md">
                 Inscripción encontrada. Datos precargados.
               </div>
@@ -291,7 +350,16 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
 
             {/* Items: talle + cantidad */}
             <div className="space-y-2">
-              <Label>Talles</Label>
+              <div className="flex items-center justify-between">
+                <Label>Talles</Label>
+                <button
+                  type="button"
+                  onClick={() => setShowTablaTalles(true)}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Ver tabla de talles
+                </button>
+              </div>
               <div className="space-y-2">
                 {items.map((item, idx) => (
                   <div key={idx} className="flex gap-2 items-center">
@@ -359,19 +427,14 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
               </label>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" onClick={() => setStep("dni")} className="flex-1">
-                Atrás
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={enviando}
-                className="flex-1 bg-red-600 text-white hover:bg-red-700"
-              >
-                {enviando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                {isEditing ? "Guardar cambios" : "Enviar pedido"}
-              </Button>
-            </div>
+            <Button
+              onClick={handleSubmit}
+              disabled={enviando}
+              className="w-full bg-red-600 text-white hover:bg-red-700"
+            >
+              {enviando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isEditing ? "Guardar cambios" : "Enviar pedido"}
+            </Button>
           </div>
         )}
 
@@ -393,6 +456,22 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Dialog tabla de talles */}
+    <Dialog open={showTablaTalles} onOpenChange={setShowTablaTalles}>
+      <DialogContent className="max-w-[95vw] sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Tabla de talles</DialogTitle>
+        </DialogHeader>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/tabladetalles.jfif"
+          alt="Tabla de talles"
+          className="w-full rounded border object-contain"
+        />
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
 
