@@ -44,52 +44,48 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true)
   const [eventSettings, setEventSettings] = useState<any>(null)
   const [ciclosConfig, setCiclosConfig] = useState<CicloConfig[]>([])
-  const [firebaseReady, setFirebaseReady] = useState(false)
+  const [isFirebaseAvailable, setIsFirebaseAvailable] = useState(false)
 
-  // Check dinámico en el cliente — no a nivel de módulo
   useEffect(() => {
-    if (auth && db && typeof auth.onAuthStateChanged === "function") {
-      setFirebaseReady(true)
-    } else {
+    try {
+      // auth y db siempre existen en el cliente gracias a "use client" en firebase-config
+      const unsubscribe = onAuthStateChanged(auth, (u) => {
+        setUser(u)
+        setLoading(false)
+      })
+
+      setIsFirebaseAvailable(true)
+
+      const fetchSettings = async () => {
+        try {
+          const [settingsSnap, ciclosSnap] = await Promise.all([
+            getDoc(doc(db, "settings", "eventSettings")),
+            getDoc(doc(db, "configuracion", "inscripciones")),
+          ])
+
+          setEventSettings(settingsSnap.exists() ? settingsSnap.data() : defaultSettings)
+          if (ciclosSnap.exists()) {
+            setCiclosConfig(ciclosSnap.data().ciclos || [])
+          }
+        } catch (error: any) {
+          if (error?.code !== "unavailable" && !error?.message?.includes("offline")) {
+            console.warn("Error fetching event settings:", error)
+          }
+          setEventSettings(defaultSettings)
+        }
+      }
+
+      fetchSettings()
+
+      return () => unsubscribe()
+    } catch {
       setLoading(false)
       setEventSettings(defaultSettings)
     }
   }, [])
 
-  useEffect(() => {
-    if (!firebaseReady) return
-
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u)
-      setLoading(false)
-    })
-
-    const fetchSettings = async () => {
-      try {
-        const [settingsSnap, ciclosSnap] = await Promise.all([
-          getDoc(doc(db, "settings", "eventSettings")),
-          getDoc(doc(db, "configuracion", "inscripciones")),
-        ])
-
-        setEventSettings(settingsSnap.exists() ? settingsSnap.data() : defaultSettings)
-        if (ciclosSnap.exists()) {
-          setCiclosConfig(ciclosSnap.data().ciclos || [])
-        }
-      } catch (error: any) {
-        if (error?.code !== "unavailable" && !error?.message?.includes("offline")) {
-          console.warn("Error fetching event settings:", error)
-        }
-        setEventSettings(defaultSettings)
-      }
-    }
-
-    fetchSettings()
-
-    return () => unsubscribe()
-  }, [firebaseReady])
-
   return (
-    <FirebaseContext.Provider value={{ user, loading, eventSettings, ciclosConfig, isFirebaseAvailable: firebaseReady }}>
+    <FirebaseContext.Provider value={{ user, loading, eventSettings, ciclosConfig, isFirebaseAvailable }}>
       {children}
     </FirebaseContext.Provider>
   )

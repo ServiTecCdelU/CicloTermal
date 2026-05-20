@@ -1,6 +1,8 @@
-import { initializeApp, getApps } from "firebase/app"
-import { getFirestore } from "firebase/firestore"
-import { getAuth } from "firebase/auth"
+"use client"
+
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app"
+import { getFirestore, type Firestore } from "firebase/firestore"
+import { getAuth, type Auth } from "firebase/auth"
 
 if (typeof window !== "undefined") {
   const _origError = console.error.bind(console)
@@ -22,16 +24,33 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-let app: any = null
-let db: any = null
-let auth: any = null
-
-try {
-  app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig)
-  db = getFirestore(app)
-  auth = getAuth(app)
-} catch {
-  // Falla durante prerender estático sin API key — se resuelve en el cliente
+function initFirebase() {
+  const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig)
+  return { app, db: getFirestore(app), auth: getAuth(app) }
 }
 
-export { app, db, auth }
+let _app: FirebaseApp
+let _db: Firestore
+let _auth: Auth
+
+// Inicialización inmediata en el cliente, protegida en server
+if (typeof window !== "undefined") {
+  const fb = initFirebase()
+  _app = fb.app
+  _db = fb.db
+  _auth = fb.auth
+} else {
+  try {
+    const fb = initFirebase()
+    _app = fb.app
+    _db = fb.db
+    _auth = fb.auth
+  } catch {
+    // Prerender estático sin env vars — los exports quedan undefined
+    // pero nunca se usan en server porque todo es "use client"
+  }
+}
+
+export const app = _app!
+export const db = _db!
+export const auth = _auth!
