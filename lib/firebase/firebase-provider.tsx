@@ -30,6 +30,14 @@ const FirebaseContext = createContext<FirebaseContextType>({
 
 export const useFirebaseContext = () => useContext(FirebaseContext)
 
+const firebaseAvailable = (() => {
+  try {
+    return !!(auth && typeof auth.onAuthStateChanged === "function")
+  } catch {
+    return false
+  }
+})()
+
 const defaultSettings = {
   cupoMaximo: 300,
   precio: 35000,
@@ -41,47 +49,42 @@ const defaultSettings = {
 
 export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [eventSettings, setEventSettings] = useState<any>(null)
+  const [loading, setLoading] = useState(firebaseAvailable)
+  const [eventSettings, setEventSettings] = useState<any>(firebaseAvailable ? null : defaultSettings)
   const [ciclosConfig, setCiclosConfig] = useState<CicloConfig[]>([])
-  const [isFirebaseAvailable, setIsFirebaseAvailable] = useState(false)
+  const isFirebaseAvailable = firebaseAvailable
 
   useEffect(() => {
-    try {
-      // auth y db siempre existen en el cliente gracias a "use client" en firebase-config
-      const unsubscribe = onAuthStateChanged(auth, (u) => {
-        setUser(u)
-        setLoading(false)
-      })
+    if (!firebaseAvailable) return
 
-      setIsFirebaseAvailable(true)
-
-      const fetchSettings = async () => {
-        try {
-          const [settingsSnap, ciclosSnap] = await Promise.all([
-            getDoc(doc(db, "settings", "eventSettings")),
-            getDoc(doc(db, "configuracion", "inscripciones")),
-          ])
-
-          setEventSettings(settingsSnap.exists() ? settingsSnap.data() : defaultSettings)
-          if (ciclosSnap.exists()) {
-            setCiclosConfig(ciclosSnap.data().ciclos || [])
-          }
-        } catch (error: any) {
-          if (error?.code !== "unavailable" && !error?.message?.includes("offline")) {
-            console.warn("Error fetching event settings:", error)
-          }
-          setEventSettings(defaultSettings)
-        }
-      }
-
-      fetchSettings()
-
-      return () => unsubscribe()
-    } catch {
+    // Auth y settings en paralelo
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user)
       setLoading(false)
-      setEventSettings(defaultSettings)
+    })
+
+    const fetchSettings = async () => {
+      try {
+        const [settingsSnap, ciclosSnap] = await Promise.all([
+          getDoc(doc(db, "settings", "eventSettings")),
+          getDoc(doc(db, "configuracion", "inscripciones")),
+        ])
+
+        setEventSettings(settingsSnap.exists() ? settingsSnap.data() : defaultSettings)
+        if (ciclosSnap.exists()) {
+          setCiclosConfig(ciclosSnap.data().ciclos || [])
+        }
+      } catch (error: any) {
+        if (error?.code !== "unavailable" && !error?.message?.includes("offline")) {
+          console.warn("Error fetching event settings:", error)
+        }
+        setEventSettings(defaultSettings)
+      }
     }
+
+    fetchSettings()
+
+    return () => unsubscribe()
   }, [])
 
   return (

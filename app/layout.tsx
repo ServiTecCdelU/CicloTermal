@@ -2,9 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Permanent_Marker } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import { FirebaseProvider } from "@/lib/firebase/firebase-provider"
+import { ClientProviders } from "@/components/client-providers"
 
 const inter = Inter({ subsets: ["latin"] })
 const permanentMarker = Permanent_Marker({
@@ -24,7 +22,7 @@ export const metadata: Metadata = {
     siteName: "Cicloturismo Termal",
     images: [
       {
-        url: "/logo.jpg", // Imagen alojada en /public/logo.jpg
+        url: "/logo.jpg",
         alt: "Logo Cicloturismo Termal",
       },
     ],
@@ -39,8 +37,6 @@ export const metadata: Metadata = {
   },
 }
 
-
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -49,12 +45,9 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.className} ${permanentMarker.variable} min-h-screen bg-white text-black flex flex-col`}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <FirebaseProvider>
-            {children}
-            <Toaster />
-          </FirebaseProvider>
-        </ThemeProvider>
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   )
