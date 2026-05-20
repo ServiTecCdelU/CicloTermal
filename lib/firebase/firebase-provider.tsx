@@ -30,8 +30,6 @@ const FirebaseContext = createContext<FirebaseContextType>({
 
 export const useFirebaseContext = () => useContext(FirebaseContext)
 
-const firebaseAvailable = !!(auth && db)
-
 const defaultSettings = {
   cupoMaximo: 300,
   precio: 35000,
@@ -43,17 +41,26 @@ const defaultSettings = {
 
 export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(firebaseAvailable)
-  const [eventSettings, setEventSettings] = useState<any>(firebaseAvailable ? null : defaultSettings)
+  const [loading, setLoading] = useState(true)
+  const [eventSettings, setEventSettings] = useState<any>(null)
   const [ciclosConfig, setCiclosConfig] = useState<CicloConfig[]>([])
-  const isFirebaseAvailable = firebaseAvailable
+  const [firebaseReady, setFirebaseReady] = useState(false)
+
+  // Check dinámico en el cliente — no a nivel de módulo
+  useEffect(() => {
+    if (auth && db && typeof auth.onAuthStateChanged === "function") {
+      setFirebaseReady(true)
+    } else {
+      setLoading(false)
+      setEventSettings(defaultSettings)
+    }
+  }, [])
 
   useEffect(() => {
-    if (!firebaseAvailable) return
+    if (!firebaseReady) return
 
-    // Auth y settings en paralelo
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user)
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u)
       setLoading(false)
     })
 
@@ -79,10 +86,10 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
     fetchSettings()
 
     return () => unsubscribe()
-  }, [])
+  }, [firebaseReady])
 
   return (
-    <FirebaseContext.Provider value={{ user, loading, eventSettings, ciclosConfig, isFirebaseAvailable }}>
+    <FirebaseContext.Provider value={{ user, loading, eventSettings, ciclosConfig, isFirebaseAvailable: firebaseReady }}>
       {children}
     </FirebaseContext.Provider>
   )

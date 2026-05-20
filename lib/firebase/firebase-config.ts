@@ -1,8 +1,7 @@
-import { initializeApp } from "firebase/app"
+import { initializeApp, getApps } from "firebase/app"
 import { getFirestore } from "firebase/firestore"
 import { getAuth } from "firebase/auth"
 
-// Evita que Next.js dev mode trate los mensajes de offline de Firestore como errores fatales
 if (typeof window !== "undefined") {
   const _origError = console.error.bind(console)
   console.error = (...args: any[]) => {
@@ -23,18 +22,16 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-// try-catch protege el prerender estático de /_not-found donde la API key
-// puede estar vacía. En el cliente siempre inicializa correctamente.
 let app: any = null
 let db: any = null
 let auth: any = null
 
 try {
-  app = initializeApp(firebaseConfig)
+  app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig)
   db = getFirestore(app)
   auth = getAuth(app)
 } catch {
-  // Falla silenciosamente durante prerender — el provider maneja el caso null
+  // Falla durante prerender estático sin API key — se resuelve en el cliente
 }
 
 export { app, db, auth }
