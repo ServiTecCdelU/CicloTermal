@@ -42,22 +42,23 @@ const compressImage = (file: File, maxWidth = 400, quality = 0.8): Promise<strin
     const img = new Image()
 
     img.onload = () => {
-      // Calcular nuevas dimensiones manteniendo aspect ratio
       const ratio = Math.min(maxWidth / img.width, maxWidth / img.height)
       canvas.width = img.width * ratio
       canvas.height = img.height * ratio
 
-      // Dibujar imagen redimensionada
+      const hasTransparency = file.type === "image/png" || file.type === "image/webp"
+      const format = hasTransparency ? "image/png" : "image/jpeg"
+
+      if (hasTransparency) {
+        ctx?.clearRect(0, 0, canvas.width, canvas.height)
+      }
+
       ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
 
-      // Convertir a base64 con compresión
-      const compressedBase64 = canvas.toDataURL("image/jpeg", quality)
+      const compressedBase64 = canvas.toDataURL(format, hasTransparency ? undefined : quality)
 
-      // Verificar tamaño (debe ser menor a 800KB para estar seguro)
-      if (compressedBase64.length > 800000) {
-        // Si aún es muy grande, reducir más la calidad
-        const smallerBase64 = canvas.toDataURL("image/jpeg", 0.6)
-        resolve(smallerBase64)
+      if (compressedBase64.length > 800000 && !hasTransparency) {
+        resolve(canvas.toDataURL("image/jpeg", 0.6))
       } else {
         resolve(compressedBase64)
       }
@@ -387,7 +388,7 @@ export default function SponsorsEditor() {
                   <Check className="h-4 w-4 text-green-600" />
                   Vista previa
                 </Label>
-                <div className="relative w-full max-w-xs mx-auto h-40 border-2 border-primary/20 rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="relative w-full max-w-xs mx-auto h-40 border-2 border-primary/20 rounded-lg overflow-hidden shadow-sm" style={{ backgroundImage: "repeating-conic-gradient(#d4d4d4 0% 25%, transparent 0% 50%)", backgroundSize: "16px 16px" }}>
                   <img
                     src={formData.imagePreview || "/placeholder.svg"}
                     alt="Preview"
@@ -511,7 +512,7 @@ export default function SponsorsEditor() {
                                 </div>
 
                                 {/* Logo */}
-                                <div className="w-full h-36 bg-white rounded-lg overflow-hidden border flex items-center justify-center p-3">
+                                <div className="w-full h-36 rounded-lg overflow-hidden border flex items-center justify-center p-3" style={{ backgroundImage: "repeating-conic-gradient(#d4d4d4 0% 25%, transparent 0% 50%)", backgroundSize: "16px 16px" }}>
                                   <img
                                     src={sponsor.imageBase64 || "/placeholder.svg"}
                                     alt={sponsor.name}

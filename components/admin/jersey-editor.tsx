@@ -52,9 +52,16 @@ const compressImage = (file: File, maxWidth = 800, quality = 0.8): Promise<strin
       canvas.width = img.width * ratio
       canvas.height = img.height * ratio
 
-      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
-      const compressedBase64 = canvas.toDataURL("image/jpeg", quality)
-      resolve(compressedBase64)
+      const hasTransparency = file.type === "image/png" || file.type === "image/webp"
+
+      if (hasTransparency) {
+        ctx?.clearRect(0, 0, canvas.width, canvas.height)
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL("image/png"))
+      } else {
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL("image/jpeg", quality))
+      }
     }
 
     img.onerror = reject
@@ -348,7 +355,7 @@ export default function JerseyEditor() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Vista previa actual */}
-            <div className="relative aspect-square max-w-sm mx-auto border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+            <div className="relative aspect-square max-w-sm mx-auto border-2 border-dashed border-gray-200 rounded-lg overflow-hidden" style={{ backgroundImage: "repeating-conic-gradient(#d4d4d4 0% 25%, transparent 0% 50%)", backgroundSize: "16px 16px" }}>
               <Image
                 src={imagePreview || jerseyData.imageUrl || "/placeholder.svg?height=400&width=400"}
                 alt="Vista previa de la remera"
