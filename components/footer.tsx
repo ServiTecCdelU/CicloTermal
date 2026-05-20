@@ -43,7 +43,7 @@ export default function Footer() {
                 { href: "/#fotos", label: "Fotos" },
                 { href: "/#sponsors", label: "Sponsors" },
                 { href: "/#contacto", label: "Contacto" },
-                { href: "/admin", label: "Admin" },
+                { href: "/admin/registrations", label: "Admin" },
               ].map(({ href, label }) => (
                 <li key={href}>
                   <Link href={href} className="text-sm text-gray-600 hover:text-gray-900">

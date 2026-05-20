@@ -39,7 +39,10 @@
       "Bash(echo \"exit: $?\")",
       "Bash(powershell:*)",
       "Bash(git commit -m ':*)",
-      "Bash(ls C:/Users/Emanuel/Documents/Proyectos/CicloTermal/types*)"
+      "Bash(ls C:/Users/Emanuel/Documents/Proyectos/CicloTermal/types*)",
+      "Bash(ls C:/Users/Emanuel/Documents/Proyectos/CicloTermal/.env*)",
+      "Bash(grep -l \"NEXT_PUBLIC_FIREBASE_API_KEY\" .next/static/chunks/*.js)",
+      "Bash(git checkout:*)"
     ]
   }
 }

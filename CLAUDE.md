@@ -42,70 +42,83 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Cicloturismo Termal de Federación** — A Next.js 15 web app for managing a cycling tourism event in Federación, Entre Ríos, Argentina. Deployed at https://ciclo-turismo.vercel.app.
+**Cicloturismo Termal de Federación** — App Next.js 15 para gestionar un evento de cicloturismo en Federación, Entre Ríos. Deploy en https://ciclo-turismo.vercel.app.
 
 ## Commands
 
 ```bash
-npm run dev      # Start development server (http://localhost:3000)
-npm run build    # Production build
-npm start        # Start production server
-npm run lint     # Run ESLint
+npm run dev      # Dev server (http://localhost:3000)
+npm run build    # Build de producción
+npm start        # Servidor de producción
+npm run lint     # ESLint
 ```
 
-No test runner is configured. ESLint and TypeScript checks are disabled during `build` in `next.config.mjs`.
+No hay test runner configurado. ESLint y TypeScript están deshabilitados en build (`next.config.mjs`).
 
 ## Architecture
 
 **Framework:** Next.js 15 App Router, TypeScript, React 19  
 **Styling:** Tailwind CSS + Shadcn/ui (Radix primitives, neutral base, CSS variables)  
 **Database/Auth:** Firebase Firestore + Firebase Authentication  
-**Key libs:** React Hook Form + Zod (forms), Leaflet (maps), EmailJS (email), Recharts (charts), Framer Motion (animations), Google Drive API (file uploads)
+**Libs principales:** React Hook Form + Zod (forms), Leaflet (maps), EmailJS (email), Recharts (charts), Framer Motion (animations), Google Drive API (uploads)
 
 ### App Router structure
 
 ```
 app/
-  page.tsx              # Public home page (hero carousel + sections)
-  layout.tsx            # Root layout — wraps ThemeProvider + FirebaseProvider
-  admin/                # Protected admin area (requires Firebase auth)
-    dashboard/page.tsx  # Statistics & metrics (~2200 lines)
-    registrations/page.tsx # Participant management (~2200 lines)
-    gastos/page.tsx     # Expense tracking
-    content/page.tsx    # Event content editor
-    settings/page.tsx   # Configuration
+  page.tsx                    # Home pública (hero carousel + secciones)
+  layout.tsx                  # Root layout → ClientProviders
+  admin/
+    page.tsx                  # Login admin
+    layout.tsx                # Auth guard + AdminDataProvider + sidebar
+    dashboard/page.tsx        # Estadísticas (~2200 líneas)
+    registrations/page.tsx    # Gestión de inscriptos (~2200 líneas)
+    gastos/page.tsx           # Gastos
+    content/page.tsx          # Editor de contenido del evento
+    settings/page.tsx         # Configuración
+    remera/page.tsx           # Gestión de remeras
   inscripcion/
-    page.tsx            # Registration form (React Hook Form + Zod)
+    page.tsx                  # Formulario de inscripción (RHF + Zod)
+    [año]/page.tsx            # Inscripción por año
     confirmacion/page.tsx
-  fotos/page.tsx        # Photo gallery
+  pedir-remera/page.tsx       # Pedido público de remera
+  fotos/page.tsx              # Galería de fotos
   api/
-    upload/route.js         # File upload
-    upload-drive/route.js   # Google Drive integration
+    upload-drive/route.js     # Upload a Google Drive (único API route)
 ```
 
-### Key components
+### Provider chain
 
-- `components/navbar.tsx` / `footer.tsx` — Site chrome
-- `components/ui/` — 40+ Shadcn/ui components (do not edit manually)
-- `lib/firebase/firebase-config.ts` — Firebase app initialization
-- `lib/firebase/firebase-provider.tsx` — Auth context + event settings (React context)
-- `lib/google-drive.js` — Google Drive API wrapper
+`layout.tsx` → `ClientProviders` → `ThemeProvider` → `FirebaseProvider`
 
-### Data flow
+- `ClientProviders` (`components/client-providers.tsx`) carga `FirebaseProvider` con `dynamic(..., { ssr: false })` para evitar errores de prerender.
+- `FirebaseProvider` (`lib/firebase/firebase-provider.tsx`) expone auth state, event settings y `ciclosConfig` via context. Si Firebase no está disponible, usa defaults hardcodeados.
+- `AdminDataProvider` (`lib/admin-data-context.tsx`) wrappea solo `/admin/*` (excepto login). Cachea registrations y expenses con localStorage + memory cache (30 min TTL).
 
-- **Firebase Auth** gates the entire `/admin` subtree
-- **Firestore** is the primary data store for registrations, expenses, settings, and event content
-- The `FirebaseProvider` (`lib/firebase/firebase-provider.tsx`) exposes auth state and event settings to all components via context
-- Admin pages read/write Firestore directly using the Firebase SDK (no custom API layer)
+### Caching
 
-### Adding home page sections
+- `lib/use-cached-firestore.ts` — Hook genérico con cache en memoria + localStorage (1h TTL) para datos públicos.
+- `lib/admin-data-context.tsx` — Cache de registrations/expenses solo en admin (30 min TTL).
 
-The home `page.tsx` composes section components from `components/`. Add a new section component there and import it into `app/page.tsx`.
+### Roles admin
 
-### Path aliases
+El layout de admin consulta `admins` collection en Firestore por email. El rol `"remera"` redirige forzosamente a `/admin/remera`.
 
-`@/*` maps to the repo root (configured in `tsconfig.json`). Always use `@/` imports, not relative paths.
+### Secciones de la home
+
+La home (`app/page.tsx`) compone secciones desde `components/*-section.tsx`. Para agregar una sección: crear componente en `components/`, importar en `app/page.tsx`.
+
+### Componentes admin
+
+Los editores de contenido están en `components/admin/` (carousel-editor, contact-editor, form-editor, etc.). Cada editor gestiona su propia lectura/escritura a Firestore.
+
+### Convenciones
+
+- `@/*` mapea a la raíz del repo. Usar siempre imports con `@/`, nunca relativos.
+- `components/ui/` — Shadcn/ui, no editar manualmente.
+- Páginas admin acceden Firestore directamente, no hay API layer intermedio.
+- `next.config.mjs` optimiza imports de lucide-react, framer-motion, recharts, radix y firebase.
 
 ## Environment
 
-`.env.local` holds Firebase credentials and Google API keys — required for local development. Copy from a team member; never commit secrets.
+`.env.local` tiene credenciales de Firebase y Google API keys. Necesario para desarrollo local.
