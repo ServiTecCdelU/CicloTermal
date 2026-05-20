@@ -1,6 +1,6 @@
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app"
-import { getFirestore, type Firestore } from "firebase/firestore"
-import { getAuth, type Auth } from "firebase/auth"
+import { initializeApp, getApps } from "firebase/app"
+import { getFirestore } from "firebase/firestore"
+import { getAuth } from "firebase/auth"
 
 // Evita que Next.js dev mode trate los mensajes de offline de Firestore como errores fatales
 if (typeof window !== "undefined") {
@@ -8,7 +8,7 @@ if (typeof window !== "undefined") {
   console.error = (...args: any[]) => {
     const msg = String(args[0] ?? "")
     if (msg.includes("Cloud Firestore backend") || msg.includes("client is offline") || msg.includes("offline mode")) {
-      return // silenciar — es ruido de red, no un error de código
+      return
     }
     _origError(...args)
   }
@@ -23,30 +23,9 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-// Inicialización lazy: evita errores durante prerender estático de Next.js.
-// En el cliente se inicializa una sola vez en la primera llamada.
-let _app: FirebaseApp | null = null
-let _db: Firestore | null = null
-let _auth: Auth | null = null
+// Inicialización directa — protegida de SSR/prerender donde no hay API key
+const app = getApps().length ? getApps()[0] : (firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null)
+const db = app ? getFirestore(app) : (null as any)
+const auth = app ? getAuth(app) : (null as any)
 
-function getApp(): FirebaseApp {
-  if (!_app) {
-    _app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
-  }
-  return _app
-}
-
-// Exportados como getters para que se inicialicen solo cuando se usan (en client components)
-export const app = new Proxy({} as FirebaseApp, { get: (_, prop) => (getApp() as any)[prop] })
-export const db = new Proxy({} as Firestore, {
-  get: (_, prop) => {
-    if (!_db) _db = getFirestore(getApp())
-    return (_db as any)[prop]
-  },
-})
-export const auth = new Proxy({} as Auth, {
-  get: (_, prop) => {
-    if (!_auth) _auth = getAuth(getApp())
-    return (_auth as any)[prop]
-  },
-})
+export { app, db, auth }
