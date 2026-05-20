@@ -30,9 +30,7 @@ const FirebaseContext = createContext<FirebaseContextType>({
 
 export const useFirebaseContext = () => useContext(FirebaseContext)
 
-// Se evalúa en el cliente: el Proxy de auth inicializa Firebase lazy.
-// En SSR (prerender) devuelve false porque no hay window.
-const firebaseAvailable = typeof window !== "undefined"
+const firebaseAvailable = !!(auth && db)
 
 const defaultSettings = {
   cupoMaximo: 300,

@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from "firebase/app"
+import { initializeApp } from "firebase/app"
 import { getFirestore } from "firebase/firestore"
 import { getAuth } from "firebase/auth"
 
@@ -23,9 +23,18 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-// Inicialización directa — protegida de SSR/prerender donde no hay API key
-const app = getApps().length ? getApps()[0] : (firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null)
-const db = app ? getFirestore(app) : (null as any)
-const auth = app ? getAuth(app) : (null as any)
+// try-catch protege el prerender estático de /_not-found donde la API key
+// puede estar vacía. En el cliente siempre inicializa correctamente.
+let app: any = null
+let db: any = null
+let auth: any = null
+
+try {
+  app = initializeApp(firebaseConfig)
+  db = getFirestore(app)
+  auth = getAuth(app)
+} catch {
+  // Falla silenciosamente durante prerender — el provider maneja el caso null
+}
 
 export { app, db, auth }
