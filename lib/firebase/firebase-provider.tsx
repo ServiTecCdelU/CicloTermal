@@ -30,98 +30,62 @@ const FirebaseContext = createContext<FirebaseContextType>({
 
 export const useFirebaseContext = () => useContext(FirebaseContext)
 
+const firebaseAvailable = (() => {
+  try {
+    return !!(auth && typeof auth.onAuthStateChanged === "function")
+  } catch {
+    return false
+  }
+})()
+
+const defaultSettings = {
+  cupoMaximo: 300,
+  precio: 35000,
+  metodoPago: "Transferencia bancaria",
+  inscripcionesAbiertas: true,
+  currentYear: new Date().getFullYear(),
+  edicion: "",
+}
+
 export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [eventSettings, setEventSettings] = useState(null)
+  const [loading, setLoading] = useState(firebaseAvailable)
+  const [eventSettings, setEventSettings] = useState<any>(firebaseAvailable ? null : defaultSettings)
   const [ciclosConfig, setCiclosConfig] = useState<CicloConfig[]>([])
-  const [isFirebaseAvailable, setIsFirebaseAvailable] = useState(false)
-
-  // Verificar si Firebase está disponible
-  useEffect(() => {
-    try {
-      // Intentar acceder a auth para verificar si Firebase está inicializado correctamente
-      if (auth && typeof auth.onAuthStateChanged === "function") {
-        setIsFirebaseAvailable(true)
-      } else {
-        console.warn("Firebase Auth no está disponible. Algunas funcionalidades estarán limitadas.")
-        setIsFirebaseAvailable(false)
-        setLoading(false)
-      }
-    } catch (error) {
-      console.error("Error al verificar Firebase:", error)
-      setIsFirebaseAvailable(false)
-      setLoading(false)
-    }
-  }, [])
+  const isFirebaseAvailable = firebaseAvailable
 
   useEffect(() => {
-    if (!isFirebaseAvailable) return
+    if (!firebaseAvailable) return
 
+    // Auth y settings en paralelo
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user)
       setLoading(false)
     })
 
-    return () => unsubscribe()
-  }, [isFirebaseAvailable])
-
-  useEffect(() => {
-    const fetchEventSettings = async () => {
-      if (!isFirebaseAvailable) {
-        // Configuración predeterminada si Firebase no está disponible
-        setEventSettings({
-          cupoMaximo: 300,
-          precio: 35000,
-          metodoPago: "Transferencia bancaria",
-          inscripcionesAbiertas: true,
-          currentYear: new Date().getFullYear(),
-          edicion: "",
-        })
-        return
-      }
-
+    const fetchSettings = async () => {
       try {
-        const settingsDoc = doc(db, "settings", "eventSettings")
-        const docSnap = await getDoc(settingsDoc)
+        const [settingsSnap, ciclosSnap] = await Promise.all([
+          getDoc(doc(db, "settings", "eventSettings")),
+          getDoc(doc(db, "configuracion", "inscripciones")),
+        ])
 
-        if (docSnap.exists()) {
-          setEventSettings(docSnap.data())
-        } else {
-          setEventSettings({
-            cupoMaximo: 300,
-            precio: 35000,
-            metodoPago: "Transferencia bancaria",
-            inscripcionesAbiertas: true,
-            currentYear: new Date().getFullYear(),
-            edicion: "",
-          })
-        }
-
-        const ciclosDoc = doc(db, "configuracion", "inscripciones")
-        const ciclosSnap = await getDoc(ciclosDoc)
+        setEventSettings(settingsSnap.exists() ? settingsSnap.data() : defaultSettings)
         if (ciclosSnap.exists()) {
           setCiclosConfig(ciclosSnap.data().ciclos || [])
         }
       } catch (error: any) {
-        if (error?.code === "unavailable" || error?.message?.includes("offline")) {
-          // Firestore sin conexión — modo offline, no es un error crítico
-        } else {
+        if (error?.code !== "unavailable" && !error?.message?.includes("offline")) {
           console.warn("Error fetching event settings:", error)
         }
-        setEventSettings({
-          cupoMaximo: 300,
-          precio: 35000,
-          metodoPago: "Transferencia bancaria",
-          inscripcionesAbiertas: true,
-          currentYear: new Date().getFullYear(),
-          edicion: "",
-        })
+        setEventSettings(defaultSettings)
       }
     }
 
-    fetchEventSettings()
-  }, [isFirebaseAvailable])
+    fetchSettings()
+
+    return () => unsubscribe()
+  }, [])
 
   return (
     <FirebaseContext.Provider value={{ user, loading, eventSettings, ciclosConfig, isFirebaseAvailable }}>

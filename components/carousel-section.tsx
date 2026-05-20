@@ -19,8 +19,8 @@ const staticSlides = [
     imageUrl: "/foto 1.jpg?height=600&width=1200",
     title: "Cicloturismo Termal de Federación",
     subtitle: null, // se reemplaza con fecha dinámica
-    buttonText: "Inscripción Cerrada",
-    buttonUrl: "",
+    buttonText: `Inscripción ${new Date().getFullYear()}`,
+    buttonUrl: `/inscripcion/${new Date().getFullYear()}`,
   },
   {
     id: "default-2",
@@ -59,8 +59,8 @@ const staticSlides = [
     imageUrl: "/foto 6.jpg?height=600&width=1200",
     title: "Cicloturismo Termal de Federación",
     subtitle: null, // se reemplaza con fecha dinámica
-    buttonText: "Inscripción Cerrada",
-    buttonUrl: "",
+    buttonText: `Inscripción ${new Date().getFullYear()}`,
+    buttonUrl: `/inscripcion/${new Date().getFullYear()}`,
   },
 ]
 
@@ -70,10 +70,8 @@ export default function CarouselSection() {
   const cicloActivo = ciclosConfig.find((c) => c.habilitado)
   const slides = staticSlides.map((s) => {
     const base = { ...s, subtitle: s.subtitle ?? fechaLabel }
-    if (base.buttonText === "Inscripción Cerrada") {
-      if (cicloActivo) {
-        return { ...base, buttonText: `Inscripción ${cicloActivo.año}`, buttonUrl: `/inscripcion/${cicloActivo.año}` }
-      }
+    if (base.buttonText.startsWith("Inscripción") && cicloActivo) {
+      return { ...base, buttonText: `Inscripción ${cicloActivo.año}`, buttonUrl: `/inscripcion/${cicloActivo.año}` }
     }
     return base
   })
