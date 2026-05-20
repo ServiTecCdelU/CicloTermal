@@ -21,6 +21,7 @@ const navItems = [
   { name: "Evento", href: "/#evento" },
   { name: "Fotos", href: "/#fotos" },
   { name: "Sponsors", href: "/#sponsors" },
+  { name: "Remeras", href: "/pedir-remera" },
   { name: "Contacto", href: "/#contacto" },
 ]
 

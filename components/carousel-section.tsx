@@ -120,7 +120,7 @@ export default function CarouselSection() {
               src={isMobile ? slide.imageUrl.replace(".jpg", " cel.jpg") : slide.imageUrl.replace(".jpg", " pc.jpg")}
               alt={slide.title || "Carousel image"}
               fill
-              priority
+              priority={index === 0}
               className="object-cover"
             />
             <div className="absolute inset-0 bg-black/30" />
