@@ -1,4 +1,4 @@
-import { initializeApp, type FirebaseApp } from "firebase/app"
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app"
 import { getFirestore, type Firestore } from "firebase/firestore"
 import { getAuth, type Auth } from "firebase/auth"
 
@@ -23,10 +23,30 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-// Firebase solo se inicializa si hay API key (ausente durante prerender estático).
-// En el cliente siempre existe porque NEXT_PUBLIC_* se inyecta en build.
-const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : (undefined as unknown as FirebaseApp)
-const db = app ? getFirestore(app) : (undefined as unknown as Firestore)
-const auth = app ? getAuth(app) : (undefined as unknown as Auth)
+// Inicialización lazy: evita errores durante prerender estático de Next.js.
+// En el cliente se inicializa una sola vez en la primera llamada.
+let _app: FirebaseApp | null = null
+let _db: Firestore | null = null
+let _auth: Auth | null = null
 
-export { app, db, auth }
+function getApp(): FirebaseApp {
+  if (!_app) {
+    _app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
+  }
+  return _app
+}
+
+// Exportados como getters para que se inicialicen solo cuando se usan (en client components)
+export const app = new Proxy({} as FirebaseApp, { get: (_, prop) => (getApp() as any)[prop] })
+export const db = new Proxy({} as Firestore, {
+  get: (_, prop) => {
+    if (!_db) _db = getFirestore(getApp())
+    return (_db as any)[prop]
+  },
+})
+export const auth = new Proxy({} as Auth, {
+  get: (_, prop) => {
+    if (!_auth) _auth = getAuth(getApp())
+    return (_auth as any)[prop]
+  },
+})
