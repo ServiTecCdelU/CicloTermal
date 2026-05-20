@@ -45,11 +45,6 @@ import {
   Search,
 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
-import emailjs from "@emailjs/browser"
-
-if (typeof window !== "undefined") {
-  emailjs.init(process.env.NEXT_PUBLIC_EMAILJS_KEY_INSCRIPCION!)
-}
 
 // ─── PALETA DEL EVENTO ── cambiar estos valores cada año ────────
 const AMARILLO      = "#C8E000"  // Lima brillante (top remera)
@@ -457,21 +452,6 @@ export default function InscripcionAño() {
     }
   }
 
-  const sendAdminNotificationEmail = async (participantData) => {
-    try {
-      await emailjs.send(process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!, process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_INSCRIPCION!, {
-        nombre: participantData.nombre,
-        apellido: participantData.apellido,
-        comprobanteUrl: participantData.nombreArchivo || "comprobante",
-        emailIara: "iara37699@gmail.com",
-      })
-      return true
-    } catch (error) {
-      toast({ title: "Error al enviar email", description: "No se pudo notificar al administrador.", variant: "destructive" })
-      return false
-    }
-  }
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) return
@@ -535,8 +515,6 @@ export default function InscripcionAño() {
         ...datosCiclo,
         años: arrayUnion(añoParam),
       }, { merge: true })
-
-      await sendAdminNotificationEmail({ ...perfilPersonal, ...datosCiclo })
 
       // Guardar grupo nuevo si no estaba en la lista
       const grupoIngresado = formData.grupoCiclistas.trim()
