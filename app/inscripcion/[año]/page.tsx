@@ -203,12 +203,11 @@ export default function InscripcionAño() {
   // Cargar settings y abrir inscripción directamente
   useEffect(() => {
     if (!añoParam || isNaN(añoParam)) { setCicloStatus("open"); return }
-    if (!db) { setCicloStatus("open"); return }
     const check = async () => {
       try {
         const [settingsSnap, confirmSnap] = await Promise.all([
-          getDoc(doc(db!, "settings", "eventSettings")),
-          getDoc(doc(db!, "settings", "confirmacion")),
+          getDoc(doc(db, "settings", "eventSettings")),
+          getDoc(doc(db, "settings", "confirmacion")),
         ])
         if (settingsSnap.exists()) {
           const d = settingsSnap.data()
@@ -289,8 +288,8 @@ export default function InscripcionAño() {
       } else {
         setDniFound(false)
       }
-    } catch (err: any) {
-      toast({ title: "Error al buscar DNI", description: err?.message || "Verificá tu conexión", variant: "destructive" })
+    } catch {
+      // Silenciar — el usuario puede completar los datos manualmente
     } finally {
       setDniLookingUp(false)
     }
@@ -411,7 +410,7 @@ export default function InscripcionAño() {
     }
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) {
-      toast({ title: "Error en el formulario", description: Object.values(errors)[0] as string, variant: "destructive" })
+      toast({ title: "Revisá los datos", description: Object.values(errors)[0] as string, variant: "destructive" })
       return false
     }
     return true
@@ -445,7 +444,6 @@ export default function InscripcionAño() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) return
-
     setIsSubmitting(true)
     try {
       const numeroInscripcion = await getNextRegistrationNumber()
@@ -453,8 +451,8 @@ export default function InscripcionAño() {
       if (formData.comprobantePago) {
         try {
           imagenBase64 = await convertToBase64(formData.comprobantePago)
-        } catch (error) {
-          toast({ title: "Error al procesar el archivo", description: (error as Error).message, variant: "destructive" })
+        } catch {
+          toast({ title: "No se pudo procesar el comprobante", description: "Intentá subir otra imagen", variant: "destructive" })
           setIsSubmitting(false)
           return
         }
@@ -521,8 +519,7 @@ export default function InscripcionAño() {
       setSubmitted(true)
       setShowSuccessDialog(true)
     } catch (error) {
-      console.error("Error al enviar formulario:", error)
-      toast({ title: "Error", description: (error as Error).message || "Error al procesar la inscripción", variant: "destructive" })
+      toast({ title: "No se pudo completar la inscripción", description: "Revisá tu conexión e intentá de nuevo", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
     }

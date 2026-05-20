@@ -23,14 +23,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-let app: FirebaseApp | undefined
-let db: Firestore | undefined
-let auth: Auth | undefined
-
-if (firebaseConfig.apiKey) {
-  app = initializeApp(firebaseConfig)
-  db = getFirestore(app)
-  auth = getAuth(app)
-}
+// Firebase solo se inicializa si hay API key (ausente durante prerender estático).
+// En el cliente siempre existe porque NEXT_PUBLIC_* se inyecta en build.
+const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : (undefined as unknown as FirebaseApp)
+const db = app ? getFirestore(app) : (undefined as unknown as Firestore)
+const auth = app ? getAuth(app) : (undefined as unknown as Auth)
 
 export { app, db, auth }
