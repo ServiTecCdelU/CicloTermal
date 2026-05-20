@@ -176,7 +176,7 @@ export default function InscripcionAño() {
   const añoParam = Number(params.año)
 
   const { toast, toasts } = useToast()
-  const [cicloStatus, setCicloStatus] = useState<"loading" | "not_found" | "disabled" | "closed" | "open">("loading")
+  const [cicloStatus, setCicloStatus] = useState<"loading" | "open">("loading")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
@@ -200,24 +200,16 @@ export default function InscripcionAño() {
 
   const totalSteps = 3
 
-  // Verificar estado del ciclo
+  // Cargar settings y abrir inscripción directamente
   useEffect(() => {
-    if (!añoParam || isNaN(añoParam)) { setCicloStatus("not_found"); return }
+    if (!añoParam || isNaN(añoParam)) { setCicloStatus("open"); return }
+    if (!db) { setCicloStatus("open"); return }
     const check = async () => {
       try {
-        const [ciclosSnap, settingsSnap, confirmSnap] = await Promise.all([
-          getDoc(doc(db, "configuracion", "inscripciones")),
-          getDoc(doc(db, "settings", "eventSettings")),
-          getDoc(doc(db, "settings", "confirmacion")),
+        const [settingsSnap, confirmSnap] = await Promise.all([
+          getDoc(doc(db!, "settings", "eventSettings")),
+          getDoc(doc(db!, "settings", "confirmacion")),
         ])
-        if (!ciclosSnap.exists()) { setCicloStatus("not_found"); return }
-        const ciclos: any[] = ciclosSnap.data().ciclos || []
-        const ciclo = ciclos.find((c) => c.año === añoParam)
-        if (!ciclo) { setCicloStatus("not_found"); return }
-        if (!ciclo.habilitado) { setCicloStatus("disabled"); return }
-        const today = new Date().toISOString().slice(0, 10)
-        if (ciclo.fechaDesde && today < ciclo.fechaDesde) { setCicloStatus("closed"); return }
-        if (ciclo.fechaHasta && today > ciclo.fechaHasta) { setCicloStatus("closed"); return }
         if (settingsSnap.exists()) {
           const d = settingsSnap.data()
           setDatosPago1(d.datosPago1 ?? "")
@@ -232,10 +224,8 @@ export default function InscripcionAño() {
             infoExtra: d.infoExtra || prev.infoExtra,
           }))
         }
-        setCicloStatus("open")
-      } catch {
-        setCicloStatus("not_found")
-      }
+      } catch {}
+      setCicloStatus("open")
     }
     check()
   }, [añoParam])
@@ -545,56 +535,6 @@ export default function InscripcionAño() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-      </div>
-    )
-  }
-
-  if (cicloStatus === "not_found" || cicloStatus === "disabled") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-gray-100 to-gray-200 rounded-t-lg">
-            <CardTitle className="text-2xl font-bold text-center text-gray-700">Inscripción no disponible</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 text-center">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-2">
-              La inscripción para el año <strong>{añoParam || "indicado"}</strong> no está disponible.
-            </p>
-            <p className="text-gray-500 text-sm">Consultá las fechas del próximo ciclo en nuestra página principal.</p>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Button onClick={() => (window.location.href = "/")} variant="outline">
-              <Home className="h-4 w-4 mr-2" />
-              Volver al inicio
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    )
-  }
-
-  if (cicloStatus === "closed") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-amber-100 to-orange-100 rounded-t-lg">
-            <CardTitle className="text-2xl font-bold text-center text-amber-700">Inscripción cerrada</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 text-center">
-            <Clock className="h-12 w-12 text-amber-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-2">
-              El período de inscripción para el ciclo <strong>{añoParam}</strong> está cerrado.
-            </p>
-            <p className="text-gray-500 text-sm">Las inscripciones pueden estar pendientes de apertura o ya finalizadas.</p>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Button onClick={() => (window.location.href = "/")} variant="outline">
-              <Home className="h-4 w-4 mr-2" />
-              Volver al inicio
-            </Button>
-          </CardFooter>
-        </Card>
       </div>
     )
   }
