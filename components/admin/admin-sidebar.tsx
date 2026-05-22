@@ -4,8 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { auth } from "@/lib/firebase/firebase-config"
-import { signOut } from "firebase/auth"
+import { supabase } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { LayoutDashboard, Users, FileEdit, Settings, LogOut, Menu, X, ChevronDown, Shirt } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -60,7 +59,7 @@ export default function AdminNavbar({ userRole }: { userRole?: string | null }) 
 
   const handleSignOut = async () => {
     try {
-      await signOut(auth)
+      await supabase.auth.signOut()
       toast({
         title: "Sesión cerrada",
         description: "Has cerrado sesión correctamente",
