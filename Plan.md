@@ -483,6 +483,6 @@ GOOGLE_SERVICE_ACCOUNT_KEY=...
 - [x] Fase 1 — Schema SQL
 - [x] Fase 2 — Cliente Supabase
 - [x] Fase 3 — Auth
-- [ ] Fase 4 — Script migración de datos
+- [x] Fase 4 — Script migración de datos
 - [ ] Fase 5 — Código (capa de datos)
 - [ ] Fase 6 — Limpieza
