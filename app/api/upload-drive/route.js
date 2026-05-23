@@ -2,21 +2,23 @@ export const dynamic = "force-dynamic"
 
 import { NextResponse } from "next/server"
 import { uploadToGoogleDrive } from "@/lib/google-drive"
-import { adminAuth } from "@/lib/firebase/admin"
+import { supabaseAdmin } from "@/lib/supabase/admin"
 
 async function verifyToken(request) {
   const authorization = request.headers.get("authorization")
   if (!authorization?.startsWith("Bearer ")) return null
   try {
-    return await adminAuth.verifyIdToken(authorization.slice(7))
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(authorization.slice(7))
+    if (error || !user) return null
+    return user
   } catch {
     return null
   }
 }
 
 export async function POST(request) {
-  const decoded = await verifyToken(request)
-  if (!decoded) {
+  const user = await verifyToken(request)
+  if (!user) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   }
 

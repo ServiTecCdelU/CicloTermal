@@ -50,8 +50,6 @@
     "date-picker": "^0.3.0",
     "emailjs": "^4.0.3",
     "embla-carousel-react": "8.5.1",
-    "firebase": "^11.7.3",
-    "firebase-admin": "^13.9.0",
     "framer-motion": "^12.12.1",
     "googleapis": "^149.0.0",
     "input-otp": "1.4.1",
