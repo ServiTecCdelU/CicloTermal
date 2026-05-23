@@ -4,8 +4,7 @@ import { useState, useMemo, useEffect, useRef } from "react"
 import { SectionTitle } from "@/components/section-title"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedDoc } from "@/lib/use-cached-firestore"
-import { db } from "@/lib/firebase/firebase-config"
-import { doc, getDoc, setDoc } from "firebase/firestore"
+import { supabase } from "@/lib/supabase/client"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -71,8 +70,8 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const [showTablaTalles, setShowTablaTalles] = useState(false)
 
   useEffect(() => {
-    getDoc(doc(db, "settings", "remera")).then((snap) => {
-      if (snap.exists()) setAliasRemera(snap.data().alias ?? null)
+    supabase.from("settings").select("data").eq("id", "remera").single().then(({ data: row }) => {
+      setAliasRemera(row?.data?.alias ?? null)
     })
   }, [])
 
@@ -90,11 +89,10 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const buscarPorDniAuto = async (dniVal: string) => {
     setBuscando(true)
     try {
-      const partSnap = await getDoc(doc(db, "participantesCicloTermal", dniVal))
-      if (partSnap.exists()) {
-        const data = partSnap.data()
-        setNombre(`${data.nombre || ""} ${data.apellido || ""}`.trim())
-        setTelefono(data.telefono || "")
+      const { data: part } = await supabase.from("participantes").select("dni, nombre, apellido, telefono").eq("dni", dniVal).maybeSingle()
+      if (part) {
+        setNombre(`${part.nombre || ""} ${part.apellido || ""}`.trim())
+        setTelefono(part.telefono || "")
         setEstaRegistrado(true)
       } else {
         setNombre("")
@@ -102,19 +100,18 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
         setEstaRegistrado(false)
       }
 
-      const remeraSnap = await getDoc(doc(db, "remera", dniVal))
-      if (remeraSnap.exists()) {
-        const rd = remeraSnap.data()
-        if (rd.items?.length) {
-          setItems(rd.items)
-        } else if (rd.talle) {
-          setItems([{ talle: rd.talle, cantidad: 1 }])
+      const { data: existingRemera } = await supabase.from("remera").select("*").eq("dni", dniVal).maybeSingle()
+      if (existingRemera) {
+        if (existingRemera.items?.length) {
+          setItems(existingRemera.items)
+        } else if (existingRemera.talle) {
+          setItems([{ talle: existingRemera.talle, cantidad: 1 }])
         }
-        if (!partSnap.exists()) {
-          setNombre(rd.nombre || "")
-          setTelefono(rd.telefono || "")
+        if (!part) {
+          setNombre(existingRemera.nombre || "")
+          setTelefono(existingRemera.telefono || "")
         }
-        setExistingTieneComprobante(rd.tieneComprobante ?? !!rd.comprobanteBase64)
+        setExistingTieneComprobante(existingRemera.tiene_comprobante ?? false)
         setIsEditing(true)
       } else {
         setItems([{ talle: "", cantidad: 1 }])
@@ -153,11 +150,10 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     setBuscando(true)
     try {
       // Buscar inscripción
-      const partSnap = await getDoc(doc(db, "participantesCicloTermal", dni.trim()))
-      if (partSnap.exists()) {
-        const data = partSnap.data()
-        setNombre(`${data.nombre || ""} ${data.apellido || ""}`.trim())
-        setTelefono(data.telefono || "")
+      const { data: part } = await supabase.from("participantes").select("dni, nombre, apellido, telefono").eq("dni", dni.trim()).maybeSingle()
+      if (part) {
+        setNombre(`${part.nombre || ""} ${part.apellido || ""}`.trim())
+        setTelefono(part.telefono || "")
         setEstaRegistrado(true)
       } else {
         setNombre("")
@@ -166,19 +162,18 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
       }
 
       // Buscar pedido de remera existente
-      const remeraSnap = await getDoc(doc(db, "remera", dni.trim()))
-      if (remeraSnap.exists()) {
-        const rd = remeraSnap.data()
-        if (rd.items?.length) {
-          setItems(rd.items)
-        } else if (rd.talle) {
-          setItems([{ talle: rd.talle, cantidad: 1 }])
+      const { data: existingRemera } = await supabase.from("remera").select("*").eq("dni", dni.trim()).maybeSingle()
+      if (existingRemera) {
+        if (existingRemera.items?.length) {
+          setItems(existingRemera.items)
+        } else if (existingRemera.talle) {
+          setItems([{ talle: existingRemera.talle, cantidad: 1 }])
         }
-        if (!partSnap.exists()) {
-          setNombre(rd.nombre || "")
-          setTelefono(rd.telefono || "")
+        if (!part) {
+          setNombre(existingRemera.nombre || "")
+          setTelefono(existingRemera.telefono || "")
         }
-        setExistingTieneComprobante(rd.tieneComprobante ?? !!rd.comprobanteBase64)
+        setExistingTieneComprobante(existingRemera.tiene_comprobante ?? false)
         setIsEditing(true)
       } else {
         setItems([{ talle: "", cantidad: 1 }])
@@ -249,27 +244,31 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
 
     setEnviando(true)
     try {
-      if (comprobante) {
+      const { data: remeraRow } = await supabase
+        .from("remera")
+        .upsert(
+          {
+            dni: dni.trim(),
+            nombre: nombre.trim(),
+            telefono: telefono.trim(),
+            items: validItems,
+            tiene_comprobante: !!comprobante || existingTieneComprobante,
+            esta_registrado: estaRegistrado,
+            estado: isEditing ? undefined : "pendiente",
+            fecha_solicitud: isEditing ? undefined : new Date().toISOString(),
+          },
+          { onConflict: "dni" }
+        )
+        .select("id")
+        .single()
+
+      if (comprobante && remeraRow?.id) {
         const comprobanteBase64 = await convertToBase64(comprobante)
-        await setDoc(doc(db, "remera_comprobantes", dni.trim()), {
-          comprobanteBase64,
-          nombreArchivo: comprobante.name,
+        await supabase.from("remera_comprobantes").upsert({
+          id: remeraRow.id,
+          comprobante_base64: comprobanteBase64,
         })
       }
-
-      await setDoc(
-        doc(db, "remera", dni.trim()),
-        {
-          dni: dni.trim(),
-          nombre: nombre.trim(),
-          telefono: telefono.trim(),
-          items: validItems,
-          tieneComprobante: !!comprobante || existingTieneComprobante,
-          estaRegistrado,
-          ...(isEditing ? {} : { estado: "pendiente", fechaSolicitud: new Date().toISOString() }),
-        },
-        { merge: true }
-      )
 
       setStep("success")
     } catch {

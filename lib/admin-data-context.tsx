@@ -1,11 +1,10 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import { collection, getDocs, query, where } from "firebase/firestore"
-import { db } from "@/lib/firebase/firebase-config"
+import { supabase } from "@/lib/supabase/client"
+import { normalizeRow } from "@/lib/use-cached-firestore"
 
-
-const CACHE_KEY = "ciclotermal_registrations_v3"
+const CACHE_KEY = "ciclotermal_registrations_v4"
 const CACHE_TTL = 30 * 60 * 1000 // 30 minutos
 
 interface AdminDataContextType {
@@ -33,20 +32,20 @@ const isBase64Data = (str: any) =>
 
 const parseFecha = (value: any): Date | null => {
   if (!value) return null
-  if (typeof value?.toDate === "function") return value.toDate()
   if (typeof value === "string" || typeof value === "number") return new Date(value)
   if (value instanceof Date) return value
   return null
 }
 
-const mapDoc = (docSnap: any) => {
-  const d = docSnap.data()
+const mapRow = (row: any) => {
+  const d = normalizeRow(row)
   return {
-    id: docSnap.id,
     ...d,
+    id: d.dni ?? d.id, // participantes usa dni como PK
     imagenBase64: undefined,
-    comprobantePagoUrl: d.comprobantePagoUrl && !isBase64Data(d.comprobantePagoUrl) ? d.comprobantePagoUrl : undefined,
-    hasComprobante: !!(d.imagenBase64 || d.comprobantePagoUrl),
+    comprobantePagoUrl: d.comprobantePagoUrl && !isBase64Data(d.comprobantePagoUrl)
+      ? d.comprobantePagoUrl : undefined,
+    hasComprobante: !!(d.comprobantePagoUrl),
     fechaInscripcion: parseFecha(d.fechaInscripcion),
   }
 }
@@ -99,14 +98,19 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
 
     setLoadingRegistrations(true)
     try {
-      const ref = collection(db, "participantesCicloTermal")
-      const q = query(ref, where("años", "array-contains", year))
-      const snapshot = await getDocs(q)
-      const data = snapshot.docs.map(mapDoc).sort((a, b) => {
+      const { data: rows, error } = await supabase
+        .from("participantes")
+        .select("*")
+        .contains("años", [year])
+
+      if (error) throw error
+
+      const data = (rows ?? []).map(mapRow).sort((a, b) => {
         const ta = a.fechaInscripcion instanceof Date ? a.fechaInscripcion.getTime() : 0
         const tb = b.fechaInscripcion instanceof Date ? b.fechaInscripcion.getTime() : 0
         return tb - ta
       })
+
       setRegistrations(data)
       if (data.length > 0) saveToCacheForKey(cacheKey, data)
     } catch (error) {
@@ -119,12 +123,18 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
   const fetchExpenses = useCallback(async () => {
     setLoadingExpenses(true)
     try {
-      const ref = collection(db, "gastos2025")
-      const snapshot = await getDocs(ref)
-      const data = snapshot.docs.map((docSnap) => {
-        const d = docSnap.data()
-        return { id: docSnap.id, ...d, fecha: parseFecha(d.fecha) || new Date() }
+      const { data: rows, error } = await supabase
+        .from("gastos")
+        .select("*")
+        .eq("year", CURRENT_YEAR)
+
+      if (error) throw error
+
+      const data = (rows ?? []).map((r) => {
+        const d = normalizeRow(r)
+        return { ...d, fecha: parseFecha(d.fecha) || new Date() }
       })
+
       setExpenses(data.sort((a, b) => b.fecha.getTime() - a.fecha.getTime()))
     } catch (error) {
       console.error("Error fetching expenses:", error)
@@ -133,12 +143,9 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // refreshRegistrations acepta opcionalmente un año para forzar recarga de ese año
   const refreshRegistrations = useCallback(async (year = CURRENT_YEAR) => {
     if (typeof window !== "undefined") {
-      try {
-        localStorage.removeItem(`${CACHE_KEY}_${year}`)
-      } catch {}
+      try { localStorage.removeItem(`${CACHE_KEY}_${year}`) } catch {}
     }
     await fetchRegistrations(year, true)
   }, [fetchRegistrations])

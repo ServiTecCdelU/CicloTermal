@@ -19,8 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { db } from "@/lib/firebase/firebase-config"
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "firebase/firestore"
+import { supabase } from "@/lib/supabase/client"
 import { useAdminData } from "@/lib/admin-data-context"
 import {
   Plus,
@@ -145,23 +144,29 @@ export default function ExpensesPage() {
     }
 
     try {
-      const expenseData = {
-        concepto: formData.concepto,
-        monto: Number.parseFloat(formData.monto),
-        categoria: formData.categoria,
-        descripcion: formData.descripcion,
-        pagadoPor: formData.pagadoPor,
-        fecha: new Date(),
-      }
-
       if (editingExpense) {
         // Update existing expense
-        await updateDoc(doc(db, "gastos2025", editingExpense.id), expenseData)
+        await supabase.from("gastos").update({
+          concepto: formData.concepto,
+          monto: Number.parseFloat(formData.monto),
+          categoria: formData.categoria,
+          descripcion: formData.descripcion,
+          pagado_por: formData.pagadoPor,
+          fecha: new Date().toISOString(),
+        }).eq("id", editingExpense.id)
         setIsEditModalOpen(false)
         setEditingExpense(null)
       } else {
         // Add new expense
-        await addDoc(collection(db, "gastos2025"), expenseData)
+        await supabase.from("gastos").insert({
+          concepto: formData.concepto,
+          monto: Number.parseFloat(formData.monto),
+          categoria: formData.categoria,
+          descripcion: formData.descripcion,
+          pagado_por: formData.pagadoPor,
+          fecha: new Date().toISOString(),
+          year: new Date().getFullYear(),
+        })
         setIsAddModalOpen(false)
       }
 
@@ -196,7 +201,7 @@ export default function ExpensesPage() {
   const handleDelete = async (expenseId: string) => {
     if (confirm("¿Estás seguro de que quieres eliminar este gasto?")) {
       try {
-        await deleteDoc(doc(db, "gastos2025", expenseId))
+        await supabase.from("gastos").delete().eq("id", expenseId)
         refreshExpenses()
       } catch (error) {
         console.error("Error deleting expense:", error)

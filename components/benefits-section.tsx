@@ -20,7 +20,6 @@ import {
   Wrench,
   Truck,
 } from "lucide-react"
-import { where, orderBy } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import Contador from "@/components/Contador"
 import { useCachedCollection, useCachedDoc } from "@/lib/use-cached-firestore"
@@ -111,14 +110,14 @@ export default function BenefitsSection() {
   const { data: rawEventData, loading: loadingEvent } = useCachedCollection(
     `ct_benefits_event_${currentYear}`,
     "benefits",
-    [where("type", "==", "event"), where("year", "==", currentYear), orderBy("order", "asc")],
+    (q) => q.eq("type", "event").eq("year", currentYear).order("order", { ascending: true }),
     isFirebaseAvailable,
   )
 
   const { data: rawBenefits, loading: loadingBenefits } = useCachedCollection(
     `ct_benefits_benefit_${currentYear}`,
     "benefits",
-    [where("type", "==", "benefit"), where("year", "==", currentYear), orderBy("order", "asc")],
+    (q) => q.eq("type", "benefit").eq("year", currentYear).order("order", { ascending: true }),
     isFirebaseAvailable,
   )
 

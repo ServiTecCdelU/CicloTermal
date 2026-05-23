@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
-import { orderBy } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedCollection } from "@/lib/use-cached-firestore"
 import { SectionTitle } from "@/components/section-title"
@@ -142,7 +141,7 @@ export default function HistorySection() {
   const { data: rawHistory, loading } = useCachedCollection(
     "ct_historia",
     "historia",
-    [orderBy("order", "asc")],
+    (q) => q.order("order", { ascending: true }),
     isFirebaseAvailable,
   )
 

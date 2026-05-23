@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils"
 import { DialogTitle } from "@radix-ui/react-dialog"
 import { DialogDescription } from "@radix-ui/react-dialog"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
-import { doc, getDoc } from "firebase/firestore"
 
 // Ítems de navegación
 const navItems = [

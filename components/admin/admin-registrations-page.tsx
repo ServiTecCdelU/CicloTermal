@@ -2,7 +2,7 @@
 
 import { DialogFooter } from "@/components/ui/dialog"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -13,8 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
-import { db } from "@/lib/firebase/firebase-config"
-import { collection, getDocs, orderBy, query, doc, updateDoc } from "firebase/firestore"
+import { supabase } from "@/lib/supabase/client"
 import {
   Search,
   Filter,
@@ -173,15 +172,40 @@ export default function AdminRegistrationsPage() {
   const fetchRegistrations = async () => {
     setLoading(true)
     try {
-      const registrationsRef = collection(db, "participantesCicloTermal")
-      const allRegistrationsQuery = query(registrationsRef, orderBy("fechaInscripcion", "desc"))
-      const snapshot = await getDocs(allRegistrationsQuery)
+      const { data: rows } = await supabase.from("participantes").select("*").order("fecha_inscripcion", { ascending: false })
 
-      const registrationsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        fechaInscripcion: doc.data().fechaInscripcion?.toDate?.() || null,
-        fechaNacimiento: formatDate(doc.data().fechaNacimiento) || "-",
+      const registrationsData = (rows ?? []).map((r) => ({
+        id: r.dni,
+        dni: r.dni,
+        nombre: r.nombre,
+        apellido: r.apellido,
+        email: r.email,
+        telefono: r.telefono,
+        paisTelefono: r.pais_telefono,
+        telefonoEmergencia: r.telefono_emergencia,
+        paisTelefonoEmergencia: r.pais_telefono_emergencia,
+        fechaNacimiento: formatDate(r.fecha_nacimiento) || "-",
+        localidad: r.localidad,
+        grupoSanguineo: r.grupo_sanguineo,
+        genero: r.genero,
+        grupoCiclistas: r.grupo_ciclistas,
+        talleRemera: r.talle_remera,
+        condicionSalud: r.condiciones_salud,
+        esCeliaco: r.es_celiaco,
+        nombreTransferencia: r.nombre_transferencia,
+        precio: r.precio,
+        transferidoA: r.transfirio_a,
+        estado: r.estado,
+        años: r.años,
+        fechaInscripcion: r.fecha_inscripcion ? new Date(r.fecha_inscripcion) : null,
+        aceptaCondiciones: r.acepta_condiciones,
+        comprobantePagoUrl: r.comprobante_pago_url,
+        imagenBase64: r.comprobante_pago_url,
+        emailEnviado: r.email_enviado,
+        fechaEmailEnviado: r.fecha_email_enviado,
+        nota: r.nota,
+        numeroInscripcion: r.numero_inscripcion,
+        hasComprobante: !!(r.comprobante_pago_url),
       }))
 
       // Aplicar el ordenamiento inicial: primero pendientes, luego por número de inscripción descendente
@@ -410,22 +434,21 @@ export default function AdminRegistrationsPage() {
 
     setUpdatingStatus(true)
     try {
-      const registrationRef = doc(db, "participantesCicloTermal", selectedRegistration.id)
       const updateData = {
         estado: newStatus,
         nota: statusNote,
-        fechaActualizacion: new Date(),
+        fecha_actualizacion: new Date().toISOString(),
       }
 
-      await updateDoc(registrationRef, updateData)
+      await supabase.from("participantes").update(updateData).eq("dni", selectedRegistration.id)
 
       if (newStatus === "confirmado" && selectedRegistration.estado !== "confirmado") {
         const emailSent = await sendConfirmationEmail(selectedRegistration)
         if (emailSent) {
-          await updateDoc(registrationRef, {
-            emailEnviado: true,
-            fechaEmailEnviado: new Date(),
-          })
+          await supabase.from("participantes").update({
+            email_enviado: true,
+            fecha_email_enviado: new Date().toISOString(),
+          }).eq("dni", selectedRegistration.id)
         }
       }
 
@@ -750,10 +773,8 @@ export default function AdminRegistrationsPage() {
         grupoCiclistas: formatCapitalization(editFormData.grupoCiclistas),
       }
 
-      const registrationRef = doc(db, "participantesCicloTermal", selectedRegistration.id)
-
       // Handle comprobante upload if new file selected
-      const updateData = { ...formattedData }
+      const updateData: Record<string, unknown> = { ...formattedData }
       if (newComprobanteFile) {
         // Convert file to base64 for storage
         const reader = new FileReader()
@@ -767,10 +788,31 @@ export default function AdminRegistrationsPage() {
         updateData.comprobantePagoUrl = base64Data
       }
 
-      await updateDoc(registrationRef, {
-        ...updateData,
-        fechaActualizacion: new Date(),
-      })
+      // Convertir campos camelCase a snake_case para Supabase
+      const supabaseData: Record<string, unknown> = {
+        nombre: updateData.nombre,
+        apellido: updateData.apellido,
+        dni: updateData.dni,
+        email: updateData.email,
+        telefono: updateData.telefono,
+        localidad: updateData.localidad,
+        numero_inscripcion: updateData.numeroInscripcion,
+        fecha_nacimiento: updateData.fechaNacimiento,
+        genero: updateData.genero,
+        telefono_emergencia: updateData.telefonoEmergencia,
+        talle_remera: updateData.talleRemera,
+        grupo_sanguineo: updateData.grupoSanguineo,
+        grupo_ciclistas: updateData.grupoCiclistas,
+        condiciones_salud: updateData.condicionSalud,
+        transfirio_a: updateData.transferidoA,
+        precio: updateData.precio,
+        fecha_actualizacion: new Date().toISOString(),
+      }
+      if (updateData.comprobantePagoUrl) {
+        supabaseData.comprobante_pago_url = updateData.comprobantePagoUrl
+      }
+
+      await supabase.from("participantes").update(supabaseData).eq("dni", selectedRegistration.id)
 
       // Update local state
       setRegistrations((prev) =>

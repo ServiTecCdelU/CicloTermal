@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, getDocs, query, getDoc, doc, type QueryConstraint } from "firebase/firestore"
-import { db } from "@/lib/firebase/firebase-config"
+import { supabase } from "@/lib/supabase/client"
 
 const CACHE_TTL = 60 * 60 * 1000 // 1 hora para datos públicos
 
@@ -13,8 +12,21 @@ interface CacheEntry {
 
 const memoryCache = new Map<string, CacheEntry>()
 
+// snake_case → camelCase para normalizar filas de Supabase
+function toCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+}
+
+export function normalizeRow(row: any): any {
+  if (!row || typeof row !== "object" || Array.isArray(row)) return row
+  const out: any = {}
+  for (const [key, value] of Object.entries(row)) {
+    out[toCamelCase(key)] = value
+  }
+  return out
+}
+
 function loadFromStorage(key: string): any | null {
-  // Primero intentar memoria (más rápido que localStorage)
   const mem = memoryCache.get(key)
   if (mem && Date.now() - mem.ts < CACHE_TTL) return mem.data
 
@@ -40,10 +52,13 @@ function saveToStorage(key: string, data: any) {
   } catch {}
 }
 
+// buildQuery recibe la query de Supabase y devuelve la query con filtros/orden aplicados
+type QueryBuilder = (q: any) => any
+
 export function useCachedCollection(
   cacheKey: string,
-  collectionName: string,
-  constraints: QueryConstraint[] = [],
+  tableName: string,
+  buildQuery?: QueryBuilder,
   enabled = true,
 ) {
   const [data, setData] = useState<any[]>(() => loadFromStorage(cacheKey) ?? [])
@@ -61,16 +76,17 @@ export function useCachedCollection(
     let cancelled = false
     const fetchData = async () => {
       try {
-        const ref = collection(db, collectionName)
-        const q = constraints.length > 0 ? query(ref, ...constraints) : query(ref)
-        const snapshot = await getDocs(q)
-        const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+        let q = supabase.from(tableName).select("*")
+        if (buildQuery) q = buildQuery(q)
+        const { data: rows, error } = await q
+        if (error) throw error
+        const normalized = (rows ?? []).map(normalizeRow)
         if (!cancelled) {
-          setData(docs)
-          saveToStorage(cacheKey, docs)
+          setData(normalized)
+          saveToStorage(cacheKey, normalized)
         }
       } catch (error) {
-        console.error(`Error fetching ${collectionName}:`, error)
+        console.error(`Error fetching ${tableName}:`, error)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -78,15 +94,15 @@ export function useCachedCollection(
 
     fetchData()
     return () => { cancelled = true }
-  }, [cacheKey, collectionName, enabled])
+  }, [cacheKey, tableName, enabled])
 
   return { data, loading }
 }
 
 export function useCachedDoc(
   cacheKey: string,
-  collectionName: string,
-  docId: string,
+  tableName: string,
+  id: string,
   enabled = true,
 ) {
   const [data, setData] = useState<any>(() => loadFromStorage(cacheKey))
@@ -104,15 +120,19 @@ export function useCachedDoc(
     let cancelled = false
     const fetchData = async () => {
       try {
-        const docRef = doc(db, collectionName, docId)
-        const docSnap = await getDoc(docRef)
-        if (docSnap.exists() && !cancelled) {
-          const docData = { id: docSnap.id, ...docSnap.data() }
-          setData(docData)
-          saveToStorage(cacheKey, docData)
+        const { data: row, error } = await supabase
+          .from(tableName)
+          .select("*")
+          .eq("id", id)
+          .single()
+        if (error) throw error
+        const normalized = normalizeRow(row)
+        if (!cancelled) {
+          setData(normalized)
+          saveToStorage(cacheKey, normalized)
         }
       } catch (error) {
-        console.error(`Error fetching ${collectionName}/${docId}:`, error)
+        console.error(`Error fetching ${tableName}/${id}:`, error)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -120,7 +140,7 @@ export function useCachedDoc(
 
     fetchData()
     return () => { cancelled = true }
-  }, [cacheKey, collectionName, docId, enabled])
+  }, [cacheKey, tableName, id, enabled])
 
   return { data, loading }
 }

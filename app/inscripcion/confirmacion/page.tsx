@@ -7,8 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import { CheckCircle, Info } from "lucide-react"
-import { db } from "@/lib/firebase/firebase-config"
-import { doc, getDoc } from "firebase/firestore"
+import { supabase } from "@/lib/supabase/client"
 
 const defaults = {
   titulo: "¡Inscripción Exitosa!",
@@ -21,9 +20,9 @@ export default function ConfirmationPage() {
   const [data, setData] = useState(defaults)
 
   useEffect(() => {
-    getDoc(doc(db, "settings", "confirmacion")).then((snap) => {
-      if (snap.exists()) {
-        const d = snap.data()
+    supabase.from("settings").select("data").eq("id", "confirmacion").single().then(({ data: row }) => {
+      if (row?.data) {
+        const d = row.data
         setData({
           titulo: d.titulo || defaults.titulo,
           descripcion: d.descripcion || defaults.descripcion,

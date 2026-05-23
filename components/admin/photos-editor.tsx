@@ -2,19 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-  updateDoc,
-  writeBatch,
-  query,
-  where,
-  orderBy,
-} from "firebase/firestore"
-import { db } from "@/lib/firebase/firebase-config"
+import { supabase } from "@/lib/supabase/client"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -168,21 +156,18 @@ export default function PhotosEditor() {
 
   const loadFeaturedPhotos = async (): Promise<void> => {
     try {
-      const featuredQuery = query(
-        collection(db, "galeriaFotos"),
-        where("year", "==", selectedYear),
-        where("type", "==", "featured"),
-        orderBy("order", "asc"),
-      )
-      const querySnapshot = await getDocs(featuredQuery)
-      const featuredData: PhotoItem[] = querySnapshot.docs.map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate() || new Date(),
-          }) as PhotoItem,
-      )
+      const { data: rows } = await supabase
+        .from("galeria_fotos")
+        .select("*")
+        .eq("year", selectedYear)
+        .eq("type", "featured")
+        .order("order", { ascending: true })
+      const featuredData: PhotoItem[] = (rows || []).map((r) => ({
+        ...r,
+        imageUrl: r.image_url,
+        createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+        updatedAt: r.updated_at,
+      }) as unknown as PhotoItem)
       setFeaturedPhotos(featuredData)
     } catch (error) {
       console.error("Error cargando fotos destacadas:", error)
@@ -192,21 +177,17 @@ export default function PhotosEditor() {
 
   const loadPhotographers = async (): Promise<void> => {
     try {
-      const photographersQuery = query(
-        collection(db, "galeriaFotos"),
-        where("year", "==", selectedYear),
-        where("type", "==", "photographer"),
-        orderBy("order", "asc"),
-      )
-      const querySnapshot = await getDocs(photographersQuery)
-      const photographersData: PhotographerItem[] = querySnapshot.docs.map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate() || new Date(),
-          }) as PhotographerItem,
-      )
+      const { data: rows } = await supabase
+        .from("galeria_fotos")
+        .select("*")
+        .eq("year", selectedYear)
+        .eq("type", "photographer")
+        .order("order", { ascending: true })
+      const photographersData: PhotographerItem[] = (rows || []).map((r) => ({
+        ...r,
+        createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+        updatedAt: r.updated_at,
+      }) as unknown as PhotographerItem)
       setPhotographers(photographersData)
     } catch (error) {
       console.error("Error cargando fotógrafos:", error)
@@ -293,23 +274,23 @@ export default function PhotosEditor() {
         imageUrl = photoFormData.imagePreview
       }
 
-      const photoData = {
+      const photoDataSnake = {
         description: photoFormData.description.trim(),
-        imageUrl: imageUrl,
+        image_url: imageUrl,
         year: selectedYear,
         type: "featured",
-        updatedAt: new Date(),
+        updated_at: new Date().toISOString(),
       }
 
       if (editingPhotoId) {
-        await updateDoc(doc(db, "galeriaFotos", editingPhotoId), photoData)
+        await supabase.from("galeria_fotos").update(photoDataSnake).eq("id", editingPhotoId)
         showAlert("Foto destacada actualizada exitosamente")
       } else {
         const maxOrder = featuredPhotos.length > 0 ? Math.max(...featuredPhotos.map((p) => p.order)) : -1
-        await addDoc(collection(db, "galeriaFotos"), {
-          ...photoData,
+        await supabase.from("galeria_fotos").insert({
+          ...photoDataSnake,
           order: maxOrder + 1,
-          createdAt: new Date(),
+          created_at: new Date().toISOString(),
         })
         showAlert("Foto destacada agregada exitosamente")
       }
@@ -340,24 +321,24 @@ export default function PhotosEditor() {
     setLoading(true)
 
     try {
-      const photographerData = {
+      const photographerDataSnake = {
         name: photographerFormData.name.trim(),
         link: photographerFormData.link.trim(),
         description: photographerFormData.description.trim(),
         year: selectedYear,
         type: "photographer",
-        updatedAt: new Date(),
+        updated_at: new Date().toISOString(),
       }
 
       if (editingPhotographerId) {
-        await updateDoc(doc(db, "galeriaFotos", editingPhotographerId), photographerData)
+        await supabase.from("galeria_fotos").update(photographerDataSnake).eq("id", editingPhotographerId)
         showAlert("Fotógrafo actualizado exitosamente")
       } else {
         const maxOrder = photographers.length > 0 ? Math.max(...photographers.map((p) => p.order)) : -1
-        await addDoc(collection(db, "galeriaFotos"), {
-          ...photographerData,
+        await supabase.from("galeria_fotos").insert({
+          ...photographerDataSnake,
           order: maxOrder + 1,
-          createdAt: new Date(),
+          created_at: new Date().toISOString(),
         })
         showAlert("Fotógrafo agregado exitosamente")
       }
@@ -396,7 +377,7 @@ export default function PhotosEditor() {
     }
 
     try {
-      await deleteDoc(doc(db, "galeriaFotos", id))
+      await supabase.from("galeria_fotos").delete().eq("id", id)
       showAlert("Foto destacada eliminada exitosamente")
       loadFeaturedPhotos()
     } catch (error) {
@@ -411,7 +392,7 @@ export default function PhotosEditor() {
     }
 
     try {
-      await deleteDoc(doc(db, "galeriaFotos", id))
+      await supabase.from("galeria_fotos").delete().eq("id", id)
       showAlert("Fotógrafo eliminado exitosamente")
       loadPhotographers()
     } catch (error) {
@@ -431,13 +412,8 @@ export default function PhotosEditor() {
     const [movedItem] = newItems.splice(currentIndex, 1)
     newItems.splice(newIndex, 0, movedItem)
 
-    const batch = writeBatch(db)
-    newItems.forEach((item, index) => {
-      batch.update(doc(db, "galeriaFotos", item.id), { order: index })
-    })
-
     try {
-      await batch.commit()
+      await Promise.all(newItems.map((item, i) => supabase.from("galeria_fotos").update({ order: i }).eq("id", item.id)))
       setFeaturedPhotos(newItems.map((item, index) => ({ ...item, order: index })))
       showAlert("Orden actualizado exitosamente")
     } catch (error) {
@@ -457,13 +433,8 @@ export default function PhotosEditor() {
     const [movedItem] = newItems.splice(currentIndex, 1)
     newItems.splice(newIndex, 0, movedItem)
 
-    const batch = writeBatch(db)
-    newItems.forEach((item, index) => {
-      batch.update(doc(db, "galeriaFotos", item.id), { order: index })
-    })
-
     try {
-      await batch.commit()
+      await Promise.all(newItems.map((item, i) => supabase.from("galeria_fotos").update({ order: i }).eq("id", item.id)))
       setPhotographers(newItems.map((item, index) => ({ ...item, order: index })))
       showAlert("Orden actualizado exitosamente")
     } catch (error) {

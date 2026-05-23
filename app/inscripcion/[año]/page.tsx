@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { collection, getDocs, query, orderBy, setDoc, doc, getDoc, where, arrayUnion } from "firebase/firestore"
-import { db } from "@/lib/firebase/firebase-config"
+import { supabase } from "@/lib/supabase/client"
 import { format, parse } from "date-fns"
 import { es } from "date-fns/locale"
 import { CalendarIcon } from "lucide-react"
@@ -205,22 +204,22 @@ export default function InscripcionAño() {
     if (!añoParam || isNaN(añoParam)) { setCicloStatus("open"); return }
     const check = async () => {
       try {
-        const [settingsSnap, confirmSnap] = await Promise.all([
-          getDoc(doc(db, "settings", "eventSettings")),
-          getDoc(doc(db, "settings", "confirmacion")),
+        const [settingsRes, confirmRes] = await Promise.all([
+          supabase.from("settings").select("data").eq("id", "eventSettings").single(),
+          supabase.from("settings").select("data").eq("id", "confirmacion").single(),
         ])
-        if (settingsSnap.exists()) {
-          const d = settingsSnap.data()
+        const d = settingsRes.data?.data ?? {}
+        if (d) {
           setDatosPago1(d.datosPago1 ?? "")
           setDatosPago2(d.datosPago2 ?? "")
         }
-        if (confirmSnap.exists()) {
-          const d = confirmSnap.data()
+        const confirmData = confirmRes.data?.data ?? {}
+        if (confirmData) {
           setConfirmacionData((prev) => ({
-            titulo: d.titulo || prev.titulo,
-            descripcion: d.descripcion || prev.descripcion,
-            mensaje: d.mensaje || prev.mensaje,
-            infoExtra: d.infoExtra || prev.infoExtra,
+            titulo: confirmData.titulo || prev.titulo,
+            descripcion: confirmData.descripcion || prev.descripcion,
+            mensaje: confirmData.mensaje || prev.mensaje,
+            infoExtra: confirmData.infoExtra || prev.infoExtra,
           }))
         }
       } catch {}
@@ -232,8 +231,8 @@ export default function InscripcionAño() {
   useEffect(() => {
     const loadGrupos = async () => {
       try {
-        const snap = await getDoc(doc(db, "configuracion", "grupos"))
-        if (snap.exists()) setGruposFirebase(snap.data().lista || [])
+        const { data: row } = await supabase.from("configuracion").select("data").eq("id", "grupos").single()
+        if (row?.data?.lista) setGruposFirebase(row.data.lista)
       } catch {}
     }
     loadGrupos()
@@ -259,28 +258,31 @@ export default function InscripcionAño() {
     if (!dni || dni.length < 7) return
     setDniLookingUp(true)
     try {
-      const snap = await getDoc(doc(db, "participantesCicloTermal", dni.trim()))
-      if (snap.exists()) {
-        const data = snap.data()
-        const grupoSanguineo = data.grupoSanguineo ? String(data.grupoSanguineo).toUpperCase() : undefined
-        const genero = data.genero ? normalizeGenero(String(data.genero)) : undefined
+      const { data: existing } = await supabase
+        .from("participantes")
+        .select("*")
+        .eq("dni", dni.trim())
+        .maybeSingle()
+      if (existing) {
+        const grupoSanguineo = existing.grupo_sanguineo ? String(existing.grupo_sanguineo).toUpperCase() : undefined
+        const genero = existing.genero ? normalizeGenero(String(existing.genero)) : undefined
         setFormData((prev) => ({
           ...prev,
-          nombre: data.nombre ?? prev.nombre,
-          apellido: data.apellido ?? prev.apellido,
-          email: data.email ?? prev.email,
-          telefono: data.telefono ?? prev.telefono,
-          paisTelefono: data.paisTelefono ?? prev.paisTelefono,
-          telefonoEmergencia: data.telefonoEmergencia ?? prev.telefonoEmergencia,
-          paisTelefonoEmergencia: data.paisTelefonoEmergencia ?? prev.paisTelefonoEmergencia,
-          fechaNacimiento: data.fechaNacimiento ?? prev.fechaNacimiento,
-          localidad: data.localidad ?? prev.localidad,
+          nombre: existing.nombre ?? prev.nombre,
+          apellido: existing.apellido ?? prev.apellido,
+          email: existing.email ?? prev.email,
+          telefono: existing.telefono ?? prev.telefono,
+          paisTelefono: existing.pais_telefono ?? prev.paisTelefono,
+          telefonoEmergencia: existing.telefono_emergencia ?? prev.telefonoEmergencia,
+          paisTelefonoEmergencia: existing.pais_telefono_emergencia ?? prev.paisTelefonoEmergencia,
+          fechaNacimiento: existing.fecha_nacimiento ?? prev.fechaNacimiento,
+          localidad: existing.localidad ?? prev.localidad,
           grupoSanguineo: grupoSanguineo ?? prev.grupoSanguineo,
           genero: genero ?? prev.genero,
-          grupoCiclistas: data.grupoCiclistas ?? prev.grupoCiclistas,
+          grupoCiclistas: existing.grupo_ciclistas ?? prev.grupoCiclistas,
         }))
-        if (data.fechaNacimiento) {
-          const parsed = parseFecha(String(data.fechaNacimiento))
+        if (existing.fecha_nacimiento) {
+          const parsed = parseFecha(String(existing.fecha_nacimiento))
           if (parsed) setBirthDate(parsed)
         }
         setDniFound(true)
@@ -431,11 +433,8 @@ export default function InscripcionAño() {
 
   const getNextRegistrationNumber = async () => {
     try {
-      const snap = await getDocs(query(
-        collection(db, "participantesCicloTermal"),
-        where("años", "array-contains", añoParam)
-      ))
-      return snap.size + 1
+      const { data: rows } = await supabase.from("participantes").select("dni").contains("años", [añoParam])
+      return (rows?.length ?? 0) + 1
     } catch {
       return Date.now()
     }
@@ -497,12 +496,37 @@ export default function InscripcionAño() {
         nombreTransferencia: formData.nombreTransferencia || "",
       }
 
-      const docRef = doc(db, "participantesCicloTermal", formData.dni)
-      await setDoc(docRef, {
-        ...perfilPersonal,
-        ...datosCiclo,
-        años: arrayUnion(añoParam),
-      }, { merge: true })
+      // Leer años actuales del participante (si existe)
+      const { data: existingPart } = await supabase.from("participantes").select("años").eq("dni", formData.dni).maybeSingle()
+      const currentAños: number[] = existingPart?.años ?? []
+      const newAños = [...new Set([...currentAños, añoParam])]
+
+      await supabase.from("participantes").upsert({
+        dni: formData.dni,
+        nombre: perfilPersonal.nombre,
+        apellido: perfilPersonal.apellido,
+        email: perfilPersonal.email,
+        telefono: perfilPersonal.telefono,
+        pais_telefono: perfilPersonal.paisTelefono,
+        telefono_emergencia: perfilPersonal.telefonoEmergencia,
+        pais_telefono_emergencia: perfilPersonal.paisTelefonoEmergencia,
+        fecha_nacimiento: perfilPersonal.fechaNacimiento,
+        localidad: perfilPersonal.localidad,
+        grupo_sanguineo: perfilPersonal.grupoSanguineo,
+        genero: perfilPersonal.genero,
+        grupo_ciclistas: perfilPersonal.grupoCiclistas,
+        talle_remera: datosCiclo.talleRemera,
+        condiciones_salud: perfilPersonal.condicionSalud ?? null,
+        es_celiaco: null,
+        nombre_transferencia: datosCiclo.nombreTransferencia ?? "",
+        precio: datosCiclo.precio ?? "",
+        estado: datosCiclo.estado ?? "pendiente",
+        comprobante_pago_url: datosCiclo.comprobantePagoUrl ?? null,
+        acepta_condiciones: datosCiclo.aceptaTerminos ?? false,
+        fecha_inscripcion: datosCiclo.fechaInscripcion,
+        numero_inscripcion: datosCiclo.numeroInscripcion,
+        años: newAños,
+      })
 
       // Guardar grupo nuevo si no estaba en la lista
       const grupoIngresado = formData.grupoCiclistas.trim()
@@ -510,7 +534,11 @@ export default function InscripcionAño() {
         const todosActuales = [...new Set([...gruposCiclistas, ...gruposFirebase])]
         if (!todosActuales.some((g) => g.toLowerCase() === grupoIngresado.toLowerCase())) {
           try {
-            await setDoc(doc(db, "configuracion", "grupos"), { lista: arrayUnion(grupoIngresado) }, { merge: true })
+            const { data: currentConfig } = await supabase.from("configuracion").select("data").eq("id", "grupos").single()
+            const listaActual: string[] = currentConfig?.data?.lista ?? []
+            if (!listaActual.some((g: string) => g.toLowerCase() === grupoIngresado.toLowerCase())) {
+              await supabase.from("configuracion").upsert({ id: "grupos", data: { lista: [...listaActual, grupoIngresado] } })
+            }
             setGruposFirebase((prev) => [...prev, grupoIngresado])
           } catch {}
         }

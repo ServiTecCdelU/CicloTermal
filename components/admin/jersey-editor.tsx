@@ -11,8 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
-import { db } from "@/lib/firebase/firebase-config"
-import { doc, getDoc, setDoc } from "firebase/firestore"
+import { supabase } from "@/lib/supabase/client"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { Loader2, Upload, Shirt, Check, X, ImageIcon, Edit3, Trash2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -106,21 +105,19 @@ export default function JerseyEditor() {
     const fetchJerseyData = async () => {
       try {
         const currentYear = eventSettings?.currentYear || new Date().getFullYear()
-        const jerseyDoc = doc(db, "jersey", "info")
-        const docSnap = await getDoc(jerseyDoc)
+        const { data: row } = await supabase.from("jersey").select("*").eq("id", "info").single()
 
-        if (docSnap.exists()) {
-          const data = docSnap.data()
-          if (data.year === currentYear) {
+        if (row) {
+          if (row.year === currentYear) {
             setJerseyData({
-              title: data.title || jerseyData.title,
-              description: data.description || jerseyData.description,
-              imageUrl: data.imageUrl || jerseyData.imageUrl,
-              showSection: data.showSection !== undefined ? data.showSection : jerseyData.showSection,
+              title: row.title || jerseyData.title,
+              description: row.description || jerseyData.description,
+              imageUrl: row.image_url || jerseyData.imageUrl,
+              showSection: row.show_section !== undefined ? row.show_section : jerseyData.showSection,
               year: currentYear,
-              callToActionTitle: data.callToActionTitle || jerseyData.callToActionTitle,
-              callToActionDescription: data.callToActionDescription || jerseyData.callToActionDescription,
-              features: data.features || defaultFeatures,
+              callToActionTitle: row.call_to_action_title || jerseyData.callToActionTitle,
+              callToActionDescription: row.call_to_action_description || jerseyData.callToActionDescription,
+              features: row.features || defaultFeatures,
             })
           } else {
             setJerseyData((prev) => ({ ...prev, year: currentYear }))
@@ -246,12 +243,17 @@ export default function JerseyEditor() {
 
       const currentYear = eventSettings?.currentYear || new Date().getFullYear()
 
-      // Save to Firestore
-      await setDoc(doc(db, "jersey", "info"), {
-        ...jerseyData,
-        imageUrl,
+      await supabase.from("jersey").upsert({
+        id: "info",
+        title: jerseyData.title,
+        description: jerseyData.description,
+        image_url: imageUrl,
+        show_section: jerseyData.showSection,
         year: currentYear,
-        updatedAt: new Date(),
+        call_to_action_title: jerseyData.callToActionTitle,
+        call_to_action_description: jerseyData.callToActionDescription,
+        features: jerseyData.features,
+        updated_at: new Date().toISOString(),
       })
 
       // Update local state

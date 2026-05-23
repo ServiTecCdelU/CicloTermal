@@ -2,8 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, writeBatch } from "firebase/firestore"
-import { db } from "/lib/firebase/firebase-config"
+import { supabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -91,17 +90,13 @@ export default function SponsorsEditor() {
 
   const loadSponsors = async (): Promise<void> => {
     try {
-      const querySnapshot = await getDocs(collection(db, "sponsors"))
-      const sponsorsData: Sponsor[] = querySnapshot.docs.map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate() || new Date(),
-            order: doc.data().order || 0,
-          }) as Sponsor,
-      )
-      // Ordenar por campo order
+      const { data: rows } = await supabase.from("sponsors").select("*")
+      const sponsorsData: Sponsor[] = (rows || []).map((r) => ({
+        ...r,
+        imageBase64: r.image_base64,
+        createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+        order: r.order || 0,
+      }) as unknown as Sponsor)
       sponsorsData.sort((a, b) => a.order - b.order)
       setSponsors(sponsorsData)
     } catch (error) {
@@ -187,24 +182,22 @@ export default function SponsorsEditor() {
     setLoading(true)
 
     try {
-      const sponsorData = {
+      const sponsorDataSnake: Record<string, unknown> = {
         name: formData.name.trim(),
         website: formData.website.trim(),
-        ...(formData.imagePreview && { imageBase64: formData.imagePreview }),
-        updatedAt: new Date(),
+        updated_at: new Date().toISOString(),
       }
+      if (formData.imagePreview) sponsorDataSnake.image_base64 = formData.imagePreview
 
       if (editingId) {
-        // Actualizar sponsor existente
-        await updateDoc(doc(db, "sponsors", editingId), sponsorData)
+        await supabase.from("sponsors").update(sponsorDataSnake).eq("id", editingId)
         showAlert("Sponsor actualizado exitosamente")
       } else {
-        // Crear nuevo sponsor con order
         const maxOrder = sponsors.length > 0 ? Math.max(...sponsors.map((s) => s.order)) : -1
-        await addDoc(collection(db, "sponsors"), {
-          ...sponsorData,
+        await supabase.from("sponsors").insert({
+          ...sponsorDataSnake,
           order: maxOrder + 1,
-          createdAt: new Date(),
+          created_at: new Date().toISOString(),
         })
         showAlert("Sponsor agregado exitosamente")
       }
@@ -235,7 +228,7 @@ export default function SponsorsEditor() {
     }
 
     try {
-      await deleteDoc(doc(db, "sponsors", id))
+      await supabase.from("sponsors").delete().eq("id", id)
       showAlert("Sponsor eliminado exitosamente")
       loadSponsors()
     } catch (error) {
@@ -256,14 +249,8 @@ export default function SponsorsEditor() {
     const [movedSponsor] = newSponsors.splice(currentIndex, 1)
     newSponsors.splice(newIndex, 0, movedSponsor)
 
-    // Actualizar orders
-    const batch = writeBatch(db)
-    newSponsors.forEach((sponsor, index) => {
-      batch.update(doc(db, "sponsors", sponsor.id), { order: index })
-    })
-
     try {
-      await batch.commit()
+      await Promise.all(newSponsors.map((sponsor, i) => supabase.from("sponsors").update({ order: i }).eq("id", sponsor.id)))
       setSponsors(newSponsors.map((sponsor, index) => ({ ...sponsor, order: index })))
       showAlert("Orden actualizado exitosamente")
     } catch (error) {
@@ -280,22 +267,14 @@ export default function SponsorsEditor() {
     const [reorderedItem] = items.splice(result.source.index, 1)
     items.splice(result.destination.index, 0, reorderedItem)
 
-    // Actualizar estado local inmediatamente
     setSponsors(items)
 
-    // Actualizar en Firebase
-    const batch = writeBatch(db)
-    items.forEach((sponsor, index) => {
-      batch.update(doc(db, "sponsors", sponsor.id), { order: index })
-    })
-
     try {
-      await batch.commit()
+      await Promise.all(items.map((sponsor, i) => supabase.from("sponsors").update({ order: i }).eq("id", sponsor.id)))
       showAlert("Orden actualizado exitosamente")
     } catch (error) {
       console.error("Error actualizando orden:", error)
       showAlert("Error al actualizar el orden", "error")
-      // Revertir cambios en caso de error
       loadSponsors()
     }
   }

@@ -2,19 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-  updateDoc,
-  writeBatch,
-  query,
-  where,
-  orderBy,
-} from "firebase/firestore"
-import { db } from "@/lib/firebase/firebase-config"
+import { supabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -177,37 +165,33 @@ export default function BenefitsEditor() {
       const currentYear = eventSettings?.currentYear || new Date().getFullYear()
 
       // Load event items
-      const eventQuery = query(
-        collection(db, "benefits"),
-        where("type", "==", "event"),
-        where("year", "==", currentYear),
-        orderBy("order", "asc"),
-      )
-      const eventSnapshot = await getDocs(eventQuery)
-      const eventData = eventSnapshot.docs.map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-          }) as EventItem,
-      )
+      const { data: eventRows } = await supabase
+        .from("benefits")
+        .select("*")
+        .eq("type", "event")
+        .eq("year", currentYear)
+        .order("order", { ascending: true })
+      const eventData = (eventRows || []).map((r) => ({
+        ...r,
+        iconName: r.icon_name,
+        iconType: r.icon_type,
+        createdAt: r.created_at,
+      }) as unknown as EventItem)
       setEventItems(eventData)
 
       // Load benefit items
-      const benefitQuery = query(
-        collection(db, "benefits"),
-        where("type", "==", "benefit"),
-        where("year", "==", currentYear),
-        orderBy("order", "asc"),
-      )
-      const benefitSnapshot = await getDocs(benefitQuery)
-      const benefitData = benefitSnapshot.docs.map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-          }) as BenefitItem,
-      )
+      const { data: benefitRows } = await supabase
+        .from("benefits")
+        .select("*")
+        .eq("type", "benefit")
+        .eq("year", currentYear)
+        .order("order", { ascending: true })
+      const benefitData = (benefitRows || []).map((r) => ({
+        ...r,
+        iconName: r.icon_name,
+        iconType: r.icon_type,
+        createdAt: r.created_at,
+      }) as unknown as BenefitItem)
       setBenefitItems(benefitData)
     } catch (error) {
       console.error("Error loading data:", error)
@@ -241,15 +225,25 @@ export default function BenefitsEditor() {
         updatedAt: new Date(),
       }
 
+      const eventDataSnake = {
+        label: eventData.label,
+        value: eventData.value,
+        icon_name: eventData.iconName,
+        icon_type: eventData.iconType,
+        type: eventData.type,
+        year: eventData.year,
+        updated_at: new Date().toISOString(),
+      }
+
       if (editingEventId) {
-        await updateDoc(doc(db, "benefits", editingEventId), eventData)
+        await supabase.from("benefits").update(eventDataSnake).eq("id", editingEventId)
         showAlert("Item del evento actualizado exitosamente")
       } else {
         const maxOrder = eventItems.length > 0 ? Math.max(...eventItems.map((s) => s.order)) : -1
-        await addDoc(collection(db, "benefits"), {
-          ...eventData,
+        await supabase.from("benefits").insert({
+          ...eventDataSnake,
           order: maxOrder + 1,
-          createdAt: new Date(),
+          created_at: new Date().toISOString(),
         })
         showAlert("Item del evento agregado exitosamente")
       }
@@ -283,15 +277,24 @@ export default function BenefitsEditor() {
         updatedAt: new Date(),
       }
 
+      const benefitDataSnake = {
+        text: benefitData.text,
+        icon_name: benefitData.iconName,
+        icon_type: benefitData.iconType,
+        type: benefitData.type,
+        year: benefitData.year,
+        updated_at: new Date().toISOString(),
+      }
+
       if (editingBenefitId) {
-        await updateDoc(doc(db, "benefits", editingBenefitId), benefitData)
+        await supabase.from("benefits").update(benefitDataSnake).eq("id", editingBenefitId)
         showAlert("Beneficio actualizado exitosamente")
       } else {
         const maxOrder = benefitItems.length > 0 ? Math.max(...benefitItems.map((s) => s.order)) : -1
-        await addDoc(collection(db, "benefits"), {
-          ...benefitData,
+        await supabase.from("benefits").insert({
+          ...benefitDataSnake,
           order: maxOrder + 1,
-          createdAt: new Date(),
+          created_at: new Date().toISOString(),
         })
         showAlert("Beneficio agregado exitosamente")
       }
@@ -350,7 +353,7 @@ export default function BenefitsEditor() {
     if (!confirm("¿Estás seguro de que quieres eliminar este item?")) return
 
     try {
-      await deleteDoc(doc(db, "benefits", id))
+      await supabase.from("benefits").delete().eq("id", id)
       showAlert("Item eliminado exitosamente")
       loadData()
     } catch (error) {
@@ -363,7 +366,7 @@ export default function BenefitsEditor() {
     if (!confirm("¿Estás seguro de que quieres eliminar este beneficio?")) return
 
     try {
-      await deleteDoc(doc(db, "benefits", id))
+      await supabase.from("benefits").delete().eq("id", id)
       showAlert("Beneficio eliminado exitosamente")
       loadData()
     } catch (error) {
@@ -382,13 +385,8 @@ export default function BenefitsEditor() {
 
     setEventItems(items)
 
-    const batch = writeBatch(db)
-    items.forEach((item, index) => {
-      batch.update(doc(db, "benefits", item.id), { order: index })
-    })
-
     try {
-      await batch.commit()
+      await Promise.all(items.map((item, i) => supabase.from("benefits").update({ order: i }).eq("id", item.id)))
       showAlert("Orden actualizado exitosamente")
     } catch (error) {
       console.error("Error actualizando orden:", error)
@@ -406,13 +404,8 @@ export default function BenefitsEditor() {
 
     setBenefitItems(items)
 
-    const batch = writeBatch(db)
-    items.forEach((item, index) => {
-      batch.update(doc(db, "benefits", item.id), { order: index })
-    })
-
     try {
-      await batch.commit()
+      await Promise.all(items.map((item, i) => supabase.from("benefits").update({ order: i }).eq("id", item.id)))
       showAlert("Orden actualizado exitosamente")
     } catch (error) {
       console.error("Error actualizando orden:", error)

@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, getDocs, doc, setDoc, query, where } from "firebase/firestore"
-import { db } from "@/lib/firebase/firebase-config"
+import { supabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -47,12 +46,10 @@ export default function ItineraryEditor() {
 
   const loadData = async () => {
     try {
-      const q = query(collection(db, "itinerario"), where("year", "==", currentYear))
-      const snapshot = await getDocs(q)
-      snapshot.docs.forEach((d) => {
-        const data = d.data() as ItineraryDay
-        if (data.day === "sabado") setSabado({ ...emptyDay("sabado", currentYear), ...data })
-        if (data.day === "domingo") setDomingo({ ...emptyDay("domingo", currentYear), ...data })
+      const { data: rows } = await supabase.from("itinerario").select("*").eq("year", currentYear)
+      ;(rows || []).forEach((r) => {
+        if (r.day === "sabado") setSabado({ ...emptyDay("sabado", currentYear), ...r })
+        if (r.day === "domingo") setDomingo({ ...emptyDay("domingo", currentYear), ...r })
       })
     } catch (error) {
       console.error("Error cargando itinerario:", error)
@@ -68,10 +65,11 @@ export default function ItineraryEditor() {
     setLoading(dayData.day)
     try {
       const docId = `${currentYear}_${dayData.day}`
-      await setDoc(doc(db, "itinerario", docId), {
+      await supabase.from("itinerario").upsert({
+        id: docId,
         ...dayData,
         year: currentYear,
-        updatedAt: new Date(),
+        updated_at: new Date().toISOString(),
       })
       showAlert(`${dayData.day === "sabado" ? "Sabado" : "Domingo"} guardado`)
     } catch (error) {

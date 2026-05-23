@@ -8,8 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
-import { db } from "@/lib/firebase/firebase-config"
-import { doc, getDoc, setDoc } from "firebase/firestore"
+import { supabase } from "@/lib/supabase/client"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExternalLink, Plus, Settings2, ToggleLeft, CheckCircle } from "lucide-react"
 import type { CicloConfig } from "@/lib/firebase/firebase-provider"
@@ -58,13 +57,13 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const [settingsSnap, ciclosSnap, confirmSnap] = await Promise.all([
-          getDoc(doc(db, "settings", "eventSettings")),
-          getDoc(doc(db, "configuracion", "inscripciones")),
-          getDoc(doc(db, "settings", "confirmacion")),
+        const [settingsRes, ciclosRes, confirmRes] = await Promise.all([
+          supabase.from("settings").select("data").eq("id", "eventSettings").single(),
+          supabase.from("configuracion").select("data").eq("id", "inscripciones").single(),
+          supabase.from("settings").select("data").eq("id", "confirmacion").single(),
         ])
-        if (settingsSnap.exists()) {
-          const d = settingsSnap.data()
+        if (settingsRes.data?.data) {
+          const d = settingsRes.data.data
           setSettings({
             cupoMaximo: d.cupoMaximo ?? 300,
             precio: d.precio ?? 35000,
@@ -76,13 +75,13 @@ export default function AdminSettingsPage() {
             edicion: d.edicion ?? "",
           })
         }
-        if (ciclosSnap.exists()) {
-          const data = ciclosSnap.data().ciclos ?? []
-          setCiclos(data)
-          setCiclosEdit(data)
+        const ciclosData = ciclosRes.data?.data?.ciclos ?? []
+        if (ciclosData.length > 0) {
+          setCiclos(ciclosData)
+          setCiclosEdit(ciclosData)
         }
-        if (confirmSnap.exists()) {
-          const d = confirmSnap.data()
+        if (confirmRes.data?.data) {
+          const d = confirmRes.data.data
           setConfirmacion((prev) => ({
             titulo: d.titulo ?? prev.titulo,
             descripcion: d.descripcion ?? prev.descripcion,
@@ -107,7 +106,7 @@ export default function AdminSettingsPage() {
   const saveSettings = async () => {
     setSaving(true)
     try {
-      await setDoc(doc(db, "settings", "eventSettings"), settings, { merge: true })
+      await supabase.from("settings").upsert({ id: "eventSettings", data: settings })
       toast({ title: "Configuración guardada" })
     } catch {
       toast({ title: "Error al guardar", variant: "destructive" })
@@ -119,7 +118,7 @@ export default function AdminSettingsPage() {
   const saveConfirmacion = async () => {
     setSavingConfirmacion(true)
     try {
-      await setDoc(doc(db, "settings", "confirmacion"), confirmacion)
+      await supabase.from("settings").upsert({ id: "confirmacion", data: confirmacion })
       toast({ title: "Mensaje de confirmación guardado" })
     } catch {
       toast({ title: "Error al guardar", variant: "destructive" })
@@ -138,7 +137,7 @@ export default function AdminSettingsPage() {
       const updated = ciclos.some((c) => c.año === año)
         ? ciclos.map((c) => (c.año === año ? { ...c, habilitado: abrir } : c))
         : [...ciclos, { año, habilitado: abrir, fechaDesde: "", fechaHasta: "" }]
-      await setDoc(doc(db, "configuracion", "inscripciones"), { ciclos: updated })
+      await supabase.from("configuracion").upsert({ id: "inscripciones", data: { ciclos: updated } })
       setCiclos(updated)
       setCiclosEdit(updated)
       toast({ title: abrir ? `Inscripciones ${año} abiertas` : `Inscripciones ${año} cerradas` })
@@ -156,7 +155,7 @@ export default function AdminSettingsPage() {
       const updated = ciclos.map((c) =>
         c.año === año ? { ...c, fechaDesde: cicloEdit!.fechaDesde, fechaHasta: cicloEdit!.fechaHasta } : c
       )
-      await setDoc(doc(db, "configuracion", "inscripciones"), { ciclos: updated })
+      await supabase.from("configuracion").upsert({ id: "inscripciones", data: { ciclos: updated } })
       setCiclos(updated)
       toast({ title: `Fechas del ${año} guardadas` })
     } catch {
@@ -172,7 +171,7 @@ export default function AdminSettingsPage() {
       const maxYear = ciclos.length > 0 ? Math.max(...ciclos.map((c) => c.año)) : CURRENT_YEAR
       const newYear = maxYear + 1
       const updated = [...ciclos, { año: newYear, habilitado: false, fechaDesde: "", fechaHasta: "" }]
-      await setDoc(doc(db, "configuracion", "inscripciones"), { ciclos: updated })
+      await supabase.from("configuracion").upsert({ id: "inscripciones", data: { ciclos: updated } })
       setCiclos(updated)
       setCiclosEdit(updated)
       toast({ title: `Ciclo ${newYear} agregado` })

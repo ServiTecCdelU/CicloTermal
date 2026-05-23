@@ -2,8 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, writeBatch } from "firebase/firestore"
-import { db } from "@/lib/firebase/firebase-config"
+import { supabase } from "@/lib/supabase/client"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -152,16 +151,15 @@ export default function HistoryEditor() {
 
   const loadHistoryItems = async (): Promise<void> => {
     try {
-      const querySnapshot = await getDocs(collection(db, "historia"))
-      const historyData: HistoryItem[] = querySnapshot.docs.map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate() || new Date(),
-            order: doc.data().order || 0,
-          }) as HistoryItem,
-      )
+      const { data: rows } = await supabase.from("historia").select("*")
+      const historyData: HistoryItem[] = (rows || []).map((r) => ({
+        ...r,
+        imageUrl: r.image_url,
+        logoUrl: r.logo_url,
+        contactLink: r.contact_link,
+        createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+        order: r.order || 0,
+      }) as unknown as HistoryItem)
       historyData.sort((a, b) => a.order - b.order)
       setHistoryItems(historyData)
     } catch (error) {
@@ -273,27 +271,25 @@ export default function HistoryEditor() {
     setLoading(true)
 
     try {
-      const historyData = {
+      const historyDataSnake: Record<string, unknown> = {
         title: formData.title.trim(),
         description: formData.description.trim(),
-        contactLink: formData.contactLink.trim(),
-        ...(formData.imagePreview && { imageUrl: formData.imagePreview }),
-        ...(formData.logoPreview && { logoUrl: formData.logoPreview }),
+        contact_link: formData.contactLink.trim(),
         year: eventSettings?.currentYear || new Date().getFullYear(),
-        updatedAt: new Date(),
+        updated_at: new Date().toISOString(),
       }
+      if (formData.imagePreview) historyDataSnake.image_url = formData.imagePreview
+      if (formData.logoPreview) historyDataSnake.logo_url = formData.logoPreview
 
       if (editingId) {
-        // Actualizar historia existente
-        await updateDoc(doc(db, "historia", editingId), historyData)
+        await supabase.from("historia").update(historyDataSnake).eq("id", editingId)
         showAlert("Historia actualizada exitosamente")
       } else {
-        // Crear nueva historia con order
         const maxOrder = historyItems.length > 0 ? Math.max(...historyItems.map((s) => s.order)) : -1
-        await addDoc(collection(db, "historia"), {
-          ...historyData,
+        await supabase.from("historia").insert({
+          ...historyDataSnake,
           order: maxOrder + 1,
-          createdAt: new Date(),
+          created_at: new Date().toISOString(),
         })
         showAlert("Historia agregada exitosamente")
       }
@@ -327,7 +323,7 @@ export default function HistoryEditor() {
     }
 
     try {
-      await deleteDoc(doc(db, "historia", id))
+      await supabase.from("historia").delete().eq("id", id)
       showAlert("Historia eliminada exitosamente")
       loadHistoryItems()
     } catch (error) {
@@ -347,13 +343,8 @@ export default function HistoryEditor() {
     const [movedItem] = newItems.splice(currentIndex, 1)
     newItems.splice(newIndex, 0, movedItem)
 
-    const batch = writeBatch(db)
-    newItems.forEach((item, index) => {
-      batch.update(doc(db, "historia", item.id), { order: index })
-    })
-
     try {
-      await batch.commit()
+      await Promise.all(newItems.map((item, i) => supabase.from("historia").update({ order: i }).eq("id", item.id)))
       setHistoryItems(newItems.map((item, index) => ({ ...item, order: index })))
       showAlert("Orden actualizado exitosamente")
     } catch (error) {
@@ -371,13 +362,8 @@ export default function HistoryEditor() {
 
     setHistoryItems(items)
 
-    const batch = writeBatch(db)
-    items.forEach((item, index) => {
-      batch.update(doc(db, "historia", item.id), { order: index })
-    })
-
     try {
-      await batch.commit()
+      await Promise.all(items.map((item, i) => supabase.from("historia").update({ order: i }).eq("id", item.id)))
       showAlert("Orden actualizado exitosamente")
     } catch (error) {
       console.error("Error actualizando orden:", error)

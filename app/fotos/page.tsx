@@ -5,8 +5,7 @@ import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { db } from "@/lib/firebase/firebase-config"
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
+import { supabase } from "@/lib/supabase/client"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { ExternalLink, ArrowLeft } from "lucide-react"
 import Navbar from "@/components/navbar"
@@ -114,38 +113,37 @@ export default function FotosPage() {
 
       try {
         // Cargar fotos destacadas del año seleccionado
-        const featuredQuery = query(
-          collection(db, "galeriaFotos"),
-          where("year", "==", selectedYear),
-          where("type", "==", "featured"),
-          orderBy("order", "asc"),
-        )
-        const featuredSnapshot = await getDocs(featuredQuery)
-        const featuredData: PhotoItem[] = featuredSnapshot.docs.map(
-          (doc) =>
-            ({
-              id: doc.id,
-              ...doc.data(),
-            }) as PhotoItem,
-        )
+        const { data: featuredRows } = await supabase
+          .from("galeria_fotos")
+          .select("*")
+          .eq("year", selectedYear)
+          .eq("type", "featured")
+          .order("order", { ascending: true })
+        const featuredData: PhotoItem[] = (featuredRows ?? []).map((r) => ({
+          id: r.id,
+          imageUrl: r.image_url,
+          description: r.description,
+          order: r.order,
+          year: r.year,
+        }))
 
         setFeaturedPhotos(featuredData)
 
         // Cargar fotógrafos del año seleccionado
-        const photographersQuery = query(
-          collection(db, "galeriaFotos"),
-          where("year", "==", selectedYear),
-          where("type", "==", "photographer"),
-          orderBy("order", "asc"),
-        )
-        const photographersSnapshot = await getDocs(photographersQuery)
-        const photographersData: PhotographerItem[] = photographersSnapshot.docs.map(
-          (doc) =>
-            ({
-              id: doc.id,
-              ...doc.data(),
-            }) as PhotographerItem,
-        )
+        const { data: photographerRows } = await supabase
+          .from("galeria_fotos")
+          .select("*")
+          .eq("year", selectedYear)
+          .eq("type", "photographer")
+          .order("order", { ascending: true })
+        const photographersData: PhotographerItem[] = (photographerRows ?? []).map((r) => ({
+          id: r.id,
+          name: r.name,
+          link: r.link,
+          description: r.description,
+          order: r.order,
+          year: r.year,
+        }))
 
         setPhotographers(photographersData)
       } catch (error) {

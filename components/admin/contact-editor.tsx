@@ -9,8 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { db } from "@/lib/firebase/firebase-config"
-import { doc, getDoc, setDoc } from "firebase/firestore"
+import { supabase } from "@/lib/supabase/client"
 import { Loader2, MapPin, Plus, Trash2, ExternalLink, Check, X, Facebook, Instagram, Twitter } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
@@ -70,18 +69,16 @@ export default function ContactEditor() {
   useEffect(() => {
     const fetchContactData = async () => {
       try {
-        const contactDoc = doc(db, "contacto", "info")
-        const docSnap = await getDoc(contactDoc)
+        const { data: row } = await supabase.from("contacto").select("*").eq("id", "info").single()
 
-        if (docSnap.exists()) {
-          const data = docSnap.data()
+        if (row) {
           setContactData({
-            address: data.address || contactData.address,
-            phones: Array.isArray(data.phones) ? data.phones : contactData.phones,
-            email: data.email || "",
-            links: Array.isArray(data.links) ? data.links : [],
-            mapUrl: data.mapUrl || contactData.mapUrl,
-            showMap: data.showMap !== undefined ? data.showMap : contactData.showMap,
+            address: row.address || contactData.address,
+            phones: Array.isArray(row.phones) ? row.phones : contactData.phones,
+            email: row.email || "",
+            links: Array.isArray(row.links) ? row.links : [],
+            mapUrl: row.map_url || contactData.mapUrl,
+            showMap: row.show_map !== undefined ? row.show_map : contactData.showMap,
           })
         }
       } catch (error) {
@@ -170,9 +167,15 @@ export default function ContactEditor() {
         email: contactData.email.trim(),
       }
 
-      await setDoc(doc(db, "contacto", "info"), {
-        ...cleanedData,
-        updatedAt: new Date(),
+      await supabase.from("contacto").upsert({
+        id: "info",
+        address: cleanedData.address,
+        phones: cleanedData.phones,
+        email: cleanedData.email,
+        links: cleanedData.links,
+        map_url: cleanedData.mapUrl,
+        show_map: cleanedData.showMap,
+        updated_at: new Date().toISOString(),
       })
 
       showAlert("Información de contacto actualizada correctamente")

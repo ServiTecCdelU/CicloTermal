@@ -42,7 +42,22 @@
       "Bash(ls C:/Users/Emanuel/Documents/Proyectos/CicloTermal/types*)",
       "Bash(ls C:/Users/Emanuel/Documents/Proyectos/CicloTermal/.env*)",
       "Bash(grep -l \"NEXT_PUBLIC_FIREBASE_API_KEY\" .next/static/chunks/*.js)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"collection\\(db,\" /c/Users/Emanuel/Documents/Proyectos/CicloTermal --include=\"*.ts\" --include=\"*.tsx\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\")",
+      "Bash(grep -r \"doc\\(db,\" /c/Users/Emanuel/Documents/Proyectos/CicloTermal --include=\"*.ts\" --include=\"*.tsx\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\")",
+      "Bash(grep -rn \"collection\\(db, \\\\\"\" /c/Users/Emanuel/Documents/Proyectos/CicloTermal --include=\"*.tsx\" --include=\"*.ts\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\")",
+      "Bash(sed 's/.*collection\\(db, \"//')",
+      "Bash(sed 's/\"\\).*//')",
+      "Bash(grep -rn \"doc\\(db, \\\\\"\" /c/Users/Emanuel/Documents/Proyectos/CicloTermal --include=\"*.tsx\" --include=\"*.ts\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\")",
+      "Bash(sed 's/.*doc\\(db, \"//')",
+      "Bash(sed 's/\".*\\).*//')",
+      "Bash(grep -roh \"collection\\(db, ['\\\\\"].*['\\\\\"]\" /c/Users/Emanuel/Documents/Proyectos/CicloTermal --include=\"*.tsx\" --include=\"*.ts\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\")",
+      "Bash(grep -roh \"doc\\(db, ['\\\\\"][^'\\\\\"]*['\\\\\"]\" /c/Users/Emanuel/Documents/Proyectos/CicloTermal --include=\"*.tsx\" --include=\"*.ts\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\")",
+      "Bash(find /c/Users/Emanuel/Documents/Proyectos/CicloTermal/app -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -l \"collection\\\\|doc\\(\" {} \\\\;)",
+      "Bash(find /c/Users/Emanuel/Documents/Proyectos/CicloTermal/components -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -l \"collection\\\\|doc\\(\" {} \\\\;)",
+      "Bash(node scripts/migrate-to-supabase.js)",
+      "Bash(wc:*)"
     ]
   }
 }

@@ -5,7 +5,6 @@ import type React from "react"
 import { useState, useMemo } from "react"
 import Link from "next/link"
 import { SectionTitle } from "@/components/section-title"
-import { orderBy } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedCollection } from "@/lib/use-cached-firestore"
 
@@ -77,7 +76,7 @@ export default function SponsorsSection(): JSX.Element {
   const { data: rawSponsors, loading } = useCachedCollection(
     `ct_sponsors_${currentYear}`,
     "sponsors",
-    [orderBy("order", "asc")],
+    (q) => q.order("order", { ascending: true }),
     isFirebaseAvailable,
   )
 

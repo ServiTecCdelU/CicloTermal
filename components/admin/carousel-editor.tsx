@@ -6,9 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { db } from "@/lib/firebase/firebase-config"
-import { collection, addDoc, doc, updateDoc, deleteDoc, getDocs, query, where, orderBy } from "firebase/firestore"
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"
+import { supabase } from "@/lib/supabase/client"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { Trash2, Plus, ArrowUp, ArrowDown, Loader2 } from "lucide-react"
 
@@ -22,17 +20,17 @@ export default function CarouselEditor() {
   useEffect(() => {
     const fetchCarouselImages = async () => {
       try {
-        const carouselRef = collection(db, "carousel")
-        const currentYearCarousel = query(
-          carouselRef,
-          where("year", "==", eventSettings?.currentYear || new Date().getFullYear()),
-          orderBy("order", "asc"),
-        )
-        const snapshot = await getDocs(currentYearCarousel)
+        const { data: rows } = await supabase
+          .from("carousel")
+          .select("*")
+          .eq("year", eventSettings?.currentYear || new Date().getFullYear())
+          .order("order", { ascending: true })
 
-        const slidesData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const slidesData = (rows || []).map((r) => ({
+          ...r,
+          imageUrl: r.image_url,
+          buttonText: r.button_text,
+          buttonUrl: r.button_url,
         }))
 
         setSlides(slidesData)
@@ -71,14 +69,7 @@ export default function CarouselEditor() {
 
     try {
       if (!slide.isNew && slide.id) {
-        // Delete from Firestore
-        await deleteDoc(doc(db, "carousel", slide.id))
-
-        // Delete image from Storage if it's not a placeholder
-        if (slide.imageUrl && !slide.imageUrl.includes("placeholder.svg")) {
-          const imageRef = ref(storage, slide.imageUrl)
-          await deleteObject(imageRef).catch((err) => console.log("Image might not exist:", err))
-        }
+        await supabase.from("carousel").delete().eq("id", slide.id)
       }
 
       const newSlides = [...slides]
@@ -137,48 +128,41 @@ export default function CarouselEditor() {
     setSlides(newSlides)
   }
 
-  const handleFileChange = (index, e) => {
+  const handleFileChange = async (index, e) => {
     const file = e.target.files[0]
     if (!file) return
 
-    const newSlides = [...slides]
-    newSlides[index] = {
-      ...newSlides[index],
-      file,
-      // Create a temporary URL for preview
-      imageUrl: URL.createObjectURL(file),
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const newSlides = [...slides]
+      newSlides[index] = {
+        ...newSlides[index],
+        file,
+        imageUrl: ev.target?.result as string,
+      }
+      setSlides(newSlides)
     }
-    setSlides(newSlides)
+    reader.readAsDataURL(file)
   }
 
   const saveChanges = async () => {
     setSaving(true)
     try {
       for (const slide of slides) {
-        // If there's a new file, upload it first
-        let imageUrl = slide.imageUrl
-        if (slide.file) {
-          const storageRef = ref(storage, `carousel/${Date.now()}_${slide.file.name}`)
-          await uploadBytes(storageRef, slide.file)
-          imageUrl = await getDownloadURL(storageRef)
-        }
-
         const slideData = {
-          imageUrl,
+          image_url: slide.imageUrl,
           title: slide.title,
           subtitle: slide.subtitle,
-          buttonText: slide.buttonText,
-          buttonUrl: slide.buttonUrl,
+          button_text: slide.buttonText,
+          button_url: slide.buttonUrl,
           order: slide.order,
           year: eventSettings?.currentYear || new Date().getFullYear(),
         }
 
         if (slide.isNew) {
-          // Add new slide
-          await addDoc(collection(db, "carousel"), slideData)
+          await supabase.from("carousel").insert(slideData)
         } else {
-          // Update existing slide
-          await updateDoc(doc(db, "carousel", slide.id), slideData)
+          await supabase.from("carousel").update(slideData).eq("id", slide.id)
         }
       }
 
@@ -188,17 +172,17 @@ export default function CarouselEditor() {
       })
 
       // Refresh slides
-      const carouselRef = collection(db, "carousel")
-      const currentYearCarousel = query(
-        carouselRef,
-        where("year", "==", eventSettings?.currentYear || new Date().getFullYear()),
-        orderBy("order", "asc"),
-      )
-      const snapshot = await getDocs(currentYearCarousel)
+      const { data: rows } = await supabase
+        .from("carousel")
+        .select("*")
+        .eq("year", eventSettings?.currentYear || new Date().getFullYear())
+        .order("order", { ascending: true })
 
-      const slidesData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const slidesData = (rows || []).map((r) => ({
+        ...r,
+        imageUrl: r.image_url,
+        buttonText: r.button_text,
+        buttonUrl: r.button_url,
       }))
 
       setSlides(slidesData)

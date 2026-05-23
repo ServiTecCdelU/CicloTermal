@@ -7,8 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { db } from "@/lib/firebase/firebase-config"
-import { collection, addDoc, doc, updateDoc, deleteDoc, getDocs } from "firebase/firestore"
+import { supabase } from "@/lib/supabase/client"
 import { Trash2, Plus, ArrowUp, ArrowDown, Loader2 } from "lucide-react"
 
 export default function FormEditor() {
@@ -20,9 +19,8 @@ export default function FormEditor() {
   useEffect(() => {
     const fetchFormFields = async () => {
       try {
-        const formFieldsRef = collection(db, "formFields")
-        const snapshot = await getDocs(formFieldsRef)
-        const fields = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        const { data: rows } = await supabase.from("form_fields").select("*")
+        const fields = (rows || []).map((r) => ({ ...r }))
 
         // Sort by order
         fields.sort((a, b) => a.order - b.order)
@@ -60,8 +58,7 @@ export default function FormEditor() {
 
     try {
       if (!field.isNew && field.id) {
-        // Delete from Firestore
-        await deleteDoc(doc(db, "formFields", field.id))
+        await supabase.from("form_fields").delete().eq("id", field.id)
       }
 
       const newFields = [...formFields]
@@ -184,11 +181,9 @@ export default function FormEditor() {
         }
 
         if (field.isNew) {
-          // Add new field
-          await addDoc(collection(db, "formFields"), fieldData)
+          await supabase.from("form_fields").insert({ ...fieldData, created_at: new Date().toISOString() })
         } else {
-          // Update existing field
-          await updateDoc(doc(db, "formFields", field.id), fieldData)
+          await supabase.from("form_fields").update(fieldData).eq("id", field.id)
         }
       }
 
@@ -198,9 +193,8 @@ export default function FormEditor() {
       })
 
       // Refresh form fields
-      const formFieldsRef = collection(db, "formFields")
-      const snapshot = await getDocs(formFieldsRef)
-      const fields = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+      const { data: rows } = await supabase.from("form_fields").select("*")
+      const fields = (rows || []).map((r) => ({ ...r }))
 
       // Sort by order
       fields.sort((a, b) => a.order - b.order)

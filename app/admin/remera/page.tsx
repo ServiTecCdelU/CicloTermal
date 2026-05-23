@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, getDocs, doc, updateDoc, getDoc, setDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase/firebase-config"
+import { supabase } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -63,17 +62,19 @@ export default function RemeraAdminPage() {
   const fetchRemeras = async () => {
     setLoading(true)
     try {
-      const snap = await getDocs(collection(db, "remera"))
-      const docs = snap.docs.map((d) => {
-        const data = d.data()
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { comprobanteBase64, nombreArchivo, ...rest } = data
-        return {
-          id: d.id,
-          ...rest,
-          tieneComprobante: rest.tieneComprobante ?? !!comprobanteBase64,
-        } as RemeraDoc
-      })
+      const { data: rows } = await supabase.from("remera").select("*")
+      const docs: RemeraDoc[] = (rows ?? []).map((r) => ({
+        id: r.id,
+        dni: r.dni,
+        nombre: r.nombre,
+        telefono: r.telefono,
+        talle: r.talle,
+        items: r.items ?? [],
+        tieneComprobante: r.tiene_comprobante,
+        estaRegistrado: r.esta_registrado,
+        estado: r.estado,
+        fechaSolicitud: r.fecha_solicitud,
+      }))
       docs.sort((a, b) => new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime())
       setRemeras(docs)
     } catch {
@@ -85,15 +86,15 @@ export default function RemeraAdminPage() {
 
   useEffect(() => {
     fetchRemeras()
-    getDoc(doc(db, "settings", "remera")).then((snap) => {
-      if (snap.exists()) setAlias(snap.data().alias ?? "")
+    supabase.from("settings").select("data").eq("id", "remera").single().then(({ data: row }) => {
+      setAlias(row?.data?.alias ?? "")
     })
   }, [])
 
   const guardarAlias = async () => {
     setAliasGuardando(true)
     try {
-      await setDoc(doc(db, "settings", "remera"), { alias }, { merge: true })
+      await supabase.from("settings").upsert({ id: "remera", data: { alias } })
       toast({ title: "Alias guardado" })
     } catch {
       toast({ title: "Error al guardar alias", variant: "destructive" })
@@ -109,18 +110,9 @@ export default function RemeraAdminPage() {
     }
     setFetchingComprobante(r.id)
     try {
-      // Intentar colección separada (nuevos registros)
-      const compSnap = await getDoc(doc(db, "remera_comprobantes", r.id))
-      if (compSnap.exists() && compSnap.data().comprobanteBase64) {
-        const b64 = compSnap.data().comprobanteBase64 as string
-        setComprobanteCache((p) => ({ ...p, [r.id]: b64 }))
-        setComprobanteModal({ record: r, base64: b64 })
-        return
-      }
-      // Fallback: doc principal (registros viejos)
-      const mainSnap = await getDoc(doc(db, "remera", r.id))
-      if (mainSnap.exists() && mainSnap.data().comprobanteBase64) {
-        const b64 = mainSnap.data().comprobanteBase64 as string
+      const { data: comp } = await supabase.from("remera_comprobantes").select("comprobante_base64").eq("id", r.id).single()
+      if (comp?.comprobante_base64) {
+        const b64 = comp.comprobante_base64 as string
         setComprobanteCache((p) => ({ ...p, [r.id]: b64 }))
         setComprobanteModal({ record: r, base64: b64 })
         return
@@ -136,7 +128,7 @@ export default function RemeraAdminPage() {
   const cambiarEstado = async (id: string, estado: "pendiente" | "entregado") => {
     setActualizando(id)
     try {
-      await updateDoc(doc(db, "remera", id), { estado })
+      await supabase.from("remera").update({ estado }).eq("id", id)
       setRemeras((prev) => prev.map((r) => r.id === id ? { ...r, estado } : r))
     } catch {
       toast({ title: "Error al actualizar estado", variant: "destructive" })

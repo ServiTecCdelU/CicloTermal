@@ -5,7 +5,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { SectionTitle } from "@/components/section-title"
 import { Button } from "@/components/ui/button"
-import { where } from "firebase/firestore"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useCachedCollection } from "@/lib/use-cached-firestore"
@@ -22,8 +21,8 @@ export default function PhotosSection() {
   const { isFirebaseAvailable } = useFirebaseContext()
   const { data: rawPhotos, loading } = useCachedCollection(
     "ct_galeria_featured",
-    "galeriaFotos",
-    [where("type", "==", "featured")],
+    "galeria_fotos",
+    (q) => q.eq("type", "featured"),
     isFirebaseAvailable,
   )
 
