@@ -68,7 +68,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const [aliasRemera, setAliasRemera] = useState<string | null>(null)
   const [dniBuscado, setDniBuscado] = useState(false)
   const [showTablaTalles, setShowTablaTalles] = useState(false)
-  const [envioTipo, setEnvioTipo] = useState<"retiro" | "envio">("retiro")
+  const [envioTipo, setEnvioTipo] = useState<"retiro" | "envio" | "">("")
   const [direccion, setDireccion] = useState("")
   const [wantAddNew, setWantAddNew] = useState(false)
 
@@ -103,7 +103,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
         setEstaRegistrado(false)
       }
 
-      const { data: existingRemera } = await supabase.from("remera").select("*").eq("dni", dniVal).maybeSingle()
+      const { data: existingRemera, error } = await supabase.from("remera").select("*").eq("dni", dniVal).single()
       if (existingRemera) {
         if (existingRemera.items?.length) {
           setItems(existingRemera.items)
@@ -115,14 +115,14 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
           setTelefono(existingRemera.telefono || "")
         }
         setExistingTieneComprobante(existingRemera.tiene_comprobante ?? false)
-        setEnvioTipo(existingRemera.envio_tipo || "retiro")
+        setEnvioTipo(existingRemera.envio_tipo || "")
         setDireccion(existingRemera.direccion || "")
         setIsEditing(true)
       } else {
         setItems([{ talle: "", cantidad: 1 }])
         setIsEditing(false)
         setExistingTieneComprobante(false)
-        setEnvioTipo("retiro")
+        setEnvioTipo("")
         setDireccion("")
       }
 
@@ -182,7 +182,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
       }
 
       // Buscar pedido de remera existente
-      const { data: existingRemera } = await supabase.from("remera").select("*").eq("dni", dni.trim()).maybeSingle()
+      const { data: existingRemera } = await supabase.from("remera").select("*").eq("dni", dni.trim()).single()
       if (existingRemera) {
         if (existingRemera.items?.length) {
           setItems(existingRemera.items)
@@ -194,14 +194,14 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
           setTelefono(existingRemera.telefono || "")
         }
         setExistingTieneComprobante(existingRemera.tiene_comprobante ?? false)
-        setEnvioTipo(existingRemera.envio_tipo || "retiro")
+        setEnvioTipo(existingRemera.envio_tipo || "")
         setDireccion(existingRemera.direccion || "")
         setIsEditing(true)
       } else {
         setItems([{ talle: "", cantidad: 1 }])
         setIsEditing(false)
         setExistingTieneComprobante(false)
-        setEnvioTipo("retiro")
+        setEnvioTipo("")
         setDireccion("")
       }
 
@@ -233,6 +233,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     if (!telefono.trim()) faltantes.push("teléfono")
     const validItems = items.filter((i) => i.talle && i.cantidad >= 1)
     if (validItems.length === 0) faltantes.push("talle")
+    if (!envioTipo) faltantes.push("método de entrega")
     if (!comprobante && !existingTieneComprobante) faltantes.push("comprobante")
     if (envioTipo === "envio" && !direccion.trim()) faltantes.push("dirección")
     return faltantes
@@ -265,6 +266,11 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const handleSubmit = async () => {
     if (!nombre.trim()) { toast({ title: "Nombre requerido", variant: "destructive" }); return }
     if (!telefono.trim()) { toast({ title: "Teléfono requerido", variant: "destructive" }); return }
+
+    if (!envioTipo) {
+      toast({ title: "Selecciona método de entrega", variant: "destructive" })
+      return
+    }
 
     const validItems = items.filter((i) => i.talle && i.cantidad >= 1)
     if (validItems.length === 0) {
@@ -453,9 +459,9 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
 
             {/* Tipo de envío */}
             <div className="space-y-2">
-              <Label>Método de entrega</Label>
-              <Select value={envioTipo} onValueChange={(v) => setEnvioTipo(v as "retiro" | "envio")}>
-                <SelectTrigger>
+              <Label>Método de entrega *</Label>
+              <Select value={envioTipo} onValueChange={(v) => setEnvioTipo(v as "retiro" | "envio" | "")}>
+                <SelectTrigger className={!envioTipo ? "text-gray-500" : ""}>
                   <SelectValue placeholder="Selecciona método" />
                 </SelectTrigger>
                 <SelectContent>
