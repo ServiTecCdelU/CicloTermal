@@ -28,6 +28,8 @@ interface RemeraDoc {
   estaRegistrado: boolean
   estado: "pendiente" | "entregado"
   fechaSolicitud: string
+  envioTipo?: "retiro" | "envio"
+  direccion?: string
 }
 
 const estadoColors: Record<string, string> = {
@@ -49,6 +51,7 @@ export default function RemeraAdminPage() {
   const [busqueda, setBusqueda] = useState("")
   const [filtroEstado, setFiltroEstado] = useState("todos")
   const [filtroTalle, setFiltroTalle] = useState("todos")
+  const [filtroEnvio, setFiltroEnvio] = useState("todos")
   const [actualizando, setActualizando] = useState<string | null>(null)
 
   // Comprobante lazy + caché
@@ -74,6 +77,8 @@ export default function RemeraAdminPage() {
         estaRegistrado: r.esta_registrado,
         estado: r.estado,
         fechaSolicitud: r.fecha_solicitud,
+        envioTipo: r.envio_tipo,
+        direccion: r.direccion,
       }))
       docs.sort((a, b) => new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime())
       setRemeras(docs)
@@ -147,7 +152,8 @@ export default function RemeraAdminPage() {
     const matchTalle =
       filtroTalle === "todos" ||
       (r.items ? r.items.some((i) => i.talle === filtroTalle) : r.talle === filtroTalle)
-    return matchBusqueda && matchEstado && matchTalle
+    const matchEnvio = filtroEnvio === "todos" || r.envioTipo === filtroEnvio
+    return matchBusqueda && matchEstado && matchTalle && matchEnvio
   })
 
   // Cuenta unidades por talle (considera cantidad en items)
@@ -234,6 +240,16 @@ export default function RemeraAdminPage() {
             <SelectItem value="entregado">Entregado</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={filtroEnvio} onValueChange={setFiltroEnvio}>
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder="Entrega" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="retiro">Retiro en evento</SelectItem>
+            <SelectItem value="envio">Envío a domicilio</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={filtroTalle} onValueChange={setFiltroTalle}>
           <SelectTrigger className="w-full sm:w-36">
             <SelectValue placeholder="Talle" />
@@ -278,42 +294,48 @@ export default function RemeraAdminPage() {
                   <p className="text-[11px] text-gray-400 truncate">
                     {r.dni} · {r.telefono}
                   </p>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {r.tieneComprobante && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => verComprobante(r)}
-                        disabled={fetchingComprobante === r.id}
-                        className="h-6 w-6 p-0"
-                      >
-                        {fetchingComprobante === r.id
-                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          : <Eye className="h-3.5 w-3.5" />
-                        }
-                      </Button>
-                    )}
-                    {r.estado === "pendiente" ? (
-                      <Button
-                        size="sm"
-                        className="h-6 text-[10px] px-2 bg-green-600 hover:bg-green-700 text-white"
-                        disabled={actualizando === r.id}
-                        onClick={() => cambiarEstado(r.id, "entregado")}
-                      >
-                        {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Entregado"}
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 text-[10px] px-2"
-                        disabled={actualizando === r.id}
-                        onClick={() => cambiarEstado(r.id, "pendiente")}
-                      >
-                        {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Revertir"}
-                      </Button>
-                    )}
-                  </div>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium shrink-0">
+                    {r.envioTipo === "envio" ? "Envío" : "Retiro"}
+                  </span>
+                </div>
+                {r.envioTipo === "envio" && r.direccion && (
+                  <p className="text-[10px] text-gray-500 truncate">📍 {r.direccion}</p>
+                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  {r.tieneComprobante && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => verComprobante(r)}
+                      disabled={fetchingComprobante === r.id}
+                      className="h-6 w-6 p-0"
+                    >
+                      {fetchingComprobante === r.id
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Eye className="h-3.5 w-3.5" />
+                      }
+                    </Button>
+                  )}
+                  {r.estado === "pendiente" ? (
+                    <Button
+                      size="sm"
+                      className="h-6 text-[10px] px-2 bg-green-600 hover:bg-green-700 text-white"
+                      disabled={actualizando === r.id}
+                      onClick={() => cambiarEstado(r.id, "entregado")}
+                    >
+                      {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Entregado"}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-[10px] px-2"
+                      disabled={actualizando === r.id}
+                      onClick={() => cambiarEstado(r.id, "pendiente")}
+                    >
+                      {actualizando === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Revertir"}
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -328,6 +350,8 @@ export default function RemeraAdminPage() {
                   <th className="px-4 py-3 text-left font-medium">DNI</th>
                   <th className="px-4 py-3 text-left font-medium">Teléfono</th>
                   <th className="px-4 py-3 text-center font-medium">Talles</th>
+                  <th className="px-4 py-3 text-center font-medium">Entrega</th>
+                  <th className="px-4 py-3 text-left font-medium">Dirección</th>
                   <th className="px-4 py-3 text-center font-medium">Inscripto</th>
                   <th className="px-4 py-3 text-left font-medium">Fecha</th>
                   <th className="px-4 py-3 text-center font-medium">Estado</th>
@@ -345,6 +369,14 @@ export default function RemeraAdminPage() {
                       <span className="inline-block px-2 py-0.5 bg-violet-100 text-violet-700 rounded font-semibold text-xs">
                         {formatItems(r)}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${r.envioTipo === "envio" ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}>
+                        {r.envioTipo === "envio" ? "Envío" : "Retiro"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 text-xs max-w-xs truncate" title={r.direccion || ""}>
+                      {r.envioTipo === "envio" && r.direccion ? r.direccion : "—"}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${r.estaRegistrado ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>

@@ -33,11 +33,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Respetar el stack y convenciones del proyecto. No introducir nuevas librerías sin necesidad real.
 - Inferir el contexto del proyecto desde el código. No asumir nada sobre el negocio sin leer primero.
 - No romper funcionalidad existente al agregar features. Correr los tests relacionados siempre.
+- Leer solo los archivos estrictamente necesarios para la tarea. No explorar el proyecto si no hace falta.
+- No correr `npm run build` si el cambio no toca TypeScript ni imports.
+- No correr lint salvo que se lo pida explícitamente.
 
 ## Git
 
 - Commitear con mensajes descriptivos en español, en imperativo. Ej: "Agrega validación de stock".
-- Un commit por cambio lógico. No acumular todo en un solo commit gigante.
+- Un solo commit al final de todos los cambios pedidos en un mensaje. No hacer commits intermedios.
 - Pushear sin pedir confirmación una vez que los tests pasen.
 
 ## Project Overview

@@ -68,6 +68,8 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const [aliasRemera, setAliasRemera] = useState<string | null>(null)
   const [dniBuscado, setDniBuscado] = useState(false)
   const [showTablaTalles, setShowTablaTalles] = useState(false)
+  const [envioTipo, setEnvioTipo] = useState<"retiro" | "envio">("retiro")
+  const [direccion, setDireccion] = useState("")
 
   useEffect(() => {
     supabase.from("settings").select("data").eq("id", "remera").single().then(({ data: row }) => {
@@ -112,11 +114,15 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
           setTelefono(existingRemera.telefono || "")
         }
         setExistingTieneComprobante(existingRemera.tiene_comprobante ?? false)
+        setEnvioTipo(existingRemera.envio_tipo || "retiro")
+        setDireccion(existingRemera.direccion || "")
         setIsEditing(true)
       } else {
         setItems([{ talle: "", cantidad: 1 }])
         setIsEditing(false)
         setExistingTieneComprobante(false)
+        setEnvioTipo("retiro")
+        setDireccion("")
       }
 
       setDniBuscado(true)
@@ -138,6 +144,8 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     setIsEditing(false)
     setExistingTieneComprobante(false)
     setDniBuscado(false)
+    setEnvioTipo("retiro")
+    setDireccion("")
     lastDniBuscado.current = ""
     onClose()
   }
@@ -174,11 +182,15 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
           setTelefono(existingRemera.telefono || "")
         }
         setExistingTieneComprobante(existingRemera.tiene_comprobante ?? false)
+        setEnvioTipo(existingRemera.envio_tipo || "retiro")
+        setDireccion(existingRemera.direccion || "")
         setIsEditing(true)
       } else {
         setItems([{ talle: "", cantidad: 1 }])
         setIsEditing(false)
         setExistingTieneComprobante(false)
+        setEnvioTipo("retiro")
+        setDireccion("")
       }
 
       setDniBuscado(true)
@@ -237,6 +249,11 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
       return
     }
 
+    if (envioTipo === "envio" && !direccion.trim()) {
+      toast({ title: "Dirección requerida para envío a domicilio", variant: "destructive" })
+      return
+    }
+
     if (!comprobante && !existingTieneComprobante) {
       toast({ title: "Subí el comprobante de pago", variant: "destructive" })
       return
@@ -254,6 +271,8 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
             items: validItems,
             tiene_comprobante: !!comprobante || existingTieneComprobante,
             esta_registrado: estaRegistrado,
+            envio_tipo: envioTipo,
+            direccion: envioTipo === "envio" ? direccion.trim() : null,
             estado: isEditing ? undefined : "pendiente",
             fecha_solicitud: isEditing ? undefined : new Date().toISOString(),
           },
@@ -281,15 +300,15 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   return (
     <>
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-sm w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold text-gray-900">
-            {isEditing ? "Editar pedido de remera" : "Pedir remera oficial"}
+          <DialogTitle className="text-base font-bold text-gray-900">
+            {isEditing ? "Editar pedido" : "Pedir remera"}
           </DialogTitle>
         </DialogHeader>
 
         {step === "form" && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="dni-input">DNI</Label>
               <div className="flex gap-2">
@@ -400,6 +419,39 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
                 )}
               </div>
             </div>
+
+            {/* Tipo de envío */}
+            <div className="space-y-2">
+              <Label>Método de entrega</Label>
+              <Select value={envioTipo} onValueChange={(v) => setEnvioTipo(v as "retiro" | "envio")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona método" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="retiro">Retiro en el evento</SelectItem>
+                  <SelectItem value="envio">Envío a Domicilio</SelectItem>
+                </SelectContent>
+              </Select>
+              {envioTipo === "envio" && (
+                <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                  Nos contactaremos para acordar el envío. El precio NO corre por nuestra cuenta. El envío se hará días después del evento.
+                </p>
+              )}
+            </div>
+
+            {/* Dirección (solo si es envío) */}
+            {envioTipo === "envio" && (
+              <div className="space-y-2">
+                <Label htmlFor="direccion">Dirección de entrega *</Label>
+                <Input
+                  id="direccion"
+                  value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
+                  placeholder="Calle, número, piso, localidad, provincia..."
+                  className="text-sm"
+                />
+              </div>
+            )}
 
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 space-y-1">
               <p className="font-semibold">Precio: $32.000 por remera</p>
