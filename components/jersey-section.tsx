@@ -70,6 +70,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const [showTablaTalles, setShowTablaTalles] = useState(false)
   const [envioTipo, setEnvioTipo] = useState<"retiro" | "envio">("retiro")
   const [direccion, setDireccion] = useState("")
+  const [wantAddNew, setWantAddNew] = useState(false)
 
   useEffect(() => {
     supabase.from("settings").select("data").eq("id", "remera").single().then(({ data: row }) => {
@@ -146,8 +147,19 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     setDniBuscado(false)
     setEnvioTipo("retiro")
     setDireccion("")
+    setWantAddNew(false)
     lastDniBuscado.current = ""
     onClose()
+  }
+
+  const agregarOtroRemera = () => {
+    setWantAddNew(true)
+    setIsEditing(false)
+    setItems([{ talle: "", cantidad: 1 }])
+    setComprobante(null)
+    setEnvioTipo("retiro")
+    setDireccion("")
+    setExistingTieneComprobante(false)
   }
 
   const buscarPorDni = async () => {
@@ -213,6 +225,17 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
 
   const updateItem = (idx: number, field: keyof RemeraItem, value: string | number) => {
     setItems((prev) => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
+  }
+
+  const getFaltantes = () => {
+    const faltantes: string[] = []
+    if (!nombre.trim()) faltantes.push("nombre")
+    if (!telefono.trim()) faltantes.push("teléfono")
+    const validItems = items.filter((i) => i.talle && i.cantidad >= 1)
+    if (validItems.length === 0) faltantes.push("talle")
+    if (!comprobante && !existingTieneComprobante) faltantes.push("comprobante")
+    if (envioTipo === "envio" && !direccion.trim()) faltantes.push("dirección")
+    return faltantes
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -303,7 +326,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
       <DialogContent className="max-w-sm w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-gray-900">
-            {isEditing ? "Editar pedido" : "Pedir remera"}
+            {isEditing && !wantAddNew ? "Editar pedido" : "Pedir remera"}
           </DialogTitle>
         </DialogHeader>
 
@@ -327,20 +350,28 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
               <p className="text-xs text-gray-500">Ingresá tu DNI y presioná el botón para cargar tus datos.</p>
             </div>
 
-            {dniBuscado && isEditing && (
-              <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm px-3 py-2 rounded-md flex items-center gap-2">
-                <PencilLine className="h-4 w-4 shrink-0" />
-                Ya tenés un pedido registrado. Podés modificarlo.
+            {dniBuscado && isEditing && !wantAddNew && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm px-3 py-2 rounded-md space-y-2">
+                <div className="flex items-center gap-2">
+                  <PencilLine className="h-4 w-4 shrink-0" />
+                  <span className="font-semibold">Ya cargaste una remera a este DNI</span>
+                </div>
+                <div className="flex gap-2 ml-6">
+                  <Button size="sm" variant="outline" onClick={agregarOtroRemera} className="text-xs h-7">
+                    + Agregar otra
+                  </Button>
+                  <span className="text-xs text-blue-600">o edita la actual abajo</span>
+                </div>
               </div>
             )}
-            {dniBuscado && !isEditing && !estaRegistrado && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-2 rounded-md">
-                No encontramos tu inscripción. La remera se retira el día del evento.
-              </div>
-            )}
-            {dniBuscado && !isEditing && estaRegistrado && (
+            {dniBuscado && estaRegistrado && (
               <div className="bg-green-50 border border-green-200 text-green-800 text-sm px-3 py-2 rounded-md">
                 Inscripción encontrada. Datos precargados.
+              </div>
+            )}
+            {dniBuscado && !estaRegistrado && !isEditing && (
+              <div className="bg-gray-50 border border-gray-200 text-gray-700 text-xs px-3 py-2 rounded-md">
+                No encontramos inscripción del evento, pero podés pedir igual la remera.
               </div>
             )}
 
@@ -453,6 +484,13 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
               </div>
             )}
 
+            {dniBuscado && getFaltantes().length > 0 && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                <p className="font-semibold mb-1">Falta completar:</p>
+                <p>{getFaltantes().join(", ")}</p>
+              </div>
+            )}
+
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 space-y-1">
               <p className="font-semibold">Precio: $32.000 por remera</p>
               {aliasRemera && (
@@ -484,7 +522,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
               className="w-full bg-red-600 text-white hover:bg-red-700"
             >
               {enviando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {isEditing ? "Guardar cambios" : "Enviar pedido"}
+              {isEditing && !wantAddNew ? "Guardar cambios" : "Enviar pedido"}
             </Button>
           </div>
         )}
@@ -494,10 +532,10 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
             <CheckCircle2 className="h-16 w-16 text-green-500" />
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                {isEditing ? "¡Pedido actualizado!" : "¡Pedido registrado!"}
+                {isEditing && !wantAddNew ? "¡Pedido actualizado!" : "¡Pedido registrado!"}
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                {isEditing
+                {isEditing && !wantAddNew
                   ? "Tu pedido fue actualizado correctamente."
                   : "Tu solicitud de remera fue enviada. Nos pondremos en contacto."}
               </p>
