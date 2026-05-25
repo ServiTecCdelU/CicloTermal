@@ -71,6 +71,7 @@ export function useCachedCollection(
     if (cached) {
       setData(cached)
       setLoading(false)
+      return // Cache fresco, no va al servidor
     }
 
     let cancelled = false
@@ -115,6 +116,7 @@ export function useCachedDoc(
     if (cached) {
       setData(cached)
       setLoading(false)
+      return // Cache fresco, no va al servidor
     }
 
     let cancelled = false

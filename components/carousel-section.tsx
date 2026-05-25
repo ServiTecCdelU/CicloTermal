@@ -88,23 +88,25 @@ export default function CarouselSection() {
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
+  const slidesLen = slides.length
+
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1))
+    setCurrentSlide((prev) => (prev === slidesLen - 1 ? 0 : prev + 1))
   }
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1))
+    setCurrentSlide((prev) => (prev === 0 ? slidesLen - 1 : prev - 1))
   }
 
   useEffect(() => {
-    if (slides.length <= 1) return
+    if (slidesLen <= 1) return
 
     const interval = setInterval(() => {
-      nextSlide()
+      setCurrentSlide((prev) => (prev === slidesLen - 1 ? 0 : prev + 1))
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [currentSlide])
+  }, [slidesLen])
 
   return (
     <div className="relative h-screen overflow-hidden">

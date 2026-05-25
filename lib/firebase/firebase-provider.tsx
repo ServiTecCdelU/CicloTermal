@@ -38,11 +38,40 @@ const defaultSettings = {
   edicion: "",
 }
 
+const SETTINGS_CACHE_KEY = "ciclotermal_settings_v2"
+const SETTINGS_TTL = 30 * 60 * 1000 // 30 minutos
+
+function loadSettingsCache() {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = localStorage.getItem(SETTINGS_CACHE_KEY)
+    if (!raw) return null
+    const { data, ts } = JSON.parse(raw)
+    if (Date.now() - ts > SETTINGS_TTL) return null
+    return data
+  } catch {
+    return null
+  }
+}
+
+function saveSettingsCache(data: any) {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }))
+  } catch {}
+}
+
 export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [eventSettings, setEventSettings] = useState<any>(null)
-  const [ciclosConfig, setCiclosConfig] = useState<CicloConfig[]>([])
+  const [eventSettings, setEventSettings] = useState<any>(() => {
+    const cached = loadSettingsCache()
+    return cached?.eventSettings ?? null
+  })
+  const [ciclosConfig, setCiclosConfig] = useState<CicloConfig[]>(() => {
+    const cached = loadSettingsCache()
+    return cached?.ciclos ?? []
+  })
 
   useEffect(() => {
     // Sesión inicial
@@ -57,18 +86,27 @@ export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false)
     })
 
-    // Cargar settings y configuración de ciclos
+    // Cargar settings y configuración de ciclos (con cache)
     const fetchSettings = async () => {
+      const cached = loadSettingsCache()
+      if (cached) {
+        setEventSettings(cached.eventSettings ?? defaultSettings)
+        if (cached.ciclos) setCiclosConfig(cached.ciclos)
+        return
+      }
+
       try {
         const [settingsRes, ciclosRes] = await Promise.all([
           supabase.from("settings").select("data").eq("id", "eventSettings").single(),
           supabase.from("configuracion").select("data").eq("id", "inscripciones").single(),
         ])
 
-        setEventSettings(settingsRes.data?.data ?? defaultSettings)
-        if (ciclosRes.data?.data?.ciclos) {
-          setCiclosConfig(ciclosRes.data.data.ciclos)
-        }
+        const evSettings = settingsRes.data?.data ?? defaultSettings
+        const ciclos = ciclosRes.data?.data?.ciclos ?? []
+
+        setEventSettings(evSettings)
+        if (ciclos.length) setCiclosConfig(ciclos)
+        saveSettingsCache({ eventSettings: evSettings, ciclos })
       } catch {
         setEventSettings(defaultSettings)
       }

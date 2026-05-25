@@ -1,49 +1,75 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
 import AdminSidebar from "@/components/admin/admin-sidebar"
 import { AdminDataProvider } from "@/lib/admin-data-context"
+
+const ROLE_CACHE_KEY = "admin_role_v1"
 
 export default function AdminLayout({ children }) {
   const router = useRouter()
   const pathname = usePathname()
   const [loading, setLoading] = useState(true)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const roleResolved = useRef(false)
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!session?.user && pathname !== "/admin") {
-        router.push("/admin")
+    const resolveRole = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session?.user) {
+        if (window.location.pathname !== "/admin") router.push("/admin")
         setLoading(false)
         return
       }
 
-      if (session?.user) {
-        try {
-          const { data } = await supabase
-            .from("admins")
-            .select("role")
-            .eq("email", session.user.email)
-            .single()
-
-          const role = data?.role ?? null
-          setUserRole(role)
-
-          if (role === "remera" && pathname !== "/admin/remera" && pathname !== "/admin") {
-            router.push("/admin/remera")
-          }
-        } catch {
-          // Si falla la consulta de rol, dejar pasar
+      // Usa rol cacheado en sessionStorage para evitar DB query en cada navegación
+      const cachedRole = sessionStorage.getItem(ROLE_CACHE_KEY)
+      if (cachedRole !== null) {
+        const role = cachedRole || null
+        setUserRole(role)
+        if (role === "remera" && window.location.pathname !== "/admin/remera" && window.location.pathname !== "/admin") {
+          router.push("/admin/remera")
         }
+        setLoading(false)
+        return
       }
 
+      try {
+        const { data } = await supabase
+          .from("admins")
+          .select("role")
+          .eq("email", session.user.email)
+          .single()
+
+        const role = data?.role ?? ""
+        sessionStorage.setItem(ROLE_CACHE_KEY, role)
+        setUserRole(role || null)
+
+        if (role === "remera" && window.location.pathname !== "/admin/remera" && window.location.pathname !== "/admin") {
+          router.push("/admin/remera")
+        }
+      } catch {}
+
       setLoading(false)
+    }
+
+    if (!roleResolved.current) {
+      roleResolved.current = true
+      resolveRole()
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        sessionStorage.removeItem(ROLE_CACHE_KEY)
+        router.push("/admin")
+      }
     })
 
     return () => subscription.unsubscribe()
-  }, [router, pathname])
+  }, [router])
 
   if (loading) {
     return (
