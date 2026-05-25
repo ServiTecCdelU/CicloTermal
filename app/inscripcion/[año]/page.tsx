@@ -187,6 +187,7 @@ export default function InscripcionAño() {
   const [gruposFirebase, setGruposFirebase] = useState<string[]>([])
   const [dniLookingUp, setDniLookingUp] = useState(false)
   const [dniFound, setDniFound] = useState(false)
+  const [isEdicion, setIsEdicion] = useState(false)
   const [formData, setFormData] = useState(emptyForm)
   const [datosPago1, setDatosPago1] = useState("")
   const [datosPago2, setDatosPago2] = useState("")
@@ -288,10 +289,20 @@ export default function InscripcionAño() {
           const parsed = parseFecha(String(existing.fecha_nacimiento))
           if (parsed) setBirthDate(parsed)
         }
+        const años: number[] = existing.años ?? []
+        const esEdicion = años.includes(añoParam)
+        setIsEdicion(esEdicion)
         setDniFound(true)
-        toast({ title: "Perfil encontrado", description: "Se precargaron tus datos personales.", variant: "success" })
+        toast({
+          title: esEdicion ? "Edición de inscripción" : "Perfil encontrado",
+          description: esEdicion
+            ? "Ya estás inscripto este año. Tus datos se cargaron para editar."
+            : "Se precargaron tus datos personales.",
+          variant: "success",
+        })
       } else {
         setDniFound(false)
+        setIsEdicion(false)
       }
     } catch {
       // El usuario puede completar los datos manualmente
@@ -328,6 +339,7 @@ export default function InscripcionAño() {
     setFieldErrors({})
     setCurrentStep(1)
     setDniFound(false)
+    setIsEdicion(false)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -579,12 +591,21 @@ export default function InscripcionAño() {
                 Información Personal
               </h3>
 
-              {dniFound && (
+              {dniFound && !isEdicion && (
                 <Alert className="mb-4 bg-green-50 border-green-200">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <AlertTitle className="text-green-800">Perfil encontrado</AlertTitle>
                   <AlertDescription className="text-green-700">
                     Se precargaron tus datos personales. Revisalos y actualizalos si es necesario.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {dniFound && isEdicion && (
+                <Alert className="mb-4 bg-amber-50 border-amber-300">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertTitle className="text-amber-800 font-bold">ES EDICIÓN</AlertTitle>
+                  <AlertDescription className="text-amber-700">
+                    Ya tenés una inscripción para {añoParam}. Al completar el formulario, se actualizarán tus datos.
                   </AlertDescription>
                 </Alert>
               )}
@@ -994,7 +1015,7 @@ export default function InscripcionAño() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button type="button" variant="ghost" className="text-gray-500 hover:text-gray-700"
-                    onClick={() => { setFormData(emptyForm); setBirthDate(undefined); setFieldErrors({}); setDniFound(false) }}>
+                    onClick={() => { setFormData(emptyForm); setBirthDate(undefined); setFieldErrors({}); setDniFound(false); setIsEdicion(false) }}>
                     Limpiar formulario
                   </Button>
                 </TooltipTrigger>

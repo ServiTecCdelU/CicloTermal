@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabaseAdmin
     .from("participantes")
-    .select("nombre, apellido, email, telefono, pais_telefono, telefono_emergencia, pais_telefono_emergencia, fecha_nacimiento, localidad, grupo_sanguineo, genero, grupo_ciclistas")
+    .select("nombre, apellido, email, telefono, pais_telefono, telefono_emergencia, pais_telefono_emergencia, fecha_nacimiento, localidad, grupo_sanguineo, genero, grupo_ciclistas, años")
     .eq("dni", dni)
     .maybeSingle()
 
