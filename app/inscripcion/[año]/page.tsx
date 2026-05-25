@@ -253,17 +253,15 @@ export default function InscripcionAño() {
     return map[v?.toLowerCase()] ?? v
   }
 
-  // Lookup DNI en participantesCicloTermal
+  // Lookup DNI via API route (usa service role para bypasear RLS)
   const lookupDni = async (dni: string) => {
     if (!dni || dni.length < 7) return
     setDniLookingUp(true)
     try {
-      const { data: existing } = await supabase
-        .from("participantes")
-        .select("*")
-        .eq("dni", dni.trim())
-        .maybeSingle()
-      if (existing) {
+      const res = await fetch(`/api/lookup-participant?dni=${encodeURIComponent(dni.trim())}`)
+      const json = await res.json()
+      if (json.found && json.data) {
+        const existing = json.data
         const grupoSanguineo = existing.grupo_sanguineo ? String(existing.grupo_sanguineo).toUpperCase() : undefined
         const genero = existing.genero ? normalizeGenero(String(existing.genero)) : undefined
         setFormData((prev) => ({
@@ -291,7 +289,7 @@ export default function InscripcionAño() {
         setDniFound(false)
       }
     } catch {
-      // Silenciar — el usuario puede completar los datos manualmente
+      // El usuario puede completar los datos manualmente
     } finally {
       setDniLookingUp(false)
     }
