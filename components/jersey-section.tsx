@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect, useRef } from "react"
 import { SectionTitle } from "@/components/section-title"
 import { useFirebaseContext } from "@/lib/firebase/firebase-provider"
 import { useCachedDoc } from "@/lib/use-cached-firestore"
-import { supabase } from "@/lib/supabase/client"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -82,9 +81,10 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const [wantAddNew, setWantAddNew] = useState(false)
 
   useEffect(() => {
-    supabase.from("settings").select("data").eq("id", "remera").single().then(({ data: row }) => {
-      setAliasRemera(row?.data?.alias ?? null)
-    })
+    fetch("/api/remera/settings")
+      .then((r) => r.json())
+      .then((json) => setAliasRemera(json.alias ?? null))
+      .catch(() => {})
   }, [])
 
   const lastDniBuscado = useRef("")
@@ -98,44 +98,50 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     }
   }, [dni])
 
+  const aplicarResultadoBusqueda = (part: { nombre?: string; apellido?: string; telefono?: string } | null, existingRemera: Record<string, unknown> | null) => {
+    if (part) {
+      setNombre(`${part.nombre || ""} ${part.apellido || ""}`.trim())
+      setTelefono(part.telefono || "")
+      setEstaRegistrado(true)
+    } else {
+      setNombre("")
+      setTelefono("")
+      setEstaRegistrado(false)
+    }
+
+    if (existingRemera) {
+      const rItems = existingRemera.items as RemeraItem[] | undefined
+      if (rItems?.length) {
+        setItems(rItems)
+      } else if (existingRemera.talle) {
+        setItems([{ talle: existingRemera.talle as string, cantidad: 1 }])
+      }
+      if (!part) {
+        setNombre((existingRemera.nombre as string) || "")
+        setTelefono((existingRemera.telefono as string) || "")
+      }
+      setExistingTieneComprobante((existingRemera.tiene_comprobante as boolean) ?? false)
+      setEnvioTipo((existingRemera.envio_tipo as "retiro" | "envio" | "") || "")
+      setDireccion((existingRemera.direccion as string) || "")
+      setIsEditing(true)
+    } else {
+      setItems([{ talle: "", cantidad: 1 }])
+      setIsEditing(false)
+      setExistingTieneComprobante(false)
+      setEnvioTipo("")
+      setDireccion("")
+    }
+
+    setDniBuscado(true)
+  }
+
   const buscarPorDniAuto = async (dniVal: string) => {
     setBuscando(true)
     try {
-      const { data: part } = await withTimeout(supabase.from("participantes").select("dni, nombre, apellido, telefono").eq("dni", dniVal).maybeSingle())
-      if (part) {
-        setNombre(`${part.nombre || ""} ${part.apellido || ""}`.trim())
-        setTelefono(part.telefono || "")
-        setEstaRegistrado(true)
-      } else {
-        setNombre("")
-        setTelefono("")
-        setEstaRegistrado(false)
-      }
-
-      const { data: existingRemera } = await withTimeout(supabase.from("remera").select("*").eq("dni", dniVal).single())
-      if (existingRemera) {
-        if (existingRemera.items?.length) {
-          setItems(existingRemera.items)
-        } else if (existingRemera.talle) {
-          setItems([{ talle: existingRemera.talle, cantidad: 1 }])
-        }
-        if (!part) {
-          setNombre(existingRemera.nombre || "")
-          setTelefono(existingRemera.telefono || "")
-        }
-        setExistingTieneComprobante(existingRemera.tiene_comprobante ?? false)
-        setEnvioTipo(existingRemera.envio_tipo || "")
-        setDireccion(existingRemera.direccion || "")
-        setIsEditing(true)
-      } else {
-        setItems([{ talle: "", cantidad: 1 }])
-        setIsEditing(false)
-        setExistingTieneComprobante(false)
-        setEnvioTipo("")
-        setDireccion("")
-      }
-
-      setDniBuscado(true)
+      const res = await withTimeout(fetch(`/api/remera/lookup?dni=${encodeURIComponent(dniVal)}`))
+      if (!res.ok) return
+      const json = await res.json()
+      aplicarResultadoBusqueda(json.participante, json.remera)
     } catch {
       // silencioso en auto-búsqueda
     } finally {
@@ -178,43 +184,10 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     }
     setBuscando(true)
     try {
-      // Buscar inscripción
-      const { data: part } = await withTimeout(supabase.from("participantes").select("dni, nombre, apellido, telefono").eq("dni", dni.trim()).maybeSingle())
-      if (part) {
-        setNombre(`${part.nombre || ""} ${part.apellido || ""}`.trim())
-        setTelefono(part.telefono || "")
-        setEstaRegistrado(true)
-      } else {
-        setNombre("")
-        setTelefono("")
-        setEstaRegistrado(false)
-      }
-
-      // Buscar pedido de remera existente
-      const { data: existingRemera } = await withTimeout(supabase.from("remera").select("*").eq("dni", dni.trim()).single())
-      if (existingRemera) {
-        if (existingRemera.items?.length) {
-          setItems(existingRemera.items)
-        } else if (existingRemera.talle) {
-          setItems([{ talle: existingRemera.talle, cantidad: 1 }])
-        }
-        if (!part) {
-          setNombre(existingRemera.nombre || "")
-          setTelefono(existingRemera.telefono || "")
-        }
-        setExistingTieneComprobante(existingRemera.tiene_comprobante ?? false)
-        setEnvioTipo(existingRemera.envio_tipo || "")
-        setDireccion(existingRemera.direccion || "")
-        setIsEditing(true)
-      } else {
-        setItems([{ talle: "", cantidad: 1 }])
-        setIsEditing(false)
-        setExistingTieneComprobante(false)
-        setEnvioTipo("")
-        setDireccion("")
-      }
-
-      setDniBuscado(true)
+      const res = await withTimeout(fetch(`/api/remera/lookup?dni=${encodeURIComponent(dni.trim())}`))
+      if (!res.ok) throw new Error("Error al consultar")
+      const json = await res.json()
+      aplicarResultadoBusqueda(json.participante, json.remera)
     } catch {
       toast({ title: "Error", description: "No se pudo consultar el DNI.", variant: "destructive" })
     } finally {
@@ -299,39 +272,30 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
 
     setEnviando(true)
     try {
-      const { data: remeraRow, error: upsertError } = await withTimeout(
-        supabase
-          .from("remera")
-          .upsert(
-            {
-              dni: dni.trim(),
-              nombre: nombre.trim(),
-              telefono: telefono.trim(),
-              items: validItems,
-              tiene_comprobante: !!comprobante || existingTieneComprobante,
-              esta_registrado: estaRegistrado,
-              envio_tipo: envioTipo,
-              direccion: envioTipo === "envio" ? direccion.trim() : null,
-              estado: isEditing ? undefined : "pendiente",
-              fecha_solicitud: isEditing ? undefined : new Date().toISOString(),
-            },
-            { onConflict: "dni" }
-          )
-          .select("id")
-          .single()
-      )
-
-      if (upsertError) throw upsertError
-
-      // Subir comprobante en segundo plano para no bloquear el feedback al usuario
-      if (comprobante && remeraRow?.id) {
-        convertToBase64(comprobante).then((comprobanteBase64) => {
-          supabase.from("remera_comprobantes").upsert({
-            id: remeraRow.id,
-            comprobante_base64: comprobanteBase64,
-          })
-        })
+      let comprobanteBase64: string | null = null
+      if (comprobante) {
+        comprobanteBase64 = await convertToBase64(comprobante)
       }
+
+      const res = await withTimeout(fetch("/api/remera/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dni: dni.trim(),
+          nombre: nombre.trim(),
+          telefono: telefono.trim(),
+          items: validItems,
+          tiene_comprobante: !!comprobante || existingTieneComprobante,
+          esta_registrado: estaRegistrado,
+          envio_tipo: envioTipo,
+          direccion: direccion.trim(),
+          isEditing,
+          comprobanteBase64,
+        }),
+      }))
+
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Error al guardar")
 
       setStep("success")
     } catch (err: unknown) {

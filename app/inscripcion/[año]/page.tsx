@@ -254,20 +254,22 @@ export default function InscripcionAño() {
     return map[v?.toLowerCase()] ?? v
   }
 
-  // Lookup DNI via API route (usa service role para bypasear RLS)
+  // Lookup DNI directo con cliente anon (misma forma que el submit)
   const lookupDni = async (dni: string) => {
     if (!dni || dni.length < 7) return
     setDniLookingUp(true)
     try {
-      const res = await fetch(`/api/lookup-participant?dni=${encodeURIComponent(dni.trim())}`)
-      const json = await res.json()
-      if (!res.ok) {
-        console.error("[lookupDni] API error:", json.error)
+      const { data: existing, error } = await supabase
+        .from("participantes")
+        .select("nombre, apellido, email, telefono, pais_telefono, telefono_emergencia, pais_telefono_emergencia, fecha_nacimiento, localidad, grupo_sanguineo, genero, grupo_ciclistas, años")
+        .eq("dni", dni.trim())
+        .maybeSingle()
+      if (error) {
+        console.error("[lookupDni] error:", error)
         setDniFound(false)
         return
       }
-      if (json.found && json.data) {
-        const existing = json.data
+      if (existing) {
         const grupoSanguineo = existing.grupo_sanguineo ? String(existing.grupo_sanguineo).toUpperCase() : undefined
         const genero = existing.genero ? normalizeGenero(String(existing.genero)) : undefined
         setFormData((prev) => ({
