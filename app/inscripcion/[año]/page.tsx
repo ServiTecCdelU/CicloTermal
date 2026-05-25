@@ -254,58 +254,48 @@ export default function InscripcionAño() {
     return map[v?.toLowerCase()] ?? v
   }
 
-  // Lookup DNI directo con cliente anon (misma forma que el submit)
+  // Lookup DNI via API route con service role (bypasea RLS)
   const lookupDni = async (dni: string) => {
     if (!dni || dni.length < 7) return
     setDniLookingUp(true)
     try {
-      const { data: existing, error } = await supabase
-        .from("participantes")
-        .select("nombre, apellido, email, telefono, pais_telefono, telefono_emergencia, pais_telefono_emergencia, fecha_nacimiento, localidad, grupo_sanguineo, genero, grupo_ciclistas, años")
-        .eq("dni", dni.trim())
-        .maybeSingle()
-      if (error) {
-        console.error("[lookupDni] error:", error)
-        setDniFound(false)
-        return
+      const res = await fetch(`/api/lookup-participant?dni=${encodeURIComponent(dni.trim())}`)
+      if (!res.ok) { setDniFound(false); return }
+      const json = await res.json()
+      if (!json.found || !json.data) { setDniFound(false); setIsEdicion(false); return }
+      const existing = json.data
+      const grupoSanguineo = existing.grupo_sanguineo ? String(existing.grupo_sanguineo).toUpperCase() : undefined
+      const genero = existing.genero ? normalizeGenero(String(existing.genero)) : undefined
+      setFormData((prev) => ({
+        ...prev,
+        nombre: existing.nombre ?? prev.nombre,
+        apellido: existing.apellido ?? prev.apellido,
+        email: existing.email ?? prev.email,
+        telefono: existing.telefono ?? prev.telefono,
+        paisTelefono: existing.pais_telefono ?? prev.paisTelefono,
+        telefonoEmergencia: existing.telefono_emergencia ?? prev.telefonoEmergencia,
+        paisTelefonoEmergencia: existing.pais_telefono_emergencia ?? prev.paisTelefonoEmergencia,
+        fechaNacimiento: existing.fecha_nacimiento ?? prev.fechaNacimiento,
+        localidad: existing.localidad ?? prev.localidad,
+        grupoSanguineo: grupoSanguineo ?? prev.grupoSanguineo,
+        genero: genero ?? prev.genero,
+        grupoCiclistas: existing.grupo_ciclistas ?? prev.grupoCiclistas,
+      }))
+      if (existing.fecha_nacimiento) {
+        const parsed = parseFecha(String(existing.fecha_nacimiento))
+        if (parsed) setBirthDate(parsed)
       }
-      if (existing) {
-        const grupoSanguineo = existing.grupo_sanguineo ? String(existing.grupo_sanguineo).toUpperCase() : undefined
-        const genero = existing.genero ? normalizeGenero(String(existing.genero)) : undefined
-        setFormData((prev) => ({
-          ...prev,
-          nombre: existing.nombre ?? prev.nombre,
-          apellido: existing.apellido ?? prev.apellido,
-          email: existing.email ?? prev.email,
-          telefono: existing.telefono ?? prev.telefono,
-          paisTelefono: existing.pais_telefono ?? prev.paisTelefono,
-          telefonoEmergencia: existing.telefono_emergencia ?? prev.telefonoEmergencia,
-          paisTelefonoEmergencia: existing.pais_telefono_emergencia ?? prev.paisTelefonoEmergencia,
-          fechaNacimiento: existing.fecha_nacimiento ?? prev.fechaNacimiento,
-          localidad: existing.localidad ?? prev.localidad,
-          grupoSanguineo: grupoSanguineo ?? prev.grupoSanguineo,
-          genero: genero ?? prev.genero,
-          grupoCiclistas: existing.grupo_ciclistas ?? prev.grupoCiclistas,
-        }))
-        if (existing.fecha_nacimiento) {
-          const parsed = parseFecha(String(existing.fecha_nacimiento))
-          if (parsed) setBirthDate(parsed)
-        }
-        const años: number[] = existing.años ?? []
-        const esEdicion = años.includes(añoParam)
-        setIsEdicion(esEdicion)
-        setDniFound(true)
-        toast({
-          title: esEdicion ? "Edición de inscripción" : "Perfil encontrado",
-          description: esEdicion
-            ? "Ya estás inscripto este año. Tus datos se cargaron para editar."
-            : "Se precargaron tus datos personales.",
-          variant: "success",
-        })
-      } else {
-        setDniFound(false)
-        setIsEdicion(false)
-      }
+      const años: number[] = existing.años ?? []
+      const esEdicion = años.includes(añoParam)
+      setIsEdicion(esEdicion)
+      setDniFound(true)
+      toast({
+        title: esEdicion ? "Edición de inscripción" : "Perfil encontrado",
+        description: esEdicion
+          ? "Ya estás inscripto este año. Tus datos se cargaron para editar."
+          : "Se precargaron tus datos personales.",
+        variant: "success",
+      })
     } catch {
       // El usuario puede completar los datos manualmente
     } finally {
