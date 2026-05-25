@@ -260,6 +260,11 @@ export default function InscripcionAño() {
     try {
       const res = await fetch(`/api/lookup-participant?dni=${encodeURIComponent(dni.trim())}`)
       const json = await res.json()
+      if (!res.ok) {
+        console.error("[lookupDni] API error:", json.error)
+        setDniFound(false)
+        return
+      }
       if (json.found && json.data) {
         const existing = json.data
         const grupoSanguineo = existing.grupo_sanguineo ? String(existing.grupo_sanguineo).toUpperCase() : undefined

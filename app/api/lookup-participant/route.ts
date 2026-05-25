@@ -18,7 +18,8 @@ export async function GET(request: Request) {
     .maybeSingle()
 
   if (error) {
-    return NextResponse.json({ error: "Error al buscar participante" }, { status: 500 })
+    console.error("[lookup-participant] Supabase error:", JSON.stringify(error))
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
   if (!data) {
