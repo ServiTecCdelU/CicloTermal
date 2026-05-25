@@ -57,7 +57,11 @@
       "Bash(find /c/Users/Emanuel/Documents/Proyectos/CicloTermal/app -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -l \"collection\\\\|doc\\(\" {} \\\\;)",
       "Bash(find /c/Users/Emanuel/Documents/Proyectos/CicloTermal/components -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -l \"collection\\\\|doc\\(\" {} \\\\;)",
       "Bash(node scripts/migrate-to-supabase.js)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(echo \"cicloturismo.json\")",
+      "Bash(echo \"supabase.txt\")",
+      "Bash(grep -n \"dynamic\\\\|lazy\" components/*.tsx)"
     ]
   }
 }

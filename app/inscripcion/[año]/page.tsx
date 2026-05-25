@@ -448,21 +448,11 @@ export default function InscripcionAño() {
     topRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  const getNextRegistrationNumber = async () => {
-    try {
-      const { data: rows } = await supabase.from("participantes").select("dni").contains("años", [añoParam])
-      return (rows?.length ?? 0) + 1
-    } catch {
-      return Date.now()
-    }
-  }
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) return
     setIsSubmitting(true)
     try {
-      const numeroInscripcion = await getNextRegistrationNumber()
       let imagenBase64 = ""
       if (formData.comprobantePago) {
         try {
@@ -479,7 +469,6 @@ export default function InscripcionAño() {
         esCeliaco: formData.esCeliaco || "no",
       })
 
-      // Perfil personal (se actualiza siempre)
       const perfilPersonal = {
         nombre: formData.nombre,
         apellido: formData.apellido,
@@ -488,7 +477,6 @@ export default function InscripcionAño() {
         paisTelefono: formData.paisTelefono || "Argentina",
         telefonoEmergencia: formData.telefonoEmergencia || "",
         paisTelefonoEmergencia: formData.paisTelefonoEmergencia || "Argentina",
-        dni: formData.dni,
         fechaNacimiento: formData.fechaNacimiento || "",
         genero: formData.genero || "",
         grupoSanguineo: formData.grupoSanguineo || "",
@@ -496,69 +484,39 @@ export default function InscripcionAño() {
         localidad: formData.localidad || "",
         grupoCiclistas: formData.grupoCiclistas || "",
         imagenBase64,
-        nombreArchivo: formData.comprobantePago?.name || "comprobante.jpg",
       }
 
-      // Datos del ciclo vigente (se pisan)
       const datosCiclo = {
         talleRemera: formData.talleRemera || "",
-        precio: "",
-        estado: "pendiente",
-        comprobantePagoUrl: "",
-        numeroInscripcion,
         aceptaTerminos: formData.aceptaCondiciones,
-        fechaInscripcion: new Date().toISOString(),
-        fechaActualizacion: new Date().toISOString(),
-        // Campos de transferencia del ciclo actual
         nombreTransferencia: formData.nombreTransferencia || "",
       }
 
-      // Leer años actuales del participante (si existe)
-      const { data: existingPart } = await supabase.from("participantes").select("años").eq("dni", formData.dni).maybeSingle()
-      const currentAños: number[] = existingPart?.años ?? []
-      const newAños = [...new Set([...currentAños, añoParam])]
+      const grupoIngresado = formData.grupoCiclistas.trim()
+      const todosActuales = [...new Set([...gruposCiclistas, ...gruposFirebase])]
+      const gruposExistentes = todosActuales
 
-      await supabase.from("participantes").upsert({
-        dni: formData.dni,
-        nombre: perfilPersonal.nombre,
-        apellido: perfilPersonal.apellido,
-        email: perfilPersonal.email,
-        telefono: perfilPersonal.telefono,
-        pais_telefono: perfilPersonal.paisTelefono,
-        telefono_emergencia: perfilPersonal.telefonoEmergencia,
-        pais_telefono_emergencia: perfilPersonal.paisTelefonoEmergencia,
-        fecha_nacimiento: perfilPersonal.fechaNacimiento,
-        localidad: perfilPersonal.localidad,
-        grupo_sanguineo: perfilPersonal.grupoSanguineo,
-        genero: perfilPersonal.genero,
-        grupo_ciclistas: perfilPersonal.grupoCiclistas,
-        talle_remera: datosCiclo.talleRemera,
-        condiciones_salud: perfilPersonal.condicionSalud ?? null,
-        es_celiaco: null,
-        nombre_transferencia: datosCiclo.nombreTransferencia ?? "",
-        precio: datosCiclo.precio ?? "",
-        estado: datosCiclo.estado ?? "pendiente",
-        comprobante_pago_url: datosCiclo.comprobantePagoUrl ?? null,
-        acepta_condiciones: datosCiclo.aceptaTerminos ?? false,
-        fecha_inscripcion: datosCiclo.fechaInscripcion,
-        numero_inscripcion: datosCiclo.numeroInscripcion,
-        años: newAños,
+      const res = await fetch("/api/inscripcion/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dni: formData.dni,
+          añoParam,
+          perfilPersonal,
+          datosCiclo,
+          grupoIngresado,
+          gruposExistentes,
+        }),
       })
 
-      // Guardar grupo nuevo si no estaba en la lista
-      const grupoIngresado = formData.grupoCiclistas.trim()
-      if (grupoIngresado && grupoIngresado !== "No pertenezco a ninguno") {
-        const todosActuales = [...new Set([...gruposCiclistas, ...gruposFirebase])]
-        if (!todosActuales.some((g) => g.toLowerCase() === grupoIngresado.toLowerCase())) {
-          try {
-            const { data: currentConfig } = await supabase.from("configuracion").select("data").eq("id", "grupos").single()
-            const listaActual: string[] = currentConfig?.data?.lista ?? []
-            if (!listaActual.some((g: string) => g.toLowerCase() === grupoIngresado.toLowerCase())) {
-              await supabase.from("configuracion").upsert({ id: "grupos", data: { lista: [...listaActual, grupoIngresado] } })
-            }
-            setGruposFirebase((prev) => [...prev, grupoIngresado])
-          } catch {}
-        }
+      const json = await res.json()
+      if (!res.ok) {
+        toast({ title: "No se pudo completar la inscripción", description: json.error || "Revisá tu conexión e intentá de nuevo", variant: "destructive" })
+        return
+      }
+
+      if (grupoIngresado && grupoIngresado !== "No pertenezco a ninguno" && !gruposExistentes.some((g) => g.toLowerCase() === grupoIngresado.toLowerCase())) {
+        setGruposFirebase((prev) => [...prev, grupoIngresado])
       }
 
       setSubmitted(true)

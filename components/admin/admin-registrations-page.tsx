@@ -96,7 +96,7 @@ const parseHealthConditions = (condicionSalud) => {
   }
 }
 
-import AdminRegistrationsExcel from "./admin-registrations-excel"
+import { AdminRegistrationsExcel } from "./admin-registrations-excel"
 
 export default function AdminRegistrationsPage() {
   const [registrations, setRegistrations] = useState([])
