@@ -47,6 +47,15 @@ const defaultJerseyData: JerseyData = {
 
 const talles = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"]
 
+function withTimeout<T>(promise: PromiseLike<T>, ms = 10000): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("Sin respuesta del servidor. Verificá tu conexión.")), ms)
+    ),
+  ])
+}
+
 interface RemeraItem {
   talle: string
   cantidad: number
@@ -92,7 +101,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const buscarPorDniAuto = async (dniVal: string) => {
     setBuscando(true)
     try {
-      const { data: part } = await supabase.from("participantes").select("dni, nombre, apellido, telefono").eq("dni", dniVal).maybeSingle()
+      const { data: part } = await withTimeout(supabase.from("participantes").select("dni, nombre, apellido, telefono").eq("dni", dniVal).maybeSingle())
       if (part) {
         setNombre(`${part.nombre || ""} ${part.apellido || ""}`.trim())
         setTelefono(part.telefono || "")
@@ -103,7 +112,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
         setEstaRegistrado(false)
       }
 
-      const { data: existingRemera, error } = await supabase.from("remera").select("*").eq("dni", dniVal).single()
+      const { data: existingRemera } = await withTimeout(supabase.from("remera").select("*").eq("dni", dniVal).single())
       if (existingRemera) {
         if (existingRemera.items?.length) {
           setItems(existingRemera.items)
@@ -170,7 +179,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     setBuscando(true)
     try {
       // Buscar inscripción
-      const { data: part } = await supabase.from("participantes").select("dni, nombre, apellido, telefono").eq("dni", dni.trim()).maybeSingle()
+      const { data: part } = await withTimeout(supabase.from("participantes").select("dni, nombre, apellido, telefono").eq("dni", dni.trim()).maybeSingle())
       if (part) {
         setNombre(`${part.nombre || ""} ${part.apellido || ""}`.trim())
         setTelefono(part.telefono || "")
@@ -182,7 +191,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
       }
 
       // Buscar pedido de remera existente
-      const { data: existingRemera } = await supabase.from("remera").select("*").eq("dni", dni.trim()).single()
+      const { data: existingRemera } = await withTimeout(supabase.from("remera").select("*").eq("dni", dni.trim()).single())
       if (existingRemera) {
         if (existingRemera.items?.length) {
           setItems(existingRemera.items)
@@ -290,25 +299,27 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
 
     setEnviando(true)
     try {
-      const { data: remeraRow, error: upsertError } = await supabase
-        .from("remera")
-        .upsert(
-          {
-            dni: dni.trim(),
-            nombre: nombre.trim(),
-            telefono: telefono.trim(),
-            items: validItems,
-            tiene_comprobante: !!comprobante || existingTieneComprobante,
-            esta_registrado: estaRegistrado,
-            envio_tipo: envioTipo,
-            direccion: envioTipo === "envio" ? direccion.trim() : null,
-            estado: isEditing ? undefined : "pendiente",
-            fecha_solicitud: isEditing ? undefined : new Date().toISOString(),
-          },
-          { onConflict: "dni" }
-        )
-        .select("id")
-        .single()
+      const { data: remeraRow, error: upsertError } = await withTimeout(
+        supabase
+          .from("remera")
+          .upsert(
+            {
+              dni: dni.trim(),
+              nombre: nombre.trim(),
+              telefono: telefono.trim(),
+              items: validItems,
+              tiene_comprobante: !!comprobante || existingTieneComprobante,
+              esta_registrado: estaRegistrado,
+              envio_tipo: envioTipo,
+              direccion: envioTipo === "envio" ? direccion.trim() : null,
+              estado: isEditing ? undefined : "pendiente",
+              fecha_solicitud: isEditing ? undefined : new Date().toISOString(),
+            },
+            { onConflict: "dni" }
+          )
+          .select("id")
+          .single()
+      )
 
       if (upsertError) throw upsertError
 
