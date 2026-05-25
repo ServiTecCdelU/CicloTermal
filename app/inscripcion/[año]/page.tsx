@@ -260,8 +260,13 @@ export default function InscripcionAño() {
     setDniLookingUp(true)
     try {
       const res = await fetch(`/api/lookup-participant?dni=${encodeURIComponent(dni.trim())}`)
-      if (!res.ok) { setDniFound(false); return }
       const json = await res.json()
+      if (!res.ok) {
+        console.error("[lookupDni] API error:", json.error)
+        toast({ title: "Error al buscar DNI", description: json.error || "Error desconocido", variant: "destructive" })
+        setDniFound(false)
+        return
+      }
       if (!json.found || !json.data) { setDniFound(false); setIsEdicion(false); return }
       const existing = json.data
       const grupoSanguineo = existing.grupo_sanguineo ? String(existing.grupo_sanguineo).toUpperCase() : undefined
