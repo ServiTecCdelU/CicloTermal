@@ -290,7 +290,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
 
     setEnviando(true)
     try {
-      const { data: remeraRow } = await supabase
+      const { data: remeraRow, error: upsertError } = await supabase
         .from("remera")
         .upsert(
           {
@@ -310,17 +310,22 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
         .select("id")
         .single()
 
+      if (upsertError) throw upsertError
+
+      // Subir comprobante en segundo plano para no bloquear el feedback al usuario
       if (comprobante && remeraRow?.id) {
-        const comprobanteBase64 = await convertToBase64(comprobante)
-        await supabase.from("remera_comprobantes").upsert({
-          id: remeraRow.id,
-          comprobante_base64: comprobanteBase64,
+        convertToBase64(comprobante).then((comprobanteBase64) => {
+          supabase.from("remera_comprobantes").upsert({
+            id: remeraRow.id,
+            comprobante_base64: comprobanteBase64,
+          })
         })
       }
 
       setStep("success")
-    } catch {
-      toast({ title: "Error al guardar", description: "Intentá de nuevo.", variant: "destructive" })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : (err as { message?: string })?.message
+      toast({ title: "Error al guardar", description: msg || "Intentá de nuevo.", variant: "destructive" })
     } finally {
       setEnviando(false)
     }
