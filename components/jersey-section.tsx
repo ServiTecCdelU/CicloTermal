@@ -291,6 +291,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
           direccion: direccion.trim(),
           isEditing,
           comprobanteBase64,
+          nombreArchivo: comprobante?.name ?? null,
         }),
       }))
 
