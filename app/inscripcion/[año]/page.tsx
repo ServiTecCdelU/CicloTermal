@@ -478,6 +478,7 @@ export default function InscripcionAño() {
         condicionSalud,
         localidad: formData.localidad || "",
         grupoCiclistas: formData.grupoCiclistas || "",
+        imagenBase64,
       }
 
       const datosCiclo = {

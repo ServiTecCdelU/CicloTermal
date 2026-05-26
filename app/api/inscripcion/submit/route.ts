@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       nombre_transferencia: datosCiclo.nombreTransferencia || "",
       precio: "",
       estado: "pendiente",
-      comprobante_pago_url: null,
+      comprobante_pago_url: perfilPersonal.imagenBase64 || null,
       acepta_condiciones: datosCiclo.aceptaTerminos ?? false,
       fecha_inscripcion: new Date().toISOString(),
       numero_inscripcion: numeroInscripcion,
