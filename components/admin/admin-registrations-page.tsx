@@ -103,7 +103,7 @@ export default function AdminRegistrationsPage() {
   const [filteredRegistrations, setFilteredRegistrations] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [yearFilter, setYearFilter] = useState("all")
+  const [yearFilter, setYearFilter] = useState("2026")
   const [healthFilter, setHealthFilter] = useState("all")
   const [celiacFilter, setCeliacFilter] = useState("all")
   const [noteFilter, setNoteFilter] = useState("all")
@@ -165,14 +165,24 @@ export default function AdminRegistrationsPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await fetchRegistrations()
+    await fetchRegistrations(yearFilter)
     setTimeout(() => setRefreshing(false), 1000)
   }
 
-  const fetchRegistrations = async () => {
+  const fetchAvailableYears = async () => {
+    const { data } = await supabase.from("participantes").select("años").order("años", { ascending: false })
+    const years = [...new Set((data ?? []).map((r) => r.años).filter(Boolean))]
+    setAvailableYears(years.sort((a, b) => b - a))
+  }
+
+  const fetchRegistrations = async (year = yearFilter) => {
     setLoading(true)
     try {
-      const { data: rows } = await supabase.from("participantes").select("*").order("fecha_inscripcion", { ascending: false })
+      let query = supabase.from("participantes").select("*").order("fecha_inscripcion", { ascending: false })
+      if (year !== "all") {
+        query = query.eq("años", parseInt(year))
+      }
+      const { data: rows } = await query
 
       const registrationsData = (rows ?? []).map((r) => ({
         id: r.dni,
@@ -221,9 +231,6 @@ export default function AdminRegistrationsPage() {
         return bNum - aNum
       })
 
-      const years = [...new Set(registrationsData.map((reg) => reg.fechaInscripcion?.getFullYear()).filter(Boolean))]
-      setAvailableYears(years.sort((a, b) => b - a))
-
       setRegistrations(registrationsData)
       setFilteredRegistrations(registrationsData) // filteredRegistrations ya estará ordenado inicialmente
     } catch (error) {
@@ -234,8 +241,13 @@ export default function AdminRegistrationsPage() {
   }
 
   useEffect(() => {
-    fetchRegistrations()
+    fetchAvailableYears()
+    fetchRegistrations("2026")
   }, [])
+
+  useEffect(() => {
+    fetchRegistrations(yearFilter)
+  }, [yearFilter])
 
   useEffect(() => {
     let filtered = registrations
@@ -255,10 +267,6 @@ export default function AdminRegistrationsPage() {
 
     if (statusFilter !== "all") {
       filtered = filtered.filter((reg) => reg.estado === statusFilter)
-    }
-
-    if (yearFilter !== "all") {
-      filtered = filtered.filter((reg) => reg.fechaInscripcion?.getFullYear() === Number.parseInt(yearFilter))
     }
 
     if (healthFilter !== "all") {
@@ -310,7 +318,7 @@ export default function AdminRegistrationsPage() {
 
     setFilteredRegistrations(filtered)
     setCurrentPage(1)
-  }, [searchTerm, statusFilter, yearFilter, healthFilter, celiacFilter, noteFilter, registrations])
+  }, [searchTerm, statusFilter, healthFilter, celiacFilter, noteFilter, registrations])
 
   const loadComprobante = async (registration) => {
     setLoadingComprobante(true)
