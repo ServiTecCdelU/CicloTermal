@@ -13,6 +13,7 @@ const BenefitsSection = dynamic(() => import("@/components/benefits-section"), {
 const JerseySection = dynamic(() => import("@/components/jersey-section"), { loading: sectionFallback, ssr: false })
 const PhotosSection = dynamic(() => import("@/components/photos-section"), { loading: sectionFallback, ssr: false })
 const SponsorsSection = dynamic(() => import("@/components/sponsors-section"), { loading: sectionFallback, ssr: false })
+const BikeFriendlySection = dynamic(() => import("@/components/bike-friendly-section"), { loading: sectionFallback, ssr: false })
 const ContactSection = dynamic(() => import("@/components/contact-section"), { loading: sectionFallback, ssr: false })
 
 function BikeDivider() {
@@ -54,6 +55,10 @@ export default function Home() {
         <BikeDivider />
         <section id="sponsors" className="py-16">
           <SponsorsSection />
+        </section>
+        <BikeDivider />
+        <section id="bikefriendly" className="py-16 bg-gray-50">
+          <BikeFriendlySection />
         </section>
         <BikeDivider />
         <section id="contacto" className="py-16 bg-gray-50">
