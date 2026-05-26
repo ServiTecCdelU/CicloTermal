@@ -57,24 +57,25 @@ export async function POST(request: Request) {
       .select("años, numero_inscripcion")
       .eq("dni", dni)
       .maybeSingle()
-    const currentAños: number[] = existingPart?.años ?? []
-    const newAños = [...new Set([...currentAños, añoParam])]
-    const yaInscriptoEsteAño = currentAños.includes(añoParam)
+    const añoNum = Number(añoParam)
+    const currentAños: number[] = (existingPart?.años ?? []).map(Number)
+    const newAños = [...new Set([...currentAños, añoNum])]
+    const yaInscriptoEsteAño = currentAños.includes(añoNum)
 
-    // Número: si ya tiene uno para este año, conservarlo; si no, MAX+1 excluyendo al propio DNI
+    // Número: si ya tiene uno para este año, conservarlo
+    // Si no, calcular MAX en JS (evita problemas de tipo con .contains jsonb)
     let numeroInscripcion: number
     if (yaInscriptoEsteAño && existingPart?.numero_inscripcion) {
       numeroInscripcion = existingPart.numero_inscripcion
     } else {
-      const { data: maxRow } = await supabaseAdmin
+      const { data: allRows } = await supabaseAdmin
         .from("participantes")
-        .select("numero_inscripcion")
-        .contains("años", [añoParam])
+        .select("numero_inscripcion, años")
         .neq("dni", dni)
-        .order("numero_inscripcion", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      numeroInscripcion = (maxRow?.numero_inscripcion ?? 0) + 1
+      const maxNum = (allRows ?? [])
+        .filter((r) => (r.años ?? []).map(Number).includes(añoNum))
+        .reduce((max, r) => Math.max(max, Number(r.numero_inscripcion) || 0), 0)
+      numeroInscripcion = maxNum + 1
     }
 
     const { error } = await supabaseAdmin.from("participantes").upsert({
