@@ -51,21 +51,31 @@ export async function POST(request: Request) {
       comprobantePagoUrl = await subirComprobante(dni, perfilPersonal.imagenBase64, nombreArchivo)
     }
 
-    // Leer años actuales
+    // Leer datos actuales del participante
     const { data: existingPart } = await supabaseAdmin
       .from("participantes")
-      .select("años")
+      .select("años, numero_inscripcion")
       .eq("dni", dni)
       .maybeSingle()
     const currentAños: number[] = existingPart?.años ?? []
     const newAños = [...new Set([...currentAños, añoParam])]
+    const yaInscriptoEsteAño = currentAños.includes(añoParam)
 
-    // Obtener próximo número de inscripción
-    const { data: rows } = await supabaseAdmin
-      .from("participantes")
-      .select("dni")
-      .contains("años", [añoParam])
-    const numeroInscripcion = (rows?.length ?? 0) + 1
+    // Número: si ya tiene uno para este año, conservarlo; si no, MAX+1 excluyendo al propio DNI
+    let numeroInscripcion: number
+    if (yaInscriptoEsteAño && existingPart?.numero_inscripcion) {
+      numeroInscripcion = existingPart.numero_inscripcion
+    } else {
+      const { data: maxRow } = await supabaseAdmin
+        .from("participantes")
+        .select("numero_inscripcion")
+        .contains("años", [añoParam])
+        .neq("dni", dni)
+        .order("numero_inscripcion", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      numeroInscripcion = (maxRow?.numero_inscripcion ?? 0) + 1
+    }
 
     const { error } = await supabaseAdmin.from("participantes").upsert({
       dni,
