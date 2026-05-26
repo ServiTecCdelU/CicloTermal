@@ -228,7 +228,12 @@ export default function SponsorsEditor() {
     }
 
     try {
-      await supabase.from("sponsors").delete().eq("id", id)
+      const res = await fetch("/api/admin/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "sponsors", id }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
       showAlert("Sponsor eliminado exitosamente")
       loadSponsors()
     } catch (error) {

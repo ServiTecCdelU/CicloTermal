@@ -146,9 +146,18 @@ export default function BikeFriendlyEditor() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de que querés eliminar este alojamiento?")) return
-    await supabase.from("bike_friendly").delete().eq("id", id)
-    showAlert("Alojamiento eliminado exitosamente")
-    loadItems()
+    try {
+      const res = await fetch("/api/admin/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "bike_friendly", id }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      showAlert("Alojamiento eliminado exitosamente")
+      loadItems()
+    } catch (error) {
+      showAlert("Error al eliminar alojamiento", "error")
+    }
   }
 
   const moveItem = async (itemId: string, direction: "up" | "down") => {
