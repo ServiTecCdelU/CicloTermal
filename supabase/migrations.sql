@@ -30,4 +30,5 @@ CREATE TABLE IF NOT EXISTS form_fields (
   created_at timestamptz DEFAULT now()
 );
 ALTER TABLE form_fields ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_read" ON form_fields;
 CREATE POLICY "public_read" ON form_fields FOR SELECT USING (true);
