@@ -170,8 +170,8 @@ export default function AdminRegistrationsPage() {
   }
 
   const fetchAvailableYears = async () => {
-    const { data } = await supabase.from("participantes").select("años").order("años", { ascending: false })
-    const years = [...new Set((data ?? []).map((r) => r.años).filter(Boolean))]
+    const { data } = await supabase.from("participantes").select("fecha_inscripcion").order("fecha_inscripcion", { ascending: false })
+    const years = [...new Set((data ?? []).map((r) => r.fecha_inscripcion ? new Date(r.fecha_inscripcion).getFullYear() : null).filter(Boolean))]
     setAvailableYears(years.sort((a, b) => b - a))
   }
 
@@ -180,7 +180,8 @@ export default function AdminRegistrationsPage() {
     try {
       let query = supabase.from("participantes").select("*").order("fecha_inscripcion", { ascending: false })
       if (year !== "all") {
-        query = query.eq("años", parseInt(year))
+        const y = parseInt(year)
+        query = query.gte("fecha_inscripcion", `${y}-01-01`).lt("fecha_inscripcion", `${y + 1}-01-01`)
       }
       const { data: rows } = await query
 
@@ -244,10 +245,6 @@ export default function AdminRegistrationsPage() {
     fetchAvailableYears()
     fetchRegistrations("2026")
   }, [])
-
-  useEffect(() => {
-    fetchRegistrations(yearFilter)
-  }, [yearFilter])
 
   useEffect(() => {
     let filtered = registrations
@@ -1022,7 +1019,7 @@ export default function AdminRegistrationsPage() {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Select value={yearFilter} onValueChange={setYearFilter}>
+            <Select value={yearFilter} onValueChange={(val) => { setYearFilter(val); fetchRegistrations(val) }}>
               <SelectTrigger className="w-full sm:w-32 bg-white text-xs h-8">
                 <div className="flex items-center gap-1">
                   <CalendarDays className="h-3 w-3" />
