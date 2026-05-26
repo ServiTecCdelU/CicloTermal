@@ -30,6 +30,7 @@ interface RemeraDoc {
   fechaSolicitud: string
   envioTipo?: "retiro" | "envio"
   direccion?: string
+  comprobanteUrl?: string
 }
 
 const estadoColors: Record<string, string> = {
@@ -57,7 +58,7 @@ export default function RemeraAdminPage() {
   // Comprobante lazy + caché
   const [comprobanteCache, setComprobanteCache] = useState<Record<string, string>>({})
   const [fetchingComprobante, setFetchingComprobante] = useState<string | null>(null)
-  const [comprobanteModal, setComprobanteModal] = useState<{ record: RemeraDoc; base64: string } | null>(null)
+  const [comprobanteModal, setComprobanteModal] = useState<{ record: RemeraDoc; base64: string } | null>(null) // "base64" puede ser URL o base64
 
   const [alias, setAlias] = useState("")
   const [aliasGuardando, setAliasGuardando] = useState(false)
@@ -79,6 +80,7 @@ export default function RemeraAdminPage() {
         fechaSolicitud: r.fecha_solicitud,
         envioTipo: r.envio_tipo,
         direccion: r.direccion,
+        comprobanteUrl: r.comprobante_url ?? undefined,
       }))
       docs.sort((a, b) => new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime())
       setRemeras(docs)
@@ -109,6 +111,12 @@ export default function RemeraAdminPage() {
   }
 
   const verComprobante = async (r: RemeraDoc) => {
+    // URL de Storage (nuevo sistema)
+    if (r.comprobanteUrl) {
+      setComprobanteModal({ record: r, base64: r.comprobanteUrl })
+      return
+    }
+    // Fallback: base64 en remera_comprobantes (sistema anterior)
     if (comprobanteCache[r.id]) {
       setComprobanteModal({ record: r, base64: comprobanteCache[r.id] })
       return
@@ -446,7 +454,7 @@ export default function RemeraAdminPage() {
             <p className="text-xs text-gray-500">Pedido: {comprobanteModal?.record.fechaSolicitud ? formatFecha(comprobanteModal.record.fechaSolicitud) : "—"}</p>
           </DialogHeader>
           {comprobanteModal?.base64 && (
-            comprobanteModal.base64.startsWith("data:application/pdf") ? (
+            (comprobanteModal.base64.startsWith("data:application/pdf") || comprobanteModal.base64.endsWith(".pdf")) ? (
               <iframe
                 src={comprobanteModal.base64}
                 className="w-full h-96 rounded border"
