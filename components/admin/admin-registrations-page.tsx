@@ -191,14 +191,13 @@ export default function AdminRegistrationsPage() {
   const fetchRegistrations = async (year = yearFilter) => {
     setLoading(true)
     try {
-      let query = supabase.from("participantes").select("*").order("fecha_inscripcion", { ascending: false })
-      if (year !== "all") {
-        const y = parseInt(year)
-        query = query.gte("fecha_inscripcion", `${y}-01-01`).lt("fecha_inscripcion", `${y + 1}-01-01`)
-      }
-      const { data: rows } = await query
+      const { data: rows } = await supabase.from("participantes").select("*").order("fecha_inscripcion", { ascending: false })
+      const y = year !== "all" ? Number(year) : null
+      const filteredRows = y
+        ? (rows ?? []).filter((r) => (r.años ?? []).map(Number).includes(y))
+        : (rows ?? [])
 
-      const registrationsData = (rows ?? []).map((r) => ({
+      const registrationsData = filteredRows.map((r) => ({
         id: r.dni,
         dni: r.dni,
         nombre: r.nombre,
