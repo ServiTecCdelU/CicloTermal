@@ -141,16 +141,8 @@ export default function AdminRegistrationsPage() {
 
   const displayIndexMap = useMemo(() => {
     const map = new Map<string, number>()
-    // Confirmados: numerar desde el más antiguo (#1) al más nuevo (#N)
-    const confirmados = filteredRegistrations
-      .filter((r) => r.estado === "confirmado")
-      .slice()
-      .sort((a, b) => {
-        const aDate = a.fechaInscripcion ? new Date(a.fechaInscripcion).getTime() : 0
-        const bDate = b.fechaInscripcion ? new Date(b.fechaInscripcion).getTime() : 0
-        return aDate - bDate
-      })
-    confirmados.forEach((r, i) => map.set(r.id, i + 1))
+    const total = filteredRegistrations.length
+    filteredRegistrations.forEach((r, i) => map.set(r.id, total - i))
     return map
   }, [filteredRegistrations])
 
