@@ -139,6 +139,18 @@ export default function AdminRegistrationsPage() {
   const [isEditingPrecio, setIsEditingPrecio] = useState(false)
   const [precioEditValue, setPrecioEditValue] = useState("")
 
+  const displayIndexMap = useMemo(() => {
+    const map = new Map<string, number>()
+    let counter = 1
+    const confirmados = filteredRegistrations.filter((r) => r.estado === "confirmado")
+    const pendientes = filteredRegistrations.filter((r) => r.estado !== "confirmado" && r.estado !== "rechazado")
+    const rechazados = filteredRegistrations.filter((r) => r.estado === "rechazado")
+    for (const r of confirmados) map.set(r.id, counter++)
+    for (const r of pendientes) map.set(r.id, counter++)
+    for (const r of rechazados) map.set(r.id, counter++)
+    return map
+  }, [filteredRegistrations])
+
   const gruposUnicos = useMemo(() => {
     const grupos = registrations
       .map((r) => r.grupoCiclistas || r.grupoBici || r.grupo_bici || r.grupobici || r.grupo || "")
@@ -1394,7 +1406,7 @@ export default function AdminRegistrationsPage() {
                         return (
                           <TableRow key={registration.id} className="hover:bg-gray-50/80 transition-colors border-b">
                             <TableCell className="font-medium text-center text-gray-500 text-xs">
-                              {registration.numeroInscripcion || indexOfFirstItem + index + 1}
+                              {displayIndexMap.get(registration.id) ?? indexOfFirstItem + index + 1}
                             </TableCell>
                             <TableCell className="font-medium text-xs">
                               <div className="md:hidden">
