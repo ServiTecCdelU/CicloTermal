@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       nombre_transferencia: datosCiclo.nombreTransferencia || "",
       precio: "",
       estado: "pendiente",
-      comprobante_pago_url: perfilPersonal.imagenBase64 || null,
+      comprobante_pago_url: null,
       acepta_condiciones: datosCiclo.aceptaTerminos ?? false,
       fecha_inscripcion: new Date().toISOString(),
       numero_inscripcion: numeroInscripcion,
@@ -50,6 +50,7 @@ export async function POST(request: Request) {
     })
 
     if (error) {
+      console.error("[inscripcion/submit] upsert error:", JSON.stringify(error))
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
           .from("configuracion")
           .select("data")
           .eq("id", "grupos")
-          .single()
+          .maybeSingle()
         const listaActual: string[] = currentConfig?.data?.lista ?? []
         if (!listaActual.some((g: string) => g.toLowerCase() === grupoIngresado.toLowerCase())) {
           await supabaseAdmin
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, numeroInscripcion })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Error interno"
+    console.error("[inscripcion/submit] catch:", msg)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
