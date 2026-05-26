@@ -776,16 +776,22 @@ export default function AdminRegistrationsPage() {
       // Handle comprobante upload if new file selected
       const updateData: Record<string, unknown> = { ...formattedData }
       if (newComprobanteFile) {
-        // Convert file to base64 for storage
         const reader = new FileReader()
-        const base64Promise = new Promise((resolve) => {
-          reader.onload = () => resolve(reader.result)
+        const base64Data: string = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result as string)
           reader.readAsDataURL(newComprobanteFile)
         })
-
-        const base64Data = await base64Promise
-        updateData.imagenBase64 = base64Data
-        updateData.comprobantePagoUrl = base64Data
+        try {
+          const res = await fetch("/api/admin/comprobante", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dni: selectedRegistration.id, imagenBase64: base64Data, nombreArchivo: newComprobanteFile.name }),
+          })
+          const json = await res.json()
+          if (res.ok) {
+            updateData.comprobantePagoUrl = json.url
+          }
+        } catch {}
       }
 
       // Convertir campos camelCase a snake_case para Supabase

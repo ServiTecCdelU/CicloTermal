@@ -501,6 +501,7 @@ export default function InscripcionAño() {
           datosCiclo,
           grupoIngresado,
           gruposExistentes,
+          nombreArchivo: formData.comprobantePago?.name ?? null,
         }),
       })
 

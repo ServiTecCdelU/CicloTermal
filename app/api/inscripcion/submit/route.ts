@@ -1,10 +1,55 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase/admin"
 
+const BUCKET = "comprobantes"
+
+async function subirComprobante(
+  dni: string,
+  imagenBase64: string,
+  nombreArchivo: string,
+): Promise<string | null> {
+  try {
+    // Asegurar que el bucket exista
+    const { data: buckets } = await supabaseAdmin.storage.listBuckets()
+    const existe = buckets?.some((b) => b.name === BUCKET)
+    if (!existe) {
+      await supabaseAdmin.storage.createBucket(BUCKET, { public: true })
+    }
+
+    // Decodificar base64 → Buffer
+    const base64Data = imagenBase64.replace(/^data:.+;base64,/, "")
+    const buffer = Buffer.from(base64Data, "base64")
+    const ext = nombreArchivo.split(".").pop() ?? "jpg"
+    const contentType = ext === "pdf" ? "application/pdf" : `image/${ext}`
+    const path = `${dni}/${Date.now()}.${ext}`
+
+    const { error } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .upload(path, buffer, { contentType, upsert: true })
+
+    if (error) {
+      console.error("[subirComprobante] upload error:", error.message)
+      return null
+    }
+
+    const { data } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path)
+    return data.publicUrl
+  } catch (err) {
+    console.error("[subirComprobante] catch:", err)
+    return null
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { dni, añoParam, perfilPersonal, datosCiclo, grupoIngresado, gruposExistentes } = body
+    const { dni, añoParam, perfilPersonal, datosCiclo, grupoIngresado, gruposExistentes, nombreArchivo } = body
+
+    // Subir comprobante a Storage si viene con la inscripción
+    let comprobantePagoUrl: string | null = null
+    if (perfilPersonal.imagenBase64 && nombreArchivo) {
+      comprobantePagoUrl = await subirComprobante(dni, perfilPersonal.imagenBase64, nombreArchivo)
+    }
 
     // Leer años actuales
     const { data: existingPart } = await supabaseAdmin
@@ -42,7 +87,7 @@ export async function POST(request: Request) {
       nombre_transferencia: datosCiclo.nombreTransferencia || "",
       precio: "",
       estado: "pendiente",
-      comprobante_pago_url: perfilPersonal.imagenBase64 || null,
+      comprobante_pago_url: comprobantePagoUrl,
       acepta_condiciones: datosCiclo.aceptaTerminos ?? false,
       fecha_inscripcion: new Date().toISOString(),
       numero_inscripcion: numeroInscripcion,
