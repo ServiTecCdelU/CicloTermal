@@ -11,6 +11,10 @@ ALTER TABLE participantes ADD COLUMN IF NOT EXISTS nota text;
 ALTER TABLE participantes ADD COLUMN IF NOT EXISTS numero_inscripcion int;
 ALTER TABLE participantes ADD COLUMN IF NOT EXISTS recorrido text;
 
+-- Columnas faltantes en remera (envío a domicilio)
+ALTER TABLE remera ADD COLUMN IF NOT EXISTS envio_tipo text DEFAULT 'retiro';
+ALTER TABLE remera ADD COLUMN IF NOT EXISTS direccion text;
+
 -- Índice único en remera.dni para permitir upsert (pedir-remera)
 CREATE UNIQUE INDEX IF NOT EXISTS remera_dni_unique ON remera (dni) WHERE dni IS NOT NULL;
 
