@@ -32,3 +32,74 @@ CREATE TABLE IF NOT EXISTS form_fields (
 ALTER TABLE form_fields ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "public_read" ON form_fields;
 CREATE POLICY "public_read" ON form_fields FOR SELECT USING (true);
+
+-- Tabla bike_friendly
+CREATE TABLE IF NOT EXISTS bike_friendly (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  website text DEFAULT '',
+  image_base64 text DEFAULT '',
+  "order" int DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE bike_friendly ENABLE ROW LEVEL SECURITY;
+
+-- =============================================================
+-- POLÍTICAS DE ESCRITURA (anon puede escribir)
+-- Los editors usan el browser client (anon key).
+-- La protección real es Firebase Auth en el layout de /admin.
+-- =============================================================
+
+-- Tablas de contenido del sitio (no sensibles)
+DROP POLICY IF EXISTS "anon_write" ON benefits;
+CREATE POLICY "anon_write" ON benefits FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON historia;
+CREATE POLICY "anon_write" ON historia FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON jersey;
+CREATE POLICY "anon_write" ON jersey FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON contacto;
+CREATE POLICY "anon_write" ON contacto FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON galeria_fotos;
+CREATE POLICY "anon_write" ON galeria_fotos FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON sponsors;
+CREATE POLICY "anon_write" ON sponsors FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON carousel;
+CREATE POLICY "anon_write" ON carousel FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON itinerario;
+CREATE POLICY "anon_write" ON itinerario FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON settings;
+CREATE POLICY "anon_write" ON settings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON configuracion;
+CREATE POLICY "anon_write" ON configuracion FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON form_fields;
+CREATE POLICY "anon_write" ON form_fields FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON bike_friendly;
+CREATE POLICY "anon_write" ON bike_friendly FOR ALL USING (true) WITH CHECK (true);
+
+-- Tablas operativas (también necesitan escritura desde admin)
+DROP POLICY IF EXISTS "anon_write" ON participantes;
+CREATE POLICY "anon_write" ON participantes FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON gastos;
+CREATE POLICY "anon_write" ON gastos FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON remera;
+CREATE POLICY "anon_write" ON remera FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_write" ON remera_comprobantes;
+CREATE POLICY "anon_write" ON remera_comprobantes FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_read" ON admins;
+CREATE POLICY "anon_read" ON admins FOR SELECT USING (true);
