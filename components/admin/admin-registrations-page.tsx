@@ -44,6 +44,9 @@ import {
   NotebookPen,
   Edit,
   ArrowRightLeft,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -133,6 +136,8 @@ export default function AdminRegistrationsPage() {
   const { toast } = useToast()
 
   const [transferFilter, setTransferFilter] = useState("all")
+  const [isEditingPrecio, setIsEditingPrecio] = useState(false)
+  const [precioEditValue, setPrecioEditValue] = useState("")
 
   const gruposUnicos = useMemo(() => {
     const grupos = registrations
@@ -157,6 +162,7 @@ export default function AdminRegistrationsPage() {
     condicionSalud: "",
     transferidoA: "",
     precio: "",
+    nombreTransferencia: "",
   })
 
   const scrollToTop = () => {
@@ -373,12 +379,13 @@ export default function AdminRegistrationsPage() {
     setIsDragging(false)
   }
 
-  const openDetailsModal = async (registration) => {
+  const openDetailsModal = (registration) => {
     setSelectedRegistration(registration)
     setNewStatus(registration.estado || "pendiente")
     setStatusNote(registration.nota || "")
+    setComprobanteUrl("")
+    setIsEditingPrecio(false)
     setIsDetailsModalOpen(true)
-    await loadComprobante(registration)
   }
 
   const closeDetailsModal = () => {
@@ -387,6 +394,7 @@ export default function AdminRegistrationsPage() {
     setNewStatus("")
     setStatusNote("")
     setComprobanteUrl("")
+    setIsEditingPrecio(false)
   }
 
   const openImageModal = () => {
@@ -756,6 +764,7 @@ export default function AdminRegistrationsPage() {
         condicionSalud: selectedRegistration.condicionSalud || "",
         transferidoA: selectedRegistration.transferidoA || "",
         precio: selectedRegistration.precio || "",
+        nombreTransferencia: selectedRegistration.nombreTransferencia || "",
       })
       setIsEditMode(true)
     }
@@ -817,6 +826,7 @@ export default function AdminRegistrationsPage() {
         condiciones_salud: updateData.condicionSalud,
         transfirio_a: updateData.transferidoA,
         precio: updateData.precio,
+        nombre_transferencia: updateData.nombreTransferencia,
         fecha_actualizacion: new Date().toISOString(),
       }
       if (updateData.comprobantePagoUrl) {
@@ -1546,29 +1556,29 @@ export default function AdminRegistrationsPage() {
 
         {/* Details Modal - Mobile Optimized with ALL DATA */}
         <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-          <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-base md:text-lg flex items-center gap-2">
-                <Users className="h-4 w-4 text-indigo-600" />
-                {isEditMode ? "Editar Inscripción" : "Detalles Completos de Inscripción"}
+          <DialogContent className="max-w-[95vw] md:max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pb-1">
+              <DialogTitle className="text-sm md:text-base flex items-center gap-2">
+                <Users className="h-3.5 w-3.5 text-indigo-600" />
+                {isEditMode ? "Editar Inscripción" : "Detalles de Inscripción"}
               </DialogTitle>
-              <DialogDescription className="text-sm">
+              <DialogDescription className="text-xs">
                 {isEditMode ? "Modifica la información del participante" : "Información completa del participante"}
               </DialogDescription>
             </DialogHeader>
 
             {selectedRegistration && (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {/* Información Personal */}
                 <Card className="border border-indigo-200 shadow-sm">
-                  <CardHeader className="pb-2 bg-indigo-50/50 px-3 py-2">
-                    <CardTitle className="text-sm font-medium text-indigo-800 flex items-center gap-2">
+                  <CardHeader className="pb-1 bg-indigo-50/50 px-3 py-1.5">
+                    <CardTitle className="text-xs font-medium text-indigo-800 flex items-center gap-1.5">
                       <User className="h-3 w-3" />
                       Información Personal
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-3 px-3 pb-3">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <CardContent className="pt-2 px-3 pb-2">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       <div>
                         <Label className="text-xs font-medium text-gray-500">Nombre</Label>
                         {isEditMode ? (
@@ -1606,21 +1616,21 @@ export default function AdminRegistrationsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
                       <div>
                         <Label className="text-xs font-medium text-gray-500 flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          Fecha de Nacimiento
+                          F. Nacimiento
                         </Label>
                         {isEditMode ? (
                           <Input
                             type="date"
                             value={editFormData.fechaNacimiento}
                             onChange={(e) => setEditFormData((prev) => ({ ...prev, fechaNacimiento: e.target.value }))}
-                            className="text-sm mt-1"
+                            className="text-xs mt-1 h-7 px-2"
                           />
                         ) : (
-                          <p className="text-sm">{selectedRegistration.fechaNacimiento || "-"}</p>
+                          <p className="text-xs">{selectedRegistration.fechaNacimiento || "-"}</p>
                         )}
                       </div>
                       <div>
@@ -1630,7 +1640,7 @@ export default function AdminRegistrationsPage() {
                             value={editFormData.genero}
                             onChange={(e) => setEditFormData((prev) => ({ ...prev, genero: e.target.value }))}
                           >
-                            <SelectTrigger className="text-sm mt-1">
+                            <SelectTrigger className="text-xs mt-1 h-7">
                               <SelectValue placeholder="Seleccionar género" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1640,21 +1650,21 @@ export default function AdminRegistrationsPage() {
                             </SelectContent>
                           </Select>
                         ) : (
-                          <p className="text-sm capitalize">{selectedRegistration.genero || "-"}</p>
+                          <p className="text-xs capitalize">{selectedRegistration.genero || "-"}</p>
                         )}
                       </div>
                       <div>
-                        <Label className="text-xs font-medium text-gray-500">Número de Inscripción</Label>
+                        <Label className="text-xs font-medium text-gray-500">N° Inscripción</Label>
                         {isEditMode ? (
                           <Input
                             value={editFormData.numeroInscripcion}
                             onChange={(e) =>
                               setEditFormData((prev) => ({ ...prev, numeroInscripcion: e.target.value }))
                             }
-                            className="text-sm mt-1"
+                            className="text-xs mt-1 h-7 px-2"
                           />
                         ) : (
-                          <p className="text-sm font-bold text-indigo-600">
+                          <p className="text-xs font-bold text-indigo-600">
                             #{selectedRegistration.numeroInscripcion || "-"}
                           </p>
                         )}
@@ -1665,14 +1675,14 @@ export default function AdminRegistrationsPage() {
 
                 {/* Información de Contacto */}
                 <Card className="border border-indigo-200 shadow-sm">
-                  <CardHeader className="pb-2 bg-indigo-50/50 px-3 py-2">
-                    <CardTitle className="text-sm font-medium text-indigo-800 flex items-center gap-2">
+                  <CardHeader className="pb-1 bg-indigo-50/50 px-3 py-1.5">
+                    <CardTitle className="text-xs font-medium text-indigo-800 flex items-center gap-1.5">
                       <Mail className="h-3 w-3" />
                       Información de Contacto
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-3 px-3 pb-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <CardContent className="pt-2 px-3 pb-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs font-medium text-gray-500">Email</Label>
                         {isEditMode ? (
@@ -1680,10 +1690,10 @@ export default function AdminRegistrationsPage() {
                             type="email"
                             value={editFormData.email}
                             onChange={(e) => setEditFormData((prev) => ({ ...prev, email: e.target.value }))}
-                            className="text-sm mt-1"
+                            className="text-xs mt-1 h-7 px-2"
                           />
                         ) : (
-                          <p className="text-sm break-words">{selectedRegistration.email || "-"}</p>
+                          <p className="text-xs break-words">{selectedRegistration.email || "-"}</p>
                         )}
                       </div>
                       <div>
@@ -1695,14 +1705,14 @@ export default function AdminRegistrationsPage() {
                           <Input
                             value={editFormData.localidad}
                             onChange={(e) => setEditFormData((prev) => ({ ...prev, localidad: e.target.value }))}
-                            className="text-sm mt-1"
+                            className="text-xs mt-1 h-7 px-2"
                           />
                         ) : (
-                          <p className="text-sm">{selectedRegistration.localidad || "-"}</p>
+                          <p className="text-xs">{selectedRegistration.localidad || "-"}</p>
                         )}
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                    <div className="grid grid-cols-2 gap-2 mt-2">
                       <div>
                         <Label className="text-xs font-medium text-gray-500 flex items-center gap-1">
                           <Phone className="h-3 w-3" />
@@ -1712,10 +1722,10 @@ export default function AdminRegistrationsPage() {
                           <Input
                             value={editFormData.telefono}
                             onChange={(e) => setEditFormData((prev) => ({ ...prev, telefono: e.target.value }))}
-                            className="text-sm mt-1"
+                            className="text-xs mt-1 h-7 px-2"
                           />
                         ) : (
-                          <p className="text-sm">
+                          <p className="text-xs">
                             {selectedRegistration.telefono || "-"}
                             {selectedRegistration.paisTelefono && selectedRegistration.paisTelefono !== "Argentina" && (
                               <span className="text-xs text-gray-400 ml-1">({selectedRegistration.paisTelefono})</span>
@@ -1726,7 +1736,7 @@ export default function AdminRegistrationsPage() {
                       <div>
                         <Label className="text-xs font-medium text-gray-500 flex items-center gap-1">
                           <Phone className="h-3 w-3" />
-                          Teléfono de Emergencia
+                          Tel. Emergencia
                         </Label>
                         {isEditMode ? (
                           <Input
@@ -1734,10 +1744,10 @@ export default function AdminRegistrationsPage() {
                             onChange={(e) =>
                               setEditFormData((prev) => ({ ...prev, telefonoEmergencia: e.target.value }))
                             }
-                            className="text-sm mt-1"
+                            className="text-xs mt-1 h-7 px-2"
                           />
                         ) : (
-                          <p className="text-sm">
+                          <p className="text-xs">
                             {selectedRegistration.telefonoEmergencia || "-"}
                             {selectedRegistration.paisTelefonoEmergencia &&
                               selectedRegistration.paisTelefonoEmergencia !== "Argentina" && (
@@ -1754,52 +1764,26 @@ export default function AdminRegistrationsPage() {
 
                 {/* Otros Datos */}
                 <Card className="border border-indigo-200 shadow-sm">
-                  <CardHeader className="pb-2 bg-indigo-50/50 px-3 py-2">
-                    <CardTitle className="text-sm font-medium text-indigo-800 flex items-center gap-2">
+                  <CardHeader className="pb-1 bg-indigo-50/50 px-3 py-1.5">
+                    <CardTitle className="text-xs font-medium text-indigo-800 flex items-center gap-1.5">
                       <ClipboardList className="h-3 w-3" />
                       Otros Datos
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-3 px-3 pb-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs font-medium text-gray-500">Talle de Remera</Label>
-                        {isEditMode ? (
-                          <Select
-                            value={editFormData.talleRemera}
-                            onChange={(value) => setEditFormData((prev) => ({ ...prev, talleRemera: value }))}
-                          >
-                            <SelectTrigger className="text-sm mt-1">
-                              <SelectValue placeholder="Seleccionar talle" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="xs">XS</SelectItem>
-                              <SelectItem value="s">S</SelectItem>
-                              <SelectItem value="m">M</SelectItem>
-                              <SelectItem value="l">L</SelectItem>
-                              <SelectItem value="xl">XL</SelectItem>
-                              <SelectItem value="xxl">XXL</SelectItem>
-                              <SelectItem value="xxxl">XXXL</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <p className="text-sm uppercase">{selectedRegistration.talleRemera || "-"}</p>
-                        )}
-                      </div>
+                  <CardContent className="pt-2 px-3 pb-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs font-medium text-gray-500">Grupo Sanguíneo</Label>
                         {isEditMode ? (
                           <Input
                             value={editFormData.grupoSanguineo}
                             onChange={(e) => setEditFormData((prev) => ({ ...prev, grupoSanguineo: e.target.value }))}
-                            className="text-sm mt-1"
+                            className="text-xs mt-1 h-7 px-2"
                           />
                         ) : (
-                          <p className="text-sm">{selectedRegistration.grupoSanguineo || "-"}</p>
+                          <p className="text-xs">{selectedRegistration.grupoSanguineo || "-"}</p>
                         )}
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-1 gap-3 mt-3">
                       <div>
                         <Label className="text-xs font-medium text-gray-500">Grupo de Ciclistas</Label>
                         {isEditMode ? (
@@ -1809,8 +1793,8 @@ export default function AdminRegistrationsPage() {
                               onChange={(e) => setEditFormData((prev) => ({ ...prev, grupoCiclistas: e.target.value }))}
                               onFocus={() => setShowGrupoSuggestions(true)}
                               onBlur={() => setTimeout(() => setShowGrupoSuggestions(false), 150)}
-                              className="text-sm mt-1"
-                              placeholder="Escribí para buscar o agregar nuevo..."
+                              className="text-xs mt-1 h-7 px-2"
+                              placeholder="Buscar o agregar..."
                             />
                             {showGrupoSuggestions && editFormData.grupoCiclistas && gruposUnicos.filter((g) => g.toLowerCase().includes(editFormData.grupoCiclistas.toLowerCase()) && g.toLowerCase() !== editFormData.grupoCiclistas.toLowerCase()).length > 0 && (
                               <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
@@ -1820,7 +1804,7 @@ export default function AdminRegistrationsPage() {
                                     <button
                                       key={grupo}
                                       type="button"
-                                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                                      className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 cursor-pointer"
                                       onMouseDown={(e) => {
                                         e.preventDefault()
                                         setEditFormData((prev) => ({ ...prev, grupoCiclistas: grupo }))
@@ -1834,7 +1818,7 @@ export default function AdminRegistrationsPage() {
                             )}
                           </div>
                         ) : (
-                          <p className="text-sm">{selectedRegistration.grupoCiclistas || "-"}</p>
+                          <p className="text-xs">{selectedRegistration.grupoCiclistas || "-"}</p>
                         )}
                       </div>
                     </div>
@@ -1843,72 +1827,53 @@ export default function AdminRegistrationsPage() {
 
                 {/* Información de Salud */}
                 <Card className="border border-indigo-200 shadow-sm">
-                  <CardHeader className="pb-2 bg-indigo-50/50 px-3 py-2">
-                    <CardTitle className="text-sm font-medium text-indigo-800 flex items-center gap-2">
+                  <CardHeader className="pb-1 bg-indigo-50/50 px-3 py-1.5">
+                    <CardTitle className="text-xs font-medium text-indigo-800 flex items-center gap-1.5">
                       <Stethoscope className="h-3 w-3" />
                       Información de Salud
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-3 px-3 pb-3">
+                  <CardContent className="pt-2 px-3 pb-2">
                     {(() => {
-                      // En modo edición, parseamos desde editFormData, sino desde selectedRegistration
                       const healthInfo = isEditMode
                         ? parseHealthConditions(editFormData.condicionSalud)
                         : parseHealthConditions(selectedRegistration.condicionSalud)
                       return (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           <div>
                             <Label className="text-xs font-medium text-gray-500">¿Es celíaco?</Label>
                             {isEditMode ? (
                               <select
                                 value={healthInfo.esCeliaco || "no"}
                                 onChange={(e) => {
-                                  const updatedHealthInfo = {
-                                    ...healthInfo,
-                                    esCeliaco: e.target.value,
-                                  }
-                                  setEditFormData((prev) => ({
-                                    ...prev,
-                                    condicionSalud: JSON.stringify(updatedHealthInfo),
-                                  }))
+                                  const updatedHealthInfo = { ...healthInfo, esCeliaco: e.target.value }
+                                  setEditFormData((prev) => ({ ...prev, condicionSalud: JSON.stringify(updatedHealthInfo) }))
                                 }}
-                                className="text-sm mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="text-xs mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                               >
                                 <option value="no">No</option>
                                 <option value="si">Sí</option>
                               </select>
                             ) : (
-                              <p
-                                className={`text-sm font-medium ${
-                                  healthInfo.esCeliaco === "si" ? "text-amber-600" : "text-green-600"
-                                }`}
-                              >
+                              <p className={`text-xs font-medium ${healthInfo.esCeliaco === "si" ? "text-amber-600" : "text-green-600"}`}>
                                 {healthInfo.esCeliaco === "si" ? "Sí" : "No"}
                               </p>
                             )}
                           </div>
                           <div>
-                            <Label className="text-xs font-medium text-gray-500">
-                              Condiciones de salud y medicamentos
-                            </Label>
+                            <Label className="text-xs font-medium text-gray-500">Condiciones y medicamentos</Label>
                             {isEditMode ? (
                               <textarea
                                 value={healthInfo.condicionesSalud || ""}
                                 onChange={(e) => {
-                                  const updatedHealthInfo = {
-                                    ...healthInfo,
-                                    condicionesSalud: e.target.value,
-                                  }
-                                  setEditFormData((prev) => ({
-                                    ...prev,
-                                    condicionSalud: JSON.stringify(updatedHealthInfo),
-                                  }))
+                                  const updatedHealthInfo = { ...healthInfo, condicionesSalud: e.target.value }
+                                  setEditFormData((prev) => ({ ...prev, condicionSalud: JSON.stringify(updatedHealthInfo) }))
                                 }}
-                                className="text-sm mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 min-h-[60px] resize-vertical"
-                                placeholder="Sin condiciones especiales reportadas"
+                                className="text-xs mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 min-h-[50px] resize-vertical"
+                                placeholder="Sin condiciones especiales"
                               />
                             ) : (
-                              <p className="text-sm bg-gray-50 p-2 rounded border min-h-[40px]">
+                              <p className="text-xs bg-gray-50 p-1.5 rounded border min-h-[32px]">
                                 {healthInfo.condicionesSalud || "Sin condiciones especiales reportadas"}
                               </p>
                             )}
@@ -1921,13 +1886,13 @@ export default function AdminRegistrationsPage() {
 
                 {/* Comprobante de Pago */}
                 <Card className="border border-indigo-200 shadow-sm">
-                  <CardHeader className="pb-2 bg-indigo-50/50 px-3 py-2">
-                    <CardTitle className="text-sm font-medium text-indigo-800 flex items-center gap-2">
+                  <CardHeader className="pb-1 bg-indigo-50/50 px-3 py-1.5">
+                    <CardTitle className="text-xs font-medium text-indigo-800 flex items-center gap-1.5">
                       <FileText className="h-3 w-3" />
                       Comprobante de Pago
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-3 px-3 pb-3">
+                  <CardContent className="pt-2 px-3 pb-2">
                     {isEditMode ? (
                       <div>
                         <Label className="text-xs font-medium text-gray-500">Subir nuevo comprobante</Label>
@@ -1935,28 +1900,23 @@ export default function AdminRegistrationsPage() {
                           type="file"
                           accept="image/*,application/pdf"
                           onChange={(e) => setNewComprobanteFile(e.target.files[0])}
-                          className="text-sm mt-1"
+                          className="text-xs mt-1"
                         />
                         {newComprobanteFile && (
-                          <p className="text-xs text-gray-500 mt-2">Archivo seleccionado: {newComprobanteFile.name}</p>
+                          <p className="text-xs text-gray-500 mt-1">Archivo: {newComprobanteFile.name}</p>
                         )}
                       </div>
                     ) : (
                       <>
                         {loadingComprobante ? (
-                          <div className="flex items-center justify-center">
-                            <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
-                            <span className="ml-2 text-sm text-gray-500">Cargando comprobante...</span>
+                          <div className="flex items-center">
+                            <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+                            <span className="ml-2 text-xs text-gray-500">Cargando...</span>
                           </div>
                         ) : comprobanteUrl ? (
                           <div className="flex flex-col items-center justify-center">
                             {isPDF(comprobanteUrl) ? (
-                              <a
-                                href={comprobanteUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-indigo-600 hover:text-indigo-800 text-sm"
-                              >
+                              <a href={comprobanteUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800 text-xs">
                                 Ver comprobante (PDF)
                               </a>
                             ) : (
@@ -1964,17 +1924,28 @@ export default function AdminRegistrationsPage() {
                                 <img
                                   src={comprobanteUrl || "/placeholder.svg"}
                                   alt="Comprobante de Pago"
-                                  className="max-h-64 max-w-full rounded-md shadow-md cursor-zoom-in"
+                                  className="max-h-48 max-w-full rounded-md shadow-md cursor-zoom-in"
                                   onClick={openImageModal}
                                 />
-                                <Button variant="link" size="sm" onClick={openImageModal} className="text-xs mt-2">
+                                <Button variant="link" size="sm" onClick={openImageModal} className="text-xs mt-1">
                                   Ampliar imagen
                                 </Button>
                               </>
                             )}
                           </div>
+                        ) : selectedRegistration?.hasComprobante ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={() => loadComprobante(selectedRegistration)}
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            Ver comprobante
+                          </Button>
                         ) : (
-                          <p className="text-sm text-gray-500">No hay comprobante disponible</p>
+                          <p className="text-xs text-gray-500">No hay comprobante disponible</p>
                         )}
                       </>
                     )}
@@ -1982,14 +1953,26 @@ export default function AdminRegistrationsPage() {
                 </Card>
 
                 <Card className="border border-indigo-200 shadow-sm">
-                  <CardHeader className="pb-2 bg-indigo-50/50 px-3 py-2">
-                    <CardTitle className="text-sm font-medium text-indigo-800 flex items-center gap-2">
+                  <CardHeader className="pb-1 bg-indigo-50/50 px-3 py-1.5">
+                    <CardTitle className="text-xs font-medium text-indigo-800 flex items-center gap-1.5">
                       <ArrowRightLeft className="h-3 w-3" />
                       Información de Transferencia
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-3 px-3 pb-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <CardContent className="pt-2 px-3 pb-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs font-medium text-gray-500">Nombre de quien transfiere</Label>
+                        {isEditMode ? (
+                          <Input
+                            value={editFormData.nombreTransferencia}
+                            onChange={(e) => setEditFormData((prev) => ({ ...prev, nombreTransferencia: e.target.value }))}
+                            className="text-xs mt-1 h-7 px-2"
+                          />
+                        ) : (
+                          <p className="text-xs">{selectedRegistration.nombreTransferencia || "-"}</p>
+                        )}
+                      </div>
                       <div>
                         <Label className="text-xs font-medium text-gray-500">Transfirió a</Label>
                         {isEditMode ? (
@@ -1997,77 +1980,118 @@ export default function AdminRegistrationsPage() {
                             value={editFormData.transferidoA}
                             onChange={(value) => setEditFormData((prev) => ({ ...prev, transferidoA: value }))}
                           >
-                            <SelectTrigger className="text-sm mt-1">
-                              <SelectValue placeholder="Seleccionar destinatario" />
+                            <SelectTrigger className="text-xs mt-1 h-7">
+                              <SelectValue placeholder="Seleccionar" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="sin_especificar">Sin especificar</SelectItem>
-                              <SelectItem value="Gise">Gise</SelectItem>
-                              <SelectItem value="Bruni">Bruni</SelectItem>
+                              <SelectItem value="Gisela Orbes">Gisela Orbes</SelectItem>
+                              <SelectItem value="Brunilda Schubert">Brunilda Schubert</SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
-                          <p className="text-sm">{selectedRegistration.transferidoA || "-"}</p>
+                          <p className="text-xs">{selectedRegistration.transferidoA || "-"}</p>
                         )}
                       </div>
-                      <div>
-                        <Label className="text-xs font-medium text-gray-500">Precio</Label>
-                        {isEditMode ? (
-                          <div className="space-y-2">
-                            <Select
-                              value={
-                                editFormData.precio === "$25.000" || editFormData.precio === "$35.000"
-                                  ? editFormData.precio
-                                  : "manual"
+                    </div>
+                    <div className="mt-2">
+                      <Label className="text-xs font-medium text-gray-500">Precio</Label>
+                      {isEditMode ? (
+                        <div className="space-y-1 mt-1">
+                          <Select
+                            value={
+                              editFormData.precio === "$25.000" || editFormData.precio === "$35.000"
+                                ? editFormData.precio
+                                : "manual"
+                            }
+                            onChange={(value) => {
+                              if (value === "manual") {
+                                setEditFormData((prev) => ({ ...prev, precio: "" }))
+                              } else {
+                                setEditFormData((prev) => ({ ...prev, precio: value }))
                               }
-                              onChange={(value) => {
-                                if (value === "manual") {
-                                  setEditFormData((prev) => ({ ...prev, precio: "" }))
-                                } else {
-                                  setEditFormData((prev) => ({ ...prev, precio: value }))
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="text-sm mt-1">
-                                <SelectValue placeholder="Seleccionar precio" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="$25.000">$25.000</SelectItem>
-                                <SelectItem value="$35.000">$35.000</SelectItem>
-                                <SelectItem value="manual">Agregar manual</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {editFormData.precio !== "$25.000" && editFormData.precio !== "$35.000" && (
-                              <Input
-                                value={editFormData.precio}
-                                onChange={(e) => setEditFormData((prev) => ({ ...prev, precio: e.target.value }))}
-                                placeholder="Ingrese precio manual"
-                                className="text-sm"
-                              />
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-sm">{selectedRegistration.precio || "-"}</p>
-                        )}
-                      </div>
+                            }}
+                          >
+                            <SelectTrigger className="text-xs h-7">
+                              <SelectValue placeholder="Seleccionar precio" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="$25.000">$25.000</SelectItem>
+                              <SelectItem value="$35.000">$35.000</SelectItem>
+                              <SelectItem value="manual">Agregar manual</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {editFormData.precio !== "$25.000" && editFormData.precio !== "$35.000" && (
+                            <Input
+                              value={editFormData.precio}
+                              onChange={(e) => setEditFormData((prev) => ({ ...prev, precio: e.target.value }))}
+                              placeholder="Precio manual"
+                              className="text-xs h-7 px-2"
+                            />
+                          )}
+                        </div>
+                      ) : isEditingPrecio ? (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Input
+                            value={precioEditValue}
+                            onChange={(e) => setPrecioEditValue(e.target.value)}
+                            className="text-xs h-7 px-2 w-32"
+                            autoFocus
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={async () => {
+                              await supabase.from("participantes").update({ precio: precioEditValue }).eq("dni", selectedRegistration.id)
+                              setSelectedRegistration((prev) => ({ ...prev, precio: precioEditValue }))
+                              setRegistrations((prev) => prev.map((r) => r.id === selectedRegistration.id ? { ...r, precio: precioEditValue } : r))
+                              setIsEditingPrecio(false)
+                            }}
+                          >
+                            <Check className="h-3 w-3 text-green-600" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => setIsEditingPrecio(false)}
+                          >
+                            <X className="h-3 w-3 text-red-500" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <p className="text-xs">{selectedRegistration.precio || "-"}</p>
+                          <button
+                            type="button"
+                            onClick={() => { setPrecioEditValue(selectedRegistration.precio || ""); setIsEditingPrecio(true) }}
+                            className="p-0.5 rounded hover:bg-gray-100"
+                          >
+                            <Pencil className="h-3 w-3 text-gray-400 hover:text-indigo-600" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* Estado y Notas */}
                 <Card className="border border-indigo-200 shadow-sm">
-                  <CardHeader className="pb-2 bg-indigo-50/50 px-3 py-2">
-                    <CardTitle className="text-sm font-medium text-indigo-800 flex items-center gap-2">
+                  <CardHeader className="pb-1 bg-indigo-50/50 px-3 py-1.5">
+                    <CardTitle className="text-xs font-medium text-indigo-800 flex items-center gap-1.5">
                       <Edit className="h-3 w-3" />
                       Estado y Notas
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-3 px-3 pb-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <CardContent className="pt-2 px-3 pb-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs font-medium text-gray-500">Estado</Label>
                         <Select value={newStatus} onValueChange={setNewStatus} disabled={isEditMode}>
-                          <SelectTrigger className="text-sm mt-1">
+                          <SelectTrigger className="text-xs mt-1 h-7">
                             <SelectValue placeholder="Seleccionar estado" />
                           </SelectTrigger>
                           <SelectContent>
@@ -2082,7 +2106,7 @@ export default function AdminRegistrationsPage() {
                         <Input
                           value={statusNote}
                           onChange={(e) => setStatusNote(e.target.value)}
-                          className="text-sm mt-1"
+                          className="text-xs mt-1 h-7 px-2"
                           disabled={isEditMode}
                         />
                       </div>

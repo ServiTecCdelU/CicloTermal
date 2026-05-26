@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       condiciones_salud: perfilPersonal.condicionSalud ?? null,
       es_celiaco: null,
       nombre_transferencia: datosCiclo.nombreTransferencia || "",
+      transfirio_a: datosCiclo.transferidoA || "",
       precio: "",
       estado: "pendiente",
       comprobante_pago_url: comprobantePagoUrl,

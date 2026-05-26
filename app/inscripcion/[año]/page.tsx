@@ -167,6 +167,7 @@ const emptyForm = {
   grupoSanguineo: "", genero: "", grupoCiclistas: "", talleRemera: "",
   condicionesSalud: "", esCeliaco: "",
   nombreTransferencia: "",
+  transferidoA: "",
   aceptaCondiciones: false, comprobantePago: null, comprobantePagoUrl: "",
 }
 
@@ -485,6 +486,7 @@ export default function InscripcionAño() {
         talleRemera: formData.talleRemera || "",
         aceptaTerminos: formData.aceptaCondiciones,
         nombreTransferencia: formData.nombreTransferencia || "",
+        transferidoA: formData.transferidoA || "",
       }
 
       const grupoIngresado = formData.grupoCiclistas.trim()
@@ -809,6 +811,16 @@ export default function InscripcionAño() {
                   </Label>
                   <Input id="nombreTransferencia" name="nombreTransferencia" value={formData.nombreTransferencia} onChange={handleInputChange}
                     className={fieldErrors.nombreTransferencia ? "border-red-500" : ""} placeholder="Nombre completo" />
+                </div>
+                <div className="space-y-2 max-w-xs">
+                  <Label htmlFor="transferidoA">Transfirió a *</Label>
+                  <Select name="transferidoA" value={formData.transferidoA} onValueChange={(v) => setFormData((prev) => ({ ...prev, transferidoA: v }))}>
+                    <SelectTrigger className={fieldErrors.transferidoA ? "border-red-500" : ""}><SelectValue placeholder="Seleccionar destinatario" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Gisela Orbes">Gisela Orbes</SelectItem>
+                      <SelectItem value="Brunilda Schubert">Brunilda Schubert</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
