@@ -141,13 +141,16 @@ export default function AdminRegistrationsPage() {
 
   const displayIndexMap = useMemo(() => {
     const map = new Map<string, number>()
-    let counter = 1
-    const confirmados = filteredRegistrations.filter((r) => r.estado === "confirmado")
-    const pendientes = filteredRegistrations.filter((r) => r.estado !== "confirmado" && r.estado !== "rechazado")
-    const rechazados = filteredRegistrations.filter((r) => r.estado === "rechazado")
-    for (const r of confirmados) map.set(r.id, counter++)
-    for (const r of pendientes) map.set(r.id, counter++)
-    for (const r of rechazados) map.set(r.id, counter++)
+    // Confirmados: numerar desde el más antiguo (#1) al más nuevo (#N)
+    const confirmados = filteredRegistrations
+      .filter((r) => r.estado === "confirmado")
+      .slice()
+      .sort((a, b) => {
+        const aDate = a.fechaInscripcion ? new Date(a.fechaInscripcion).getTime() : 0
+        const bDate = b.fechaInscripcion ? new Date(b.fechaInscripcion).getTime() : 0
+        return aDate - bDate
+      })
+    confirmados.forEach((r, i) => map.set(r.id, i + 1))
     return map
   }, [filteredRegistrations])
 
@@ -237,17 +240,13 @@ export default function AdminRegistrationsPage() {
         hasComprobante: !!(r.comprobante_pago_url),
       }))
 
-      // Aplicar el ordenamiento inicial: primero pendientes, luego por número de inscripción descendente
+      const estadoOrdenInit = (e) => { if (!e || e === "pendiente") return 0; if (e === "confirmado") return 1; return 2 }
       registrationsData.sort((a, b) => {
-        const aStatus = a.estado || "pendiente"
-        const bStatus = b.estado || "pendiente"
-
-        if (aStatus === "pendiente" && bStatus !== "pendiente") return -1
-        if (aStatus !== "pendiente" && bStatus === "pendiente") return 1
-
-        const aNum = a.numeroInscripcion || 0
-        const bNum = b.numeroInscripcion || 0
-        return bNum - aNum
+        const eo = estadoOrdenInit(a.estado) - estadoOrdenInit(b.estado)
+        if (eo !== 0) return eo
+        const aDate = a.fechaInscripcion ? new Date(a.fechaInscripcion).getTime() : 0
+        const bDate = b.fechaInscripcion ? new Date(b.fechaInscripcion).getTime() : 0
+        return bDate - aDate
       })
 
       setRegistrations(registrationsData)
@@ -314,21 +313,19 @@ export default function AdminRegistrationsPage() {
       })
     }
 
-    // Ordenar: primero pendientes, luego por número de inscripción descendente (más reciente primero)
-    // Esta lógica ya se aplica en fetchRegistrations para la carga inicial,
-    // pero se mantiene aquí para re-ordenar si los filtros cambian y afectan el orden.
+    // Pendientes primero, confirmados por fecha desc (más nuevo arriba), rechazados al final
+    const estadoOrden = (e) => {
+      if (!e || e === "pendiente") return 0
+      if (e === "confirmado") return 1
+      return 2
+    }
     filtered.sort((a, b) => {
-      // Prioridad 1: Estado pendiente va primero
-      const aStatus = a.estado || "pendiente"
-      const bStatus = b.estado || "pendiente"
-
-      if (aStatus === "pendiente" && bStatus !== "pendiente") return -1
-      if (aStatus !== "pendiente" && bStatus === "pendiente") return 1
-
-      // Prioridad 2: Por número de inscripción descendente (más alto primero)
-      const aNum = a.numeroInscripcion || 0
-      const bNum = b.numeroInscripcion || 0
-      return bNum - aNum
+      const eo = estadoOrden(a.estado) - estadoOrden(b.estado)
+      if (eo !== 0) return eo
+      // dentro del mismo estado: más reciente primero
+      const aDate = a.fechaInscripcion ? new Date(a.fechaInscripcion).getTime() : 0
+      const bDate = b.fechaInscripcion ? new Date(b.fechaInscripcion).getTime() : 0
+      return bDate - aDate
     })
 
     setFilteredRegistrations(filtered)
