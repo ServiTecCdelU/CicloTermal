@@ -61,7 +61,8 @@
       "Bash(npm uninstall:*)",
       "Bash(echo \"cicloturismo.json\")",
       "Bash(echo \"supabase.txt\")",
-      "Bash(grep -n \"dynamic\\\\|lazy\" components/*.tsx)"
+      "Bash(grep -n \"dynamic\\\\|lazy\" components/*.tsx)",
+      "Bash(grep -i \"env\" find \"C:/Users/Emanuel/Documents/Proyectos/CicloTermal/\" -maxdepth 1 -name \"*.env*\" -o -name \".env*\")"
     ]
   }
 }

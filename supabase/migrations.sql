@@ -33,6 +33,12 @@ ALTER TABLE form_fields ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "public_read" ON form_fields;
 CREATE POLICY "public_read" ON form_fields FOR SELECT USING (true);
 
+-- Columna updated_at faltante en tablas que los editors la envían
+ALTER TABLE sponsors ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+ALTER TABLE historia ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+ALTER TABLE jersey ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+ALTER TABLE carousel ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+
 -- Tabla bike_friendly
 CREATE TABLE IF NOT EXISTS bike_friendly (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

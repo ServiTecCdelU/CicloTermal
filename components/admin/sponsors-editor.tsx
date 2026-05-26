@@ -190,15 +190,17 @@ export default function SponsorsEditor() {
       if (formData.imagePreview) sponsorDataSnake.image_base64 = formData.imagePreview
 
       if (editingId) {
-        await supabase.from("sponsors").update(sponsorDataSnake).eq("id", editingId)
+        const { error } = await supabase.from("sponsors").update(sponsorDataSnake).eq("id", editingId)
+        if (error) throw new Error(error.message)
         showAlert("Sponsor actualizado exitosamente")
       } else {
         const maxOrder = sponsors.length > 0 ? Math.max(...sponsors.map((s) => s.order)) : -1
-        await supabase.from("sponsors").insert({
+        const { error } = await supabase.from("sponsors").insert({
           ...sponsorDataSnake,
           order: maxOrder + 1,
           created_at: new Date().toISOString(),
         })
+        if (error) throw new Error(error.message)
         showAlert("Sponsor agregado exitosamente")
       }
 
@@ -206,7 +208,7 @@ export default function SponsorsEditor() {
       loadSponsors()
     } catch (error) {
       console.error("Error guardando sponsor:", error)
-      showAlert("Error al guardar sponsor. La imagen puede ser muy grande.", "error")
+      showAlert(`Error al guardar: ${error instanceof Error ? error.message : "Error desconocido"}`, "error")
     } finally {
       setLoading(false)
     }
