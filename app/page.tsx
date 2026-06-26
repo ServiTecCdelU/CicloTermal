@@ -53,12 +53,12 @@ export default function Home() {
           <PhotosSection />
         </section>
         <BikeDivider />
-        <section id="sponsors" className="py-16">
-          <SponsorsSection />
-        </section>
-        <BikeDivider />
         <section id="bikefriendly" className="py-16 bg-gray-50">
           <BikeFriendlySection />
+        </section>
+        <BikeDivider />
+        <section id="sponsors" className="py-16">
+          <SponsorsSection />
         </section>
         <BikeDivider />
         <section id="contacto" className="py-16 bg-gray-50">
@@ -67,5 +67,5 @@ export default function Home() {
       </main>
       <Footer />
     </div>
-  )
+  );
 }

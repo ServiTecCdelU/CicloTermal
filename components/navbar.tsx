@@ -19,10 +19,11 @@ const navItems = [
   { name: "Nuestra Historia", href: "/#historia" },
   { name: "Evento", href: "/#evento" },
   { name: "Fotos", href: "/#fotos" },
+  { name: "Alojamientos", href: "/#bikefriendly" },
   { name: "Sponsors", href: "/#sponsors" },
   { name: "Remeras", href: "/pedir-remera" },
   { name: "Contacto", href: "/#contacto" },
-]
+];
 
 // Componente accesible visualmente oculto
 export function VisuallyHidden({ children }: { children: React.ReactNode }) {
