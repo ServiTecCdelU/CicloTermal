@@ -18,10 +18,10 @@ const navItems = [
   { name: "Inicio", href: "/#inicio" },
   { name: "Nuestra Historia", href: "/#historia" },
   { name: "Evento", href: "/#evento" },
+  { name: "Remeras", href: "/pedir-remera" },
   { name: "Fotos", href: "/#fotos" },
   { name: "Alojamientos", href: "/#bikefriendly" },
   { name: "Sponsors", href: "/#sponsors" },
-  { name: "Remeras", href: "/pedir-remera" },
   { name: "Contacto", href: "/#contacto" },
 ];
 
