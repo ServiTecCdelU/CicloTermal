@@ -864,6 +864,12 @@ export default function InscripcionAño() {
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
+              <div className="mt-4 flex items-center gap-3 rounded-lg border-2 border-red-500 bg-red-50 p-4 text-red-800 shadow-sm">
+                <AlertTriangle className="h-6 w-6 shrink-0 text-red-600" />
+                <p className="text-sm font-bold uppercase tracking-wide sm:text-base">
+                  No se devuelve el dinero de la inscripción una vez realizada
+                </p>
+              </div>
               <div className="flex items-start space-x-2 mt-4">
                 <Checkbox
                   id="aceptaCondiciones" name="aceptaCondiciones"

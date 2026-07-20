@@ -52,6 +52,22 @@ function saveToStorage(key: string, data: any) {
   } catch {}
 }
 
+// Invalida entradas de cache cuyo key empieza con el prefijo dado (memoria + localStorage)
+export function invalidateCache(prefix: string) {
+  for (const key of Array.from(memoryCache.keys())) {
+    if (key.startsWith(prefix)) memoryCache.delete(key)
+  }
+  if (typeof window === "undefined") return
+  try {
+    const toRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith(prefix)) toRemove.push(key)
+    }
+    toRemove.forEach((key) => localStorage.removeItem(key))
+  } catch {}
+}
+
 // buildQuery recibe la query de Supabase y devuelve la query con filtros/orden aplicados
 type QueryBuilder = (q: any) => any
 
@@ -67,11 +83,11 @@ export function useCachedCollection(
   useEffect(() => {
     if (!enabled) return
 
+    // Stale-while-revalidate: muestra cache al instante pero siempre revalida contra el server
     const cached = loadFromStorage(cacheKey)
     if (cached) {
       setData(cached)
       setLoading(false)
-      return // Cache fresco, no va al servidor
     }
 
     let cancelled = false

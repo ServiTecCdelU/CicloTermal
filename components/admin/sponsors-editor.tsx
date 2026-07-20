@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase/client"
+import { invalidateCache } from "@/lib/use-cached-firestore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -204,6 +205,7 @@ export default function SponsorsEditor() {
         showAlert("Sponsor agregado exitosamente")
       }
 
+      invalidateCache("ct_sponsors_")
       resetForm()
       loadSponsors()
     } catch (error) {
@@ -236,6 +238,7 @@ export default function SponsorsEditor() {
         body: JSON.stringify({ table: "sponsors", id }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
+      invalidateCache("ct_sponsors_")
       showAlert("Sponsor eliminado exitosamente")
       loadSponsors()
     } catch (error) {
@@ -259,6 +262,7 @@ export default function SponsorsEditor() {
     try {
       await Promise.all(newSponsors.map((sponsor, i) => supabase.from("sponsors").update({ order: i }).eq("id", sponsor.id)))
       setSponsors(newSponsors.map((sponsor, index) => ({ ...sponsor, order: index })))
+      invalidateCache("ct_sponsors_")
       showAlert("Orden actualizado exitosamente")
     } catch (error) {
       console.error("Error actualizando orden:", error)
@@ -278,6 +282,7 @@ export default function SponsorsEditor() {
 
     try {
       await Promise.all(items.map((sponsor, i) => supabase.from("sponsors").update({ order: i }).eq("id", sponsor.id)))
+      invalidateCache("ct_sponsors_")
       showAlert("Orden actualizado exitosamente")
     } catch (error) {
       console.error("Error actualizando orden:", error)
