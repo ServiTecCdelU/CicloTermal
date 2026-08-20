@@ -2,8 +2,14 @@ export const dynamic = "force-dynamic"
 
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase/admin"
+import { requireAdmin } from "@/lib/supabase/require-admin"
 
 export async function GET(request: Request) {
+  // Expone datos personales completos: solo admin.
+  // El autocompletado por DNI del formulario público está desactivado.
+  const auth = await requireAdmin(request)
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
   const { searchParams } = new URL(request.url)
   const dni = searchParams.get("dni")?.trim()
 

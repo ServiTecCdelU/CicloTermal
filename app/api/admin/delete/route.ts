@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase/admin"
+import { requireAdmin } from "@/lib/supabase/require-admin"
 
 const ALLOWED_TABLES = ["sponsors", "bike_friendly"]
 
 export async function DELETE(request: NextRequest) {
+  const auth = await requireAdmin(request)
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
   const { table, id } = await request.json()
 
   if (!ALLOWED_TABLES.includes(table)) {

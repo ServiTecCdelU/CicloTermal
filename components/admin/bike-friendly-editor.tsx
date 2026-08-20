@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase/client"
+import { authHeaders } from "@/lib/supabase/auth-headers"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -149,7 +150,7 @@ export default function BikeFriendlyEditor() {
     try {
       const res = await fetch("/api/admin/delete", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: await authHeaders(),
         body: JSON.stringify({ table: "bike_friendly", id }),
       })
       if (!res.ok) throw new Error((await res.json()).error)

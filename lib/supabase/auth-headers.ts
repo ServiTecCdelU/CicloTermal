@@ -1,0 +1,12 @@
+import { supabase } from "@/lib/supabase/client"
+
+/**
+ * Headers con el access token de la sesión actual, para llamar
+ * a las API routes protegidas de /api/admin/*.
+ */
+export async function authHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession()
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`
+  return headers
+}

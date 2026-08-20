@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase/admin"
+import { requireAdmin } from "@/lib/supabase/require-admin"
 
 const BUCKET = "comprobantes"
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireAdmin(request)
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
     const { dni, imagenBase64, nombreArchivo } = await request.json()
     if (!dni || !imagenBase64 || !nombreArchivo) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 })

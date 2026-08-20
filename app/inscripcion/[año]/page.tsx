@@ -309,14 +309,15 @@ export default function InscripcionAño() {
     }
   }
 
+  // DESACTIVADO: autocompletado por DNI
   // Dispara el lookup mientras el usuario escribe (debounce 600ms)
-  useEffect(() => {
-    const dni = formData.dni.trim()
-    if (dni.length < 7) return
-    const timer = setTimeout(() => lookupDni(dni), 600)
-    return () => clearTimeout(timer)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.dni])
+  // useEffect(() => {
+  //   const dni = formData.dni.trim()
+  //   if (dni.length < 7) return
+  //   const timer = setTimeout(() => lookupDni(dni), 600)
+  //   return () => clearTimeout(timer)
+  // // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [formData.dni])
 
   useEffect(() => {
     if (birthDate) setFormData((prev) => ({ ...prev, fechaNacimiento: format(birthDate, "yyyy-MM-dd") }))
@@ -581,10 +582,12 @@ export default function InscripcionAño() {
                       className={fieldErrors.dni ? "border-red-500 pr-8" : "pr-8"}
                       placeholder="Ej: 32456789"
                     />
+                    {/* DESACTIVADO: indicadores de autocompletado por DNI
                     {dniLookingUp && <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-gray-400" />}
                     {!dniLookingUp && dniFound && <CheckCircle2 className="absolute right-2 top-2.5 h-4 w-4 text-green-500" />}
+                    */}
                   </div>
-                  <p className="text-xs text-gray-500">Si ya participaste antes, tus datos se cargarán automáticamente.</p>
+                  {/* DESACTIVADO: <p className="text-xs text-gray-500">Si ya participaste antes, tus datos se cargarán automáticamente.</p> */}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="nombre" className="flex justify-between">

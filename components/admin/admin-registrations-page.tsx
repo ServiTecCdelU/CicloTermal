@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { supabase } from "@/lib/supabase/client"
+import { authHeaders } from "@/lib/supabase/auth-headers"
 import {
   Search,
   Filter,
@@ -798,7 +799,7 @@ export default function AdminRegistrationsPage() {
         try {
           const res = await fetch("/api/admin/comprobante", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: await authHeaders(),
             body: JSON.stringify({ dni: selectedRegistration.id, imagenBase64: base64Data, nombreArchivo: newComprobanteFile.name }),
           })
           const json = await res.json()

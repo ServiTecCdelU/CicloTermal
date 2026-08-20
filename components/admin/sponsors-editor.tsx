@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase/client"
+import { authHeaders } from "@/lib/supabase/auth-headers"
 import { invalidateCache } from "@/lib/use-cached-firestore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -234,7 +235,7 @@ export default function SponsorsEditor() {
     try {
       const res = await fetch("/api/admin/delete", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: await authHeaders(),
         body: JSON.stringify({ table: "sponsors", id }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
