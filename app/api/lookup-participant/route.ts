@@ -1,8 +1,8 @@
-export const dynamic = "force-dynamic"
-
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase/admin"
 import { requireAdmin } from "@/lib/supabase/require-admin"
+
+export const dynamic = "force-dynamic"
 
 export async function GET(request: Request) {
   // Expone datos personales completos: solo admin.
