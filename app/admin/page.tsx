@@ -3,32 +3,14 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Lock, Mail } from "lucide-react"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-
-  const [isEmailSectionOpen, setIsEmailSectionOpen] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("emailSectionOpen")
-      return saved !== null ? JSON.parse(saved) : false
-    }
-    return false
-  })
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("emailSectionOpen", JSON.stringify(isEmailSectionOpen))
-    }
-  }, [isEmailSectionOpen])
 
   // Redirigir si ya hay sesión activa (incluyendo callback de OAuth)
   useEffect(() => {
@@ -69,27 +51,6 @@ export default function LoginPage() {
     }
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-      // onAuthStateChange maneja la redirección
-    } catch (err: any) {
-      const msg = err?.message ?? ""
-      if (msg.includes("Invalid login credentials") || msg.includes("invalid_credentials")) {
-        setError("Credenciales incorrectas. Verifica tu email y contraseña.")
-      } else if (msg.includes("too many requests") || msg.includes("rate limit")) {
-        setError("Demasiados intentos. Intenta más tarde.")
-      } else {
-        setError("Error al iniciar sesión.")
-      }
-      setLoading(false)
-    }
-  }
-
   const handleGoogleLogin = async () => {
     setError("")
     setLoading(true)
@@ -123,52 +84,6 @@ export default function LoginPage() {
             </Alert>
           </div>
         )}
-
-        <form onSubmit={handleLogin}>
-          <CardContent className="space-y-4">
-            <div className="border rounded-lg">
-              <button
-                type="button"
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700"
-                onClick={() => setIsEmailSectionOpen((prev: boolean) => !prev)}
-              >
-                <span className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Iniciar sesión con email
-                </span>
-                <span>{isEmailSectionOpen ? "▲" : "▼"}</span>
-              </button>
-
-              {isEmailSectionOpen && (
-                <div className="px-4 pb-4 space-y-3">
-                  <Input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                  <Input
-                    type="password"
-                    placeholder="Contraseña"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              )}
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col space-y-2">
-            {isEmailSectionOpen && (
-              <Button type="submit" className="w-full" disabled={loading}>
-                <Lock className="h-4 w-4 mr-2" />
-                {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
-              </Button>
-            )}
-          </CardFooter>
-        </form>
 
         <CardFooter className="flex flex-col space-y-2">
           <Button
