@@ -484,11 +484,27 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
               </div>
             )}
 
-            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 space-y-1">
-              <p className="font-semibold">Precio: ${precioRemera.toLocaleString("es-AR")} por remera</p>
-              {aliasRemera && (
-                <p className="whitespace-pre-line">{aliasRemera}</p>
-              )}
+            <div className="relative overflow-hidden rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-sm">
+              <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-amber-400 to-orange-500" />
+              <div className="px-5 py-4 pl-6">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-amber-700/80">
+                  Precio por remera
+                </p>
+                <p className="mt-1 flex items-start gap-1 text-gray-900">
+                  <span className="mt-1.5 text-xl font-semibold text-amber-600">$</span>
+                  <span className="text-4xl sm:text-5xl font-extrabold leading-none tracking-tight tabular-nums">
+                    {precioRemera.toLocaleString("es-AR")}
+                  </span>
+                </p>
+                {aliasRemera && (
+                  <div className="mt-3 border-t border-dashed border-amber-300/70 pt-3">
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-amber-700/80 mb-1">
+                      Datos de pago
+                    </p>
+                    <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">{aliasRemera}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
