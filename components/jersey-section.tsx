@@ -215,6 +215,11 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
     setItems((prev) => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
   }
 
+  const cantidadRemeras = useMemo(
+    () => Math.max(1, items.filter((i) => i.talle).reduce((acc, i) => acc + (Number(i.cantidad) || 0), 0)),
+    [items],
+  )
+
   const getFaltantes = () => {
     const faltantes: string[] = []
     if (!nombre.trim()) faltantes.push("nombre")
@@ -488,14 +493,19 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
               <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-amber-400 to-orange-500" />
               <div className="px-5 py-4 pl-6">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-amber-700/80">
-                  Precio por remera
+                  {cantidadRemeras > 1 ? `Total por ${cantidadRemeras} remeras` : "Precio por remera"}
                 </p>
                 <p className="mt-1 flex items-start gap-1 text-gray-900">
                   <span className="mt-1.5 text-xl font-semibold text-amber-600">$</span>
                   <span className="text-4xl sm:text-5xl font-extrabold leading-none tracking-tight tabular-nums">
-                    {precioRemera.toLocaleString("es-AR")}
+                    {(precioRemera * cantidadRemeras).toLocaleString("es-AR")}
                   </span>
                 </p>
+                {cantidadRemeras > 1 && (
+                  <p className="mt-1.5 text-xs text-gray-500 tabular-nums">
+                    ${precioRemera.toLocaleString("es-AR")} c/u × {cantidadRemeras}
+                  </p>
+                )}
                 {aliasRemera && (
                   <div className="mt-3 border-t border-dashed border-amber-300/70 pt-3">
                     <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-amber-700/80 mb-1">
