@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Shirt, CheckCircle2, UploadCloud, Plus, Trash2, PencilLine, RefreshCw } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
+const PRECIO_REMERA_DEFAULT = 38000
+
 interface JerseyFeature {
   id: string
   title: string
@@ -74,6 +76,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const [buscando, setBuscando] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [aliasRemera, setAliasRemera] = useState<string | null>(null)
+  const [precioRemera, setPrecioRemera] = useState<number>(PRECIO_REMERA_DEFAULT)
   const [dniBuscado, setDniBuscado] = useState(false)
   const [showTablaTalles, setShowTablaTalles] = useState(false)
   const [envioTipo, setEnvioTipo] = useState<"retiro" | "envio" | "">("")
@@ -83,7 +86,10 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
   useEffect(() => {
     fetch("/api/remera/settings")
       .then((r) => r.json())
-      .then((json) => setAliasRemera(json.alias ?? null))
+      .then((json) => {
+        setAliasRemera(json.alias ?? null)
+        if (typeof json.precio === "number" && json.precio > 0) setPrecioRemera(json.precio)
+      })
       .catch(() => {})
   }, [])
 
@@ -479,7 +485,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
             )}
 
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 space-y-1">
-              <p className="font-semibold">Precio: $38.000 por remera</p>
+              <p className="font-semibold">Precio: ${precioRemera.toLocaleString("es-AR")} por remera</p>
               {aliasRemera && (
                 <p className="whitespace-pre-line">{aliasRemera}</p>
               )}

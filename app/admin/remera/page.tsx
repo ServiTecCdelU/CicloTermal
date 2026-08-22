@@ -62,6 +62,8 @@ export default function RemeraAdminPage() {
 
   const [alias, setAlias] = useState("")
   const [aliasGuardando, setAliasGuardando] = useState(false)
+  const [precio, setPrecio] = useState("")
+  const [precioGuardando, setPrecioGuardando] = useState(false)
 
   const fetchRemeras = async () => {
     setLoading(true)
@@ -95,18 +97,36 @@ export default function RemeraAdminPage() {
     fetchRemeras()
     supabase.from("settings").select("data").eq("id", "remera").single().then(({ data: row }) => {
       setAlias(row?.data?.alias ?? "")
+      setPrecio(row?.data?.precio != null ? String(row.data.precio) : "")
     })
   }, [])
 
   const guardarAlias = async () => {
     setAliasGuardando(true)
     try {
-      await supabase.from("settings").upsert({ id: "remera", data: { alias } })
+      await supabase.from("settings").upsert({ id: "remera", data: { alias, precio: Number(precio) || null } })
       toast({ title: "Alias guardado" })
     } catch {
       toast({ title: "Error al guardar alias", variant: "destructive" })
     } finally {
       setAliasGuardando(false)
+    }
+  }
+
+  const guardarPrecio = async () => {
+    const valor = Number(precio)
+    if (!Number.isFinite(valor) || valor <= 0) {
+      toast({ title: "Ingresá un precio válido", variant: "destructive" })
+      return
+    }
+    setPrecioGuardando(true)
+    try {
+      await supabase.from("settings").upsert({ id: "remera", data: { alias, precio: valor } })
+      toast({ title: "Precio guardado" })
+    } catch {
+      toast({ title: "Error al guardar el precio", variant: "destructive" })
+    } finally {
+      setPrecioGuardando(false)
     }
   }
 
@@ -213,6 +233,29 @@ export default function RemeraAdminPage() {
           {aliasGuardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
           Guardar
         </Button>
+      </div>
+
+      {/* Precio de la remera */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 block">Precio de la remera (visible en el formulario de pedido)</label>
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div className="relative sm:max-w-[200px]">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              className="pl-7"
+              value={precio}
+              onChange={(e) => setPrecio(e.target.value)}
+              placeholder="38000"
+            />
+          </div>
+          <Button onClick={guardarPrecio} disabled={precioGuardando} size="sm" className="w-full sm:w-auto">
+            {precioGuardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+            Guardar precio
+          </Button>
+        </div>
       </div>
 
       {/* Resumen por talle */}

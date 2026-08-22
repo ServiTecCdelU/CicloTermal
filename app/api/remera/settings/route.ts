@@ -10,5 +10,8 @@ export async function GET() {
     .eq("id", "remera")
     .single()
 
-  return NextResponse.json({ alias: data?.data?.alias ?? null })
+  return NextResponse.json({
+    alias: data?.data?.alias ?? null,
+    precio: data?.data?.precio ?? null,
+  })
 }
