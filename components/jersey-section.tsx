@@ -479,7 +479,7 @@ function RemeroFormModal({ open, onClose }: { open: boolean; onClose: () => void
             )}
 
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 space-y-1">
-              <p className="font-semibold">Precio: $32.000 por remera</p>
+              <p className="font-semibold">Precio: $38.000 por remera</p>
               {aliasRemera && (
                 <p className="whitespace-pre-line">{aliasRemera}</p>
               )}
