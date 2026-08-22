@@ -17,10 +17,10 @@ const staticSlides = [
   {
     id: "default-1",
     imageUrl: "/foto 1.jpg?height=600&width=1200",
-    title: "Cicloturismo Termal de Federación",
-    subtitle: null, // se reemplaza con fecha dinámica
-    buttonText: `Inscripción ${new Date().getFullYear()}`,
-    buttonUrl: `/inscripcion/${new Date().getFullYear()}`,
+    title: "Como comenzamos",
+    subtitle: "Te contamos nuestra historia",
+    buttonText: "Historia",
+    buttonUrl: "/#historia",
   },
   {
     id: "default-2",
@@ -33,34 +33,34 @@ const staticSlides = [
   {
     id: "default-3",
     imageUrl: "/foto 3.jpg?height=600&width=1200",
+    title: "¿Dónde te quedás?",
+    subtitle: "Alojamientos bike friendly en Federación",
+    buttonText: "Alojamientos",
+    buttonUrl: "/#bikefriendly",
+  },
+  {
+    id: "default-4",
+    imageUrl: "/foto 4.jpg?height=600&width=1200",
     title: "Sponsors",
     subtitle: "Conoce a nuestros sponsors",
     buttonText: "Sponsors",
     buttonUrl: "/#sponsors",
   },
   {
-    id: "default-4",
-    imageUrl: "/foto 4.jpg?height=600&width=1200",
-    title: "¡Tenes alguna duda?",
-    subtitle: "Contactate con nosotros",
-    buttonText: "Contacto",
-    buttonUrl: "/#contacto",
-  },
-  {
     id: "default-5",
     imageUrl: "/foto 5.jpg?height=600&width=1200",
-    title: "Como comenzamos",
-    subtitle: "Te contamos nuestra historia",
-    buttonText: "Historia",
-    buttonUrl: "/#historia",
+    title: "Revivi cada edición",
+    subtitle: "Mirá la galería de fotos",
+    buttonText: "Fotos",
+    buttonUrl: "/#fotos",
   },
   {
     id: "default-6",
     imageUrl: "/foto 6.jpg?height=600&width=1200",
-    title: "Cicloturismo Termal de Federación",
-    subtitle: null, // se reemplaza con fecha dinámica
-    buttonText: `Inscripción ${new Date().getFullYear()}`,
-    buttonUrl: `/inscripcion/${new Date().getFullYear()}`,
+    title: "¡Tenes alguna duda?",
+    subtitle: "Contactate con nosotros",
+    buttonText: "Contacto",
+    buttonUrl: "/#contacto",
   },
 ]
 
@@ -68,13 +68,8 @@ export default function CarouselSection() {
   const { eventSettings, ciclosConfig } = useFirebaseContext()
   const fechaLabel = formatSubtitle(eventSettings?.fechaEvento)
   const cicloActivo = ciclosConfig.find((c) => c.habilitado)
-  const slides = staticSlides.map((s) => {
-    const base = { ...s, subtitle: s.subtitle ?? fechaLabel }
-    if (base.buttonText.startsWith("Inscripción") && cicloActivo) {
-      return { ...base, buttonText: `Inscripción ${cicloActivo.año}`, buttonUrl: `/inscripcion/${cicloActivo.año}` }
-    }
-    return base
-  })
+  const añoInscripcion = cicloActivo?.año ?? new Date().getFullYear()
+  const slides = staticSlides.map((s) => ({ ...s, subtitle: s.subtitle ?? fechaLabel }))
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -126,7 +121,7 @@ export default function CarouselSection() {
               className="object-cover"
             />
             <div className="absolute inset-0 bg-black/30" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4 pb-52 sm:pb-40">
               <div className="flex items-center gap-3 mb-4">
                 <HeartIcon size={20} />
                 <h1
@@ -159,6 +154,28 @@ export default function CarouselSection() {
           </div>
         </div>
       ))}
+
+      {/* Botones fijos sobre el carrusel */}
+      <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-[min(90%,26rem)] sm:w-auto">
+        <Link href={`/inscripcion/${añoInscripcion}`} className="w-full sm:w-auto group">
+          <Button
+            size="lg"
+            className="relative w-full sm:w-auto overflow-hidden rounded-full px-8 h-12 text-base font-bold tracking-wide text-white bg-gradient-to-r from-red-600 via-red-500 to-orange-500 shadow-lg shadow-red-900/30 ring-1 ring-white/20 transition-transform duration-300 hover:scale-[1.04] active:scale-100"
+          >
+            <span className="relative z-10">Inscripciones {añoInscripcion}</span>
+            <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+          </Button>
+        </Link>
+        <Link href="/pedir-remera" className="w-full sm:w-auto group">
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full sm:w-auto rounded-full px-8 h-12 text-base font-bold tracking-wide text-white bg-white/10 backdrop-blur-md border-white/60 shadow-lg shadow-black/20 transition-all duration-300 hover:bg-white hover:text-red-600 hover:scale-[1.04] active:scale-100"
+          >
+            Pedir remera
+          </Button>
+        </Link>
+      </div>
 
       {slides.length > 1 && (
         <>
