@@ -132,9 +132,15 @@ export default function CarouselSection() {
                 </h1>
                 <HeartIcon size={20} />
               </div>
-              <p className="text-lg md:text-xl mb-8 max-w-2xl">
+              <p className="text-lg md:text-xl mb-4 max-w-2xl">
                 {slide.subtitle || [eventSettings?.edicion, formatSubtitle(eventSettings?.fechaEvento)].filter(Boolean).join(" - ")}
               </p>
+              {typeof eventSettings?.precio === "number" && (
+                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 backdrop-blur-md px-5 py-2 shadow-lg">
+                  <span className="text-xs md:text-sm font-semibold uppercase tracking-widest text-white/80">Inscripción</span>
+                  <span className="text-2xl md:text-3xl font-black text-red-500">${eventSettings.precio.toLocaleString("es-AR")}</span>
+                </div>
+              )}
               {slide.buttonText &&
                 (slide.buttonUrl ? (
                   <Link href={slide.buttonUrl}>

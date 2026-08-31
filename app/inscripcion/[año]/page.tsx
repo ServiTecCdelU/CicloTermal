@@ -192,6 +192,7 @@ export default function InscripcionAño() {
   const [formData, setFormData] = useState(emptyForm)
   const [datosPago1, setDatosPago1] = useState("")
   const [datosPago2, setDatosPago2] = useState("")
+  const [precio, setPrecio] = useState<number | null>(null)
   const [confirmacionData, setConfirmacionData] = useState({
     titulo: "¡Inscripción Exitosa!",
     descripcion: `Tu inscripción al Cicloturismo Termal ${añoParam} ha sido registrada exitosamente.`,
@@ -214,6 +215,7 @@ export default function InscripcionAño() {
         if (d) {
           setDatosPago1(d.datosPago1 ?? "")
           setDatosPago2(d.datosPago2 ?? "")
+          setPrecio(typeof d.precio === "number" ? d.precio : null)
         }
         const confirmData = confirmRes.data?.data ?? {}
         if (confirmData) {
@@ -779,6 +781,12 @@ export default function InscripcionAño() {
                 <DollarSign className="h-5 w-5" />
                 Información de pago
               </h3>
+              {precio !== null && (
+                <div className="mb-4 rounded-xl border-2 p-4 text-center shadow-sm" style={{ borderColor: VERDE, background: `linear-gradient(90deg, ${AMARILLO_SOFT}, ${VERDE_SOFT}, ${CELESTE_SOFT})` }}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Costo de la inscripción</p>
+                  <p className="text-4xl font-black text-gray-900">${precio.toLocaleString("es-AR")}</p>
+                </div>
+              )}
               {(datosPago1 || datosPago2) && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                   {datosPago1 && (
@@ -958,6 +966,14 @@ export default function InscripcionAño() {
             <CardDescription className="text-center text-gray-800 font-medium">
               Complete el formulario para registrarse en el evento
             </CardDescription>
+            {precio !== null && (
+              <div className="mt-3 flex justify-center">
+                <div className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2 shadow-lg">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-white/70">Precio</span>
+                  <span className="text-2xl font-black text-white">${precio.toLocaleString("es-AR")}</span>
+                </div>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="pt-6">
             <FormSteps currentStep={currentStep} totalSteps={totalSteps} />
